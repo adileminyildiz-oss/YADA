@@ -36,7 +36,16 @@
 
 ---
 
-## 🟢 Dernière mise à jour — Bouton « Retour » : flèche seule en haut à droite AUSSI sur les écrans du parcours (HUB / dossier / rubrique / Rapport) — v532
+## 🟢 Dernière mise à jour — HUB / Liste : bouton « Déconnexion » en DOUBLE retiré (barre latérale du shell conservée) — v533
+**Quoi :** correctif de la v532. Sur le **HUB du dossier** (et l'écran **« Liste des dossiers »**), la disposition PC (`yada-addon-dossiers-pc`) ajoute une **barre latérale de navigation qui contient déjà un bouton « Déconnexion »** (`.dspc-nav.danger`, en bas à gauche) ; or la **barre d'actions en haut à droite affichait AUSSI un « Déconnexion »** (le bouton inline `.ds-logout-btn` du HUB / `#adm-logout-inline` de la Liste) → **doublon**. Le bouton **inline redondant est désormais masqué** à l'intérieur des shells PC : il ne reste **qu'un seul** bouton « Déconnexion » (celui de la barre latérale). La **flèche de retour ←** (haut-droite) est conservée.
+
+**Comment — 2 règles CSS (styles `dossiers-pc-hub-mod` + `dossiers-pc-liste-mod` ; precompta + build V1) :** ajout de `.dspc-main-hub .ds-logout-btn{display:none !important}` (HUB) et `.dspc-main-liste #adm-logout-inline{display:none !important}` (Liste). Le bouton flottant `#yada-logout` (addon206) reste masqué en rôle cabinet (réservé au client) → aucun nouveau doublon. `sw.js` yada-v128, badge v533, `version.json` 533.
+
+**Validé :** `node --check` (precompta 238 / V1 237, 0 erreur) + `sw.js` OK + filet d'équilibre (vente 1200=1200, achat 600=600 ✅) + Playwright (HUB : **1 seul** « Déconnexion » visible = `.dspc-nav.danger` (barre latérale) ; flèche ← en haut à droite ; `#yada-logout` flottant masqué ; 0 pageerror). Badge → **v533**.
+
+---
+
+## 🟢 MAJ précédente — Bouton « Retour » : flèche seule en haut à droite AUSSI sur les écrans du parcours (HUB / dossier / rubrique / Rapport) — v532
 **Quoi :** suite de la v531 (bouton flèche des modules). Le **bouton de retour des écrans du parcours d'entrée** (HUB du dossier, dossier sélectionné, rubrique, page Rapport) — qui affichait **« ← Retour aux dossiers »** en toutes lettres — devient une **flèche seule ←**, compacte, **en haut à droite** (comme dans les modules). La **Déconnexion** reste à côté (texte). Sur le HUB, le groupe d'actions est déjà en haut à droite (v525) → l'arrondi flèche s'y intègre ; sur les autres écrans (Rapport…), le groupe est **positionné en haut à droite**.
 
 **Comment — 4 sites de markup + CSS `ds-anim-mod` (addon214 ; precompta + build V1) :** dans `ecranSelUnique`/`ecranHub`/`ecranRubrique`/`ecranRapport`, le contenu du `.ds-back-btn` passe de `<span class="ds-back-arrow">←</span> Retour aux dossiers` à `<span class="ds-back-arrow" title="Retour" aria-label="Retour">←</span>` (flèche seule, remplacement global). CSS ajouté : `.ds-back-btn{width:40px;height:40px;padding:0;display:inline-flex;justify-content:center;font-size:20px;border-radius:11px}` (chip carré arrondi) + `.login-wrap{position:relative}` + `.login-wrap:not(.ds-hub-wrap) .login-actions:has(.ds-back-btn){position:absolute;top:16px;right:20px;margin:0;justify-content:flex-end}` (haut-droite hors HUB, le HUB étant déjà géré par `dossiers-pc-hub-mod`). Le dégradé bleu du chip (marq-palette) est conservé. `sw.js` yada-v127, badge v532, `version.json` 532.

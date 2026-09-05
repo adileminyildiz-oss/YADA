@@ -11094,7 +11094,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v532';
+    b.textContent='YADA · v533';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -27057,6 +27057,8 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
         '.dspc-main-hub .ds-hub-side{display:grid !important;grid-template-rows:repeat(5,1fr);gap:8px;min-height:0}',
         '.dspc-main-hub .login-title,.dspc-main-hub .login-sub,.dspc-main-hub .dspc-crumb{text-align:center;max-width:1160px;margin-left:auto;margin-right:auto}',
         '.dspc-main-hub .login-actions{position:absolute;top:22px;right:30px;margin:0 !important;justify-content:flex-end !important;z-index:3}',
+        /* la barre latérale du shell fournit déjà « Déconnexion » → on masque le doublon inline du HUB (garde la flèche de retour) */
+        '.dspc-main-hub .ds-logout-btn{display:none !important}',
         /* rubriques en liste : icône à gauche + texte empilé + « Ouvrir → » à droite */
         '.dspc-main-hub .ds-tile{display:flex !important;flex-direction:row !important;align-items:center;gap:11px;padding:10px 14px !important;min-height:0;overflow:hidden;box-sizing:border-box}',
         '.dspc-main-hub .ds-tile-ic{width:34px;height:34px;border-radius:9px;background:rgba(47,143,255,.12);border:1px solid rgba(47,143,255,.26);display:grid;place-items:center;color:#5aa9ff;flex:0 0 auto}',
@@ -27087,6 +27089,8 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
         '.dspc-main-liste .ds-liste-layout{grid-template-columns:minmax(420px,1fr) 340px !important;align-items:start}',
         '.dspc-main-liste .ds-list-col{order:1}',
         '.dspc-main-liste .ds-info-col{order:2}',
+        /* la barre latérale du shell fournit déjà « Déconnexion » → on masque le doublon inline de la Liste */
+        '.dspc-main-liste #adm-logout-inline{display:none !important}',
         '@media(max-width:900px){.dspc-shell-liste{grid-template-columns:1fr;height:auto}.dspc-main-liste .ds-liste-layout{grid-template-columns:1fr !important}}'
       ].join('\n');
       document.head.appendChild(stl);
