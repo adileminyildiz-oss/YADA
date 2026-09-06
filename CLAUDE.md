@@ -36,7 +36,16 @@
 
 ---
 
-## 🟢 Dernière mise à jour — Accueil : barre de titre & barre d'outils retirées + tuiles réduites — v539
+## 🟢 Dernière mise à jour — Accueil : icônes à droite des onglets retirées — v540
+**Quoi :** suppression du bloc d'icônes (`▤ ⚙`) affiché **à droite de la barre d'onglets** de l'accueil. Il ne reste que les onglets (Dossiers · Entités · Collaborateur · Mes Services). Reste inchangé.
+
+**Comment :** `yada-addon-accueil` (precompta + V1) — retrait du `<span class="ge-tabs-right">…</span>` dans `launcherHTML()`. `sw.js` yada-v135, badge v540, `version.json` 540.
+
+**Validé :** `node --check` (242/241, 0 erreur) + `sw.js` OK + équilibre (1200=1200, 600=600 ✅) + Playwright (`.ge-tabs-right` absente, `.ge-tbic`=0, onglets présents, 0 pageerror). Badge → **v540**.
+
+---
+
+## 🟢 MAJ précédente — Accueil : barre de titre & barre d'outils retirées + tuiles réduites — v539
 **Quoi :** épuration de la page d'accueil (v538). La **barre de titre** (YADA — Accueil + points/boutons fenêtre) et la **barre d'outils** (★ ☰) sont **supprimées** ; l'accueil commence directement par la **barre de menus** (Fichier · Paramètres · …) puis les **onglets** (Dossiers…). Les **tuiles sont réduites** (152×132 → **112×96 px**, icônes 34→26 px, marque 22→16 px, libellés 12→11 px, grille resserrée gap 11). Le reste (3 groupes, portails, vue liste, pied de page) est inchangé.
 
 **Comment :** `yada-addon-accueil` (precompta + V1) — retrait des blocs HTML `.ge-titlebar` et `.ge-toolbar` dans `launcherHTML()` ; ajustement CSS `.ge-tile`/`.ge-tile-ic`(+`svg`)/`.ge-brand`/`.ge-tile-lbl`/`.ge-grid`. `sw.js` yada-v134, badge v539, `version.json` 539.
