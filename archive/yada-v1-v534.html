@@ -11094,7 +11094,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v543';
+    b.textContent='YADA · v534';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -15483,44 +15483,7 @@ ${lignes}
 })();
 </script>
 
-<script id="yada-addon103">
-/* ============================================================
-   MISE À JOUR AUTOMATIQUE DU SYSTÈME — même version sur toutes les surfaces /
-   tous les appareils, jamais de système divergent.
-   - Vérifie périodiquement la dernière version déployée (version.json, sans cache)
-     + relance la mise à jour du service worker ; si une version plus récente est
-     en ligne, enregistre les données puis recharge pour appliquer le nouveau système.
-   - Combiné au service worker « réseau d'abord » : chaque appareil converge vers
-     la dernière version dès qu'il est en ligne. 100% additif.
-   ============================================================ */
-(function(){
-  var reloaded=false;
-  function runningVer(){ try{ var b=document.getElementById('yada-ver'); if(b){ var m=(b.textContent||'').match(/v(\d+)/); if(m) return parseInt(m[1],10); } }catch(e){} return 0; }
-  function applyUpdate(){ if(reloaded) return; reloaded=true;
-    try{ if(typeof toast==='function') toast('Nouvelle version disponible — mise à jour…'); }catch(e){}
-    try{ if(typeof save==='function') save(); }catch(e){}
-    setTimeout(function(){ try{ location.reload(); }catch(e){} }, 400);
-  }
-  function checkVersion(){
-    if(reloaded || !navigator.onLine) return;
-    try{
-      fetch('version.json?cb='+Date.now(), {cache:'no-store'})
-        .then(function(r){ return r.ok? r.json() : null; })
-        .then(function(j){ if(!j) return; var remote=parseInt(j.version||j.v||0,10)||0; var local=runningVer();
-          if(remote && local && remote>local){ applyUpdate(); } })
-        .catch(function(){});
-    }catch(e){}
-  }
-  function swUpdate(){ try{ if('serviceWorker' in navigator){ navigator.serviceWorker.getRegistration().then(function(reg){ if(reg){ try{ reg.update(); }catch(e){} } }).catch(function(){}); } }catch(e){} }
-  function checkAll(){ checkVersion(); swUpdate(); }
-  /* au démarrage (léger délai), périodiquement, au retour au premier plan, et à la reconnexion */
-  setTimeout(checkAll, 6000);
-  setInterval(checkAll, 5*60*1000);
-  document.addEventListener('visibilitychange', function(){ if(!document.hidden) checkAll(); });
-  window.addEventListener('online', checkAll);
-  window.cloudCheckUpdate=checkAll;
-})();
-</script>
+<!-- yada-addon103 (auto-update) retire pour la V1 -->
 
 <script id="yada-addon104">
 /* ============================================================
@@ -17900,68 +17863,7 @@ ${lignes}
   try{ if(typeof save==='function') save(); }catch(e){}
 })();
 </script>
-<script id="yada-addon133">
-/* ============================================================
-   VERROU ANTI-RETOUR DE VERSION (no-downgrade) — « sur cet appareil ».
-   Dès qu'une version a été utilisée sur l'appareil, il devient IMPOSSIBLE de
-   revenir sur une version plus ANCIENNE : si une version inférieure se charge
-   (cache périmé, onglet obsolète…), elle est BLOQUÉE par un voile non
-   contournable et l'ÉCRITURE est désactivée (aucune modification possible sur
-   l'ancienne version). Un bouton « Charger la dernière version » met à jour.
-   Le « plancher » de version (le plus haut jamais exécuté) est mémorisé dans
-   localStorage ('yada-ver-max'). Combiné au service worker « réseau d'abord »
-   et à la mise à jour auto (addon103) qui ramènent la dernière version en ligne.
-   100% additif. Aucune logique comptable touchée.
-   ============================================================ */
-(function(){
-  var KEY='yada-ver-max', blocked=false;
-  function curVer(){ try{ var b=document.getElementById('yada-ver'); if(b){ var m=(b.textContent||'').match(/v(\d+)/); if(m) return parseInt(m[1],10); } }catch(e){} return 0; }
-  function getMax(){ try{ return parseInt(localStorage.getItem(KEY)||'0',10)||0; }catch(e){ return 0; } }
-  function setMax(v){ try{ localStorage.setItem(KEY, String(v)); }catch(e){} }
-  function forceUpdate(){
-    if(!navigator.onLine){ majMessageHorsLigne(); return; }
-    try{
-      if('serviceWorker' in navigator){
-        navigator.serviceWorker.getRegistration().then(function(r){ if(r){ try{ r.update(); }catch(e){} } setTimeout(function(){ try{ location.reload(); }catch(e){} }, 350); }).catch(function(){ try{ location.reload(); }catch(e){} });
-        return;
-      }
-    }catch(e){}
-    try{ location.reload(); }catch(e){}
-  }
-  window.yadaForceUpdate=forceUpdate;
-  function majMessageHorsLigne(){ var p=document.getElementById('yada-ver-lock-off'); if(p) p.style.display='block'; }
-  function showOverlay(cur, mx){
-    if(document.getElementById('yada-ver-lock')) return;
-    var ov=document.createElement('div'); ov.id='yada-ver-lock';
-    ov.style.cssText='position:fixed;inset:0;z-index:2147483647;background:rgba(6,10,18,.94);display:flex;align-items:center;justify-content:center;padding:24px;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)';
-    var off=!navigator.onLine;
-    ov.innerHTML='<div style="max-width:440px;width:100%;background:linear-gradient(160deg,#0d1830,#070b16);border:1px solid #1e90ff;border-radius:18px;padding:26px 24px;color:#eaf2ff;font-family:system-ui,-apple-system,sans-serif;box-shadow:0 20px 60px rgba(0,0,0,.6);text-align:center">'
-      +'<div style="font-size:40px;line-height:1">🔒</div>'
-      +'<h2 style="font-family:Fraunces,serif;margin:10px 0 6px;font-size:22px;color:#fff">Version obsolète</h2>'
-      +'<p style="margin:0 0 6px;font-size:14px;color:#c2cce0">Cette version (<b>v'+cur+'</b>) est plus ancienne que la dernière utilisée sur cet appareil (<b>v'+mx+'</b>).</p>'
-      +'<p style="margin:0 0 18px;font-size:14px;color:#c2cce0">Le retour en arrière est désactivé : <b>les modifications ne sont possibles que sur la dernière version</b>.</p>'
-      +'<button id="yada-ver-upd" style="width:100%;min-height:50px;border:none;border-radius:13px;font-weight:800;font-size:15px;cursor:pointer;background:linear-gradient(120deg,#0a64d6,#1e90ff);color:#fff;box-shadow:0 8px 24px rgba(10,100,214,.5)">⟳ Charger la dernière version</button>'
-      +'<p id="yada-ver-lock-off" style="display:'+(off?'block':'none')+';margin:12px 0 0;font-size:12.5px;color:#ffb4a8">Vous êtes hors-ligne — reconnectez-vous pour récupérer la dernière version.</p>'
-      +'</div>';
-    document.body.appendChild(ov);
-    var btn=document.getElementById('yada-ver-upd'); if(btn) btn.onclick=forceUpdate;
-  }
-  function block(cur, mx){
-    if(blocked) return; blocked=true;
-    /* l'ancienne version ne doit RIEN enregistrer (pas de divergence de données) */
-    try{ window.save=function(){ /* version obsolète : enregistrement désactivé */ }; }catch(e){}
-    showOverlay(cur, mx);
-  }
-  function run(){
-    var cur=curVer();
-    if(!cur){ setTimeout(run, 800); return; }   /* badge pas encore prêt */
-    var mx=getMax();
-    if(cur>=mx) setMax(cur);                      /* version courante = nouveau plancher */
-    else block(cur, mx);                          /* version plus ancienne → bloquée */
-  }
-  if(document.body) run(); else document.addEventListener('DOMContentLoaded', run);
-})();
-</script>
+<!-- yada-addon133 (verrou de version) retire pour la V1 -->
 <script id="yada-addon134">
 /* Journal comptable — barre d'ONGLETS par journal (BQ/HA/VT/OD/ODP/ODC/ODTVA).
    Regroupe les écritures du journal sélectionné. 100% additif (style ; le markup
@@ -26037,6 +25939,35 @@ ${lignes}
   try{ var s=document.createElement('style'); s.id='ds-search-btncase-mod'; s.textContent=css; document.head.appendChild(s); }catch(e){}
 })();
 </script>
+<script id="yada-v1-restrict">
+/* YADA — Version 1 : espaces Cabinet + Client. Modules conserves : Client (facturation),
+   Fournisseurs (achats), Tiers, et Societes (portefeuille) + creation/import de dossier.
+   Toute la comptabilite et l'Admin sont retires de la navigation. */
+(function(){
+  var BLOCK={dash:1,compta:1,chargespaie:1,journal:1,ia:1,tva:1,editions:1,analytique:1,
+    banque:1,saisiebq:1,rappro:1,reglements:1,immos:1,infosociete:1,coffre:1,parametrage:1,
+    plancomptable:1,fec:1,fraiskm:1,pilotage:1,salarie:1};
+  var MODS=['facturation','achats','tiers','societe'];
+  function ensureRub(){ try{ if(window.RUBRIQUES && (!window.RUBRIQUES.__v1 || (window.RUBRIQUES.__v1.mods||[]).length!==MODS.length)){
+    window.RUBRIQUES.__v1={titre:'Facturation & Tiers',desc:'Client - Fournisseurs - Tiers - Societes',mods:MODS.slice()}; } }catch(e){} }
+  ensureRub();
+  if(typeof window.dsSelectionner==='function'){ var _ds=window.dsSelectionner; window.dsSelectionner=function(id){
+    ensureRub(); window.dsSel=id; window.dsListe=false; window.dsHub=false;
+    if(typeof window.dsEntrerRubrique==='function'){ window.dsEntrerRubrique('__v1'); } else { _ds.call(this,id); } }; }
+  if(typeof render==='function'){ var _r=render; render=function(){
+    try{ var client=(window.sessionRole||'')==='client';
+      if(!client){ ensureRub();
+        if(window.dsHub && window.dsSel){ window.dsHub=false; window.dsActiveRub='__v1';
+          if(typeof current==='undefined'||!current||BLOCK[current]) current='facturation'; }
+        if(typeof current!=='undefined' && current && BLOCK[current]){ current='facturation'; window.dsActiveRub='__v1'; } }
+    }catch(e){}
+    return _r.apply(this,arguments); }; }
+  try{ var s=document.createElement('style'); s.id='v1-restrict-mod';
+    s.textContent='#adm-enter-btn,#adm-enter-inline,#adm-enter-row,.adm-hub-tile{display:none!important}';
+    document.head.appendChild(s); }catch(e){}
+  try{ setInterval(function(){ var lk=document.getElementById('yada-ver-lock'); if(lk&&lk.parentNode) lk.parentNode.removeChild(lk); }, 800); }catch(e){}
+})();
+</script>
 <script id="yada-addon234">
 /* v495 — Facturation « Liste & suivi » : barre d'outils sur la liste des factures.
    Recherche (numéro / client), filtres (statut · année), tri par colonne (clic),
@@ -26742,11 +26673,10 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
   try{
     var css=[
       'html{filter:grayscale(100%) !important;-webkit-filter:grayscale(100%) !important;}',
-      /* anneaux de focus / sélection lisibles en gris (le filtre les grise déjà, on garde le contraste) */
       '::selection{background:rgba(160,160,160,.35) !important;}'
     ].join('\n');
     var s=document.createElement('style'); s.id='yada-mono'; s.textContent=css;
-    document.head.appendChild(s); /* injecté en dernier → prime sur tout */
+    document.head.appendChild(s);
   }catch(e){}
 })();
 </script>
@@ -27156,7 +27086,6 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
         '.dspc-main-liste .login-head{display:none}',
         '.dspc-main-liste .login-title{font-size:24px;font-weight:800;letter-spacing:-.02em;color:#f2f5fb}',
         '.dspc-main-liste .login-sub{color:#9fb0cc;font-size:13px;margin-top:4px}',
-        /* liste au centre, fiche à droite (on inverse l\'ordre des colonnes existantes) */
         '.dspc-main-liste .ds-liste-layout{grid-template-columns:minmax(420px,1fr) 340px !important;align-items:start}',
         '.dspc-main-liste .ds-list-col{order:1}',
         '.dspc-main-liste .ds-info-col{order:2}',
@@ -27256,7 +27185,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       var yca=y(byM[m].ca||0), ych=y(byM[m].ch||0);
       bars+='<rect x="'+(cx-bw-1)+'" y="'+yca+'" width="'+bw+'" height="'+Math.max(0,pt+ih-yca)+'" rx="2" class="dr-bca"><title>CA '+mLabel(m)+' : '+money(byM[m].ca)+'</title></rect>'
           +'<rect x="'+(cx+1)+'" y="'+ych+'" width="'+bw+'" height="'+Math.max(0,pt+ih-ych)+'" rx="2" class="dr-bch"><title>Charges '+mLabel(m)+' : '+money(byM[m].ch)+'</title></rect>';
-      labels+='<text x="'+cx+'" y="'+(H-10)+'" class="dr-axx" text-anchor="middle">'+esc(mLabel(m)).replace(' ',' ')+'</text>';
+      labels+='<text x="'+cx+'" y="'+(H-10)+'" class="dr-axx" text-anchor="middle">'+esc(mLabel(m)).replace(' ',' ')+'</text>';
     });
     return '<svg viewBox="0 0 '+W+' '+H+'" class="dr-svg" preserveAspectRatio="xMidYMid meet">'+grid+bars+labels+'</svg>';
   }
@@ -27273,7 +27202,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     var area='M'+x(0)+','+y(0)+' '+vals.map(function(v,i){return 'L'+x(i)+','+y(v);}).join(' ')+' L'+x(vals.length-1)+','+y(0)+' Z';
     var pts=vals.map(function(v,i){return x(i)+','+y(v);}).join(' ');
     var dots=vals.map(function(v,i){return '<circle cx="'+x(i)+'" cy="'+y(v)+'" r="3" class="dr-dot"><title>'+esc(mLabel(months[i]))+' : '+money(v)+'</title></circle>';}).join('');
-    var labels=months.map(function(m,i){return '<text x="'+x(i)+'" y="'+(H-10)+'" class="dr-axx" text-anchor="middle">'+esc(mLabel(m)).replace(' ',' ')+'</text>';}).join('');
+    var labels=months.map(function(m,i){return '<text x="'+x(i)+'" y="'+(H-10)+'" class="dr-axx" text-anchor="middle">'+esc(mLabel(m)).replace(' ',' ')+'</text>';}).join('');
     return '<svg viewBox="0 0 '+W+' '+H+'" class="dr-svg" preserveAspectRatio="xMidYMid meet">'+grid
       +'<line x1="'+pl+'" y1="'+y(0)+'" x2="'+(W-pr)+'" y2="'+y(0)+'" class="dr-zero"/>'
       +'<path d="'+area+'" class="dr-area"/><polyline points="'+pts+'" class="dr-linep"/>'+dots+labels+'</svg>';
@@ -27679,387 +27608,6 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
   if(typeof _r==='function'){ window.render=function(){ var x=_r.apply(this,arguments); try{ transform(); }catch(e){} return x; }; }
   setTimeout(function(){ try{ transform(); }catch(e){} },60);
 }catch(e){} })();
-</script>
-
-<script id="yada-addon-reset">
-/* ═══════════════════════════════════════════════════════════════════════════
-   RÉINITIALISATION (reprogrammation, v535)
-   À la demande : suppression de la PAGE DE CONNEXION, de la PAGE D'ACCUEIL et de
-   TOUS les modules — SEULE « Consultation » (module compta) reste, sans y toucher.
-   Mécanique (aucune ligne de Consultation modifiée) :
-     • le verrou de connexion est neutralisé et l'overlay #sec-lock retiré ;
-     • le logiciel s'ouvre DIRECTEMENT sur la Consultation (dossier actif chargé) ;
-     • le routage force en permanence current='compta' → aucune autre page n'existe ;
-     • la barre latérale est réduite à la seule entrée « Consultation ».
-   Le code résiduel des autres pages est désormais inerte (inaccessible) ; il sera
-   physiquement retiré module par module au fil de la reprogrammation.
-   ═══════════════════════════════════════════════════════════════════════════ */
-(function(){
-  try{
-    /* 1) Neutraliser connexion / verrou / 2FA */
-    window.__secLocked=false; window.__tfaPassed=true;
-    try{ if(typeof window.secVerrouiller==='function') window.secVerrouiller=function(){}; }catch(e){}
-    try{ if(typeof window.secDeconnexion==='function') window.secDeconnexion=function(){}; }catch(e){}
-    var lock=document.getElementById('sec-lock'); if(lock&&lock.parentNode) lock.parentNode.removeChild(lock);
-  }catch(e){}
-
-  /* 2) Barre latérale : « Accueil » + « Consultation » */
-  try{ if(typeof buildNav==='function'){
-    buildNav=function(){ try{
-      var nav=document.getElementById('nav'); if(!nav) return;
-      nav.innerHTML='';
-      var s=document.createElement('div'); s.className='nav-sec'; s.textContent='Navigation'; nav.appendChild(s);
-      var ha=document.createElement('button'); ha.className='nav-btn'+(window.__homeView===true?' active':'');
-      ha.innerHTML='<span class="ico">⌂</span>Accueil';
-      ha.onclick=function(){ if(typeof window.accueilRetour==='function') window.accueilRetour(); };
-      nav.appendChild(ha);
-      var b=document.createElement('button'); b.className='nav-btn'+((typeof current!=='undefined'&&current==='compta'&&window.__homeView!==true)?' active':'');
-      b.innerHTML='<span class="ico">≣</span>Consultation';
-      b.onclick=function(){ try{ window.__homeView=false; current='compta'; }catch(e){} render(); };
-      nav.appendChild(b);
-    }catch(e){} };
-  } }catch(e){}
-
-  /* 3) Routage : ACCUEIL (choix du dossier) au démarrage, puis les modules */
-  try{ if(typeof render==='function'){
-    var _r=render;
-    render=function(){
-      if(window.__homeView===true && typeof window.accueilPaint==='function'){ try{ window.accueilPaint(); }catch(e){} return; }
-      try{ connecte=true; }catch(e){}
-      var x=_r.apply(this,arguments);
-      try{ document.body.removeAttribute('data-noside'); var chip=document.getElementById('ds-back-chip'); if(chip) chip.style.display='none'; }catch(e){}
-      return x;
-    };
-  } }catch(e){}
-
-  /* 4) Démarrage : afficher l'ACCUEIL (choix du dossier) */
-  function ouvrir(){ try{
-    window.sessionRole='cabinet'; window.selClientMode=false; window.isAdmin=false;
-    try{ sessionStorage.setItem('yada-role','cabinet'); }catch(e){}
-    if(!window.__resetOpened){ window.__homeView=true; window.__resetOpened=true; }
-    if(typeof render==='function') render();
-  }catch(e){} }
-
-  ouvrir();
-  setTimeout(ouvrir,60);
-  setTimeout(ouvrir,400);
-})();
-</script>
-
-<script id="yada-addon-fichier-modules">
-/* v536 — Menu « Fichier » de la Consultation : ouvre TOUS les modules.
-   Ajoute en bas du menu Fichier (#sg-fichier) une section « Modules » listant toutes
-   les pages ; un clic ouvre la page (current=<id>; render()). 100% additif : injection
-   post-rendu dans le dropdown existant, Consultation NON modifiée. */
-(function(){
-  if(typeof render!=='function') return;
-  try{ var st=document.createElement('style'); st.id='fmod-mod';
-    st.textContent='.sg-dd .fmod-h{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#0a64d6;padding:7px 12px 2px}'
-      +'.sg-dd .fmod-sec{font-size:10.5px;color:#8a97ad;padding:5px 12px 1px;margin-top:2px}';
-    document.head.appendChild(st); }catch(e){}
-  function inject(){ try{
-    if(typeof current==='undefined' || current!=='compta') return;
-    var dd=document.getElementById('sg-fichier'); if(!dd) return;
-    if(dd.querySelector('.fmod-mark')) return;
-    dd.style.maxHeight='82vh'; dd.style.overflowY='auto';
-    var sep=document.createElement('div'); sep.className='sep fmod-mark'; dd.appendChild(sep);
-    var hd=document.createElement('div'); hd.className='fmod-h'; hd.textContent='Modules'; dd.appendChild(hd);
-    var pages=(typeof PAGES!=='undefined'&&PAGES)?PAGES:[]; var lastSec='';
-    pages.forEach(function(p){ if(!p||!p.id||p.id==='compta') return;
-      if(p.sec && p.sec!==lastSec){ var s=document.createElement('div'); s.className='fmod-sec'; s.textContent=p.sec; dd.appendChild(s); lastSec=p.sec; }
-      var b=document.createElement('button'); b.textContent=String(p.lbl||p.id);
-      b.onclick=function(ev){ try{ ev.stopPropagation(); }catch(e){} try{ if(typeof closeFichier==='function') closeFichier(); else if(typeof closeMenus==='function') closeMenus(); }catch(e){} try{ current=p.id; }catch(e){} render(); };
-      dd.appendChild(b); });
-  }catch(e){} }
-  var _r=render; render=function(){ var x=_r.apply(this,arguments); try{ inject(); }catch(e){} return x; };
-  setTimeout(inject,120); setTimeout(inject,500);
-})();
-</script>
-
-<script id="yada-addon-accueil">
-/* v543 — ACCUEIL façon « Génération Experts » (noir total) : lanceur + création de
-   dossier + dossiers récents + « Applications du dossier » (Dossier permanent, Contacts,
-   Comptabilité, Analytique, Investissements) avec confirmation + questionnaire.
-   Fin de création de la Comptabilité → ouverture de la Consultation. 100% additif. */
-(function(){
-  if(typeof render!=='function') return;
-  function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-  function norm(s){ return String(s==null?'':s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,''); }
-  function dossiers(){ try{ return (db&&db.cabinet&&db.cabinet.dossiers)?db.cabinet.dossiers.slice():[]; }catch(e){ return []; } }
-  function dossierById(id){ try{ var a=dossiers(); for(var i=0;i<a.length;i++){ if(a[i].id===id) return a[i]; } }catch(e){} return null; }
-  function socOf(id){ try{ return (db.dossiersData&&db.dossiersData[id]&&db.dossiersData[id].societe)||{}; }catch(e){ return {}; } }
-  function recents(){ try{ db.cabinet=db.cabinet||{}; if(!Array.isArray(db.cabinet.recents)) db.cabinet.recents=[]; return db.cabinet.recents.filter(function(id){return !!dossierById(id);}); }catch(e){ return []; } }
-  function addRecent(id){ try{ db.cabinet=db.cabinet||{}; if(!Array.isArray(db.cabinet.recents)) db.cabinet.recents=[]; var a=db.cabinet.recents.filter(function(x){return x!==id;}); a.unshift(id); db.cabinet.recents=a.slice(0,8); if(typeof save==='function') save(); }catch(e){} }
-  function hasCompta(id){ try{ var d=dossierById(id); if(d&&d.spaces&&d.spaces.compta) return true; var ds=db.dossiersData&&db.dossiersData[id]; return !!(ds&&ds.ecritures&&ds.ecritures.length); }catch(e){ return false; } }
-  function newId(){ return 'd-'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
-
-  /* ── Icônes filaires (blanches) ─────────────────────────────────────────── */
-  function ic(name){
-    var A='<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">';
-    var Z='</svg>';
-    switch(name){
-      case 'list': return A+'<path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r=".8"/><circle cx="4" cy="12" r=".8"/><circle cx="4" cy="18" r=".8"/>'+Z;
-      case 'folder': return A+'<path d="M3 7a2 2 0 0 1 2-2h3.5l2 2H19a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>'+Z;
-      case 'folderplus': return A+'<path d="M3 7a2 2 0 0 1 2-2h3.5l2 2H19a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 11v5M9.5 13.5h5"/>'+Z;
-      case 'import': return A+'<path d="M12 3v11m0 0l-4-4m4 4l4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>'+Z;
-      case 'gear': return A+'<circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5 5l2.1 2.1M16.9 16.9L19 19M19 5l-2.1 2.1M7.1 16.9L5 19"/>'+Z;
-      case 'help': return A+'<circle cx="12" cy="12" r="9"/><path d="M9.6 9.2a2.4 2.4 0 1 1 3.4 2.2c-.9.4-1.2 1-1.2 1.9"/><circle cx="11.8" cy="16.4" r=".7" fill="#fff" stroke="none"/>'+Z;
-      case 'globe': return A+'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.8 2.7 2.8 15.3 0 18M12 3c-2.8 2.7-2.8 15.3 0 18"/>'+Z;
-      case 'calendar': return A+'<rect x="3.5" y="4.5" width="17" height="16" rx="2"/><path d="M3.5 9.5h17M8 2.5v4M16 2.5v4"/>'+Z;
-      case 'building': return A+'<rect x="4" y="3" width="10" height="18" rx="1"/><path d="M14 8h6v13"/><path d="M4 21h16"/><path d="M7 7h1.5M7 11h1.5M7 15h1.5M17 12h1M17 16h1"/>'+Z;
-      case 'perm': return A+'<path d="M3 7a2 2 0 0 1 2-2h3.5l2 2H19a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 11.5l1 1 2-2"/>'+Z;
-      case 'contacts': return A+'<circle cx="9" cy="8" r="3"/><path d="M3.5 20c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/><path d="M17 8h4M17 12h4M18.5 16h2.5"/>'+Z;
-      case 'compta': return A+'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>'+Z;
-      case 'analytique': return A+'<path d="M4 4v16h16"/><rect x="7" y="12" width="2.6" height="5"/><rect x="11.5" y="8" width="2.6" height="9"/><rect x="16" y="14" width="2.6" height="3"/>'+Z;
-      case 'invest': return A+'<path d="M3 9l9-5 9 5"/><path d="M4.5 9v8.5M9.5 9v8.5M14.5 9v8.5M19.5 9v8.5"/><path d="M3 20h18"/>'+Z;
-      default: return A+'<rect x="4" y="4" width="16" height="16" rx="2"/>'+Z;
-    }
-  }
-  function tile(icName,label,onclick,brand,extra){
-    var head = brand ? '<span class="ge-tile-ic ge-brand">YADA</span>' : '<span class="ge-tile-ic">'+ic(icName)+'</span>';
-    return '<button class="ge-tile'+(extra?(' '+extra):'')+'" onclick="'+onclick+'">'+head+'<span class="ge-tile-lbl">'+esc(label)+'</span></button>';
-  }
-
-  /* ── Vue LANCEUR ─────────────────────────────────────────────────────────── */
-  function launcherHTML(){
-    var sel = window.__accDossier ? dossierById(window.__accDossier) : null;
-    var g1 = tile('','YADA',"geListe()",true)
-      + tile('list','Liste des dossiers',"geListe()")
-      + tile('folderplus','Créer un dossier',"geCreer()")
-      + (sel ? tile('folder','Fermer '+(sel.nom||''),"geFermer()") : '');
-    var g2 = tile('import','Importer (JSON)',"geImport()")
-      + tile('gear','Paramétrage',"geParam()")
-      + tile('help','Centre d\'aide en ligne',"geAide()")
-      + tile('globe','Formalités de création (Qonto)',"geExt('https://qonto.com/fr')");
-    var g3 = tile('globe','Portail DGFIP',"geExt('https://www.impots.gouv.fr')")
-      + tile('calendar','Agenda fiscal',"geExt('https://www.impots.gouv.fr/professionnel')")
-      + tile('globe','Portail Net-Entreprises',"geExt('https://www.net-entreprises.fr')")
-      + tile('globe','Portail DSN',"geExt('https://www.net-entreprises.fr/declaration/dsn/')")
-      + tile('globe','Portail Urssaf',"geExt('https://www.urssaf.fr')");
-    var head = '<div class="acc-scroll acc-blk">'
-      +'<div class="ge-menubar"><span class="ge-mi" onclick="geFichier(event)">Fichier<div class="ge-dd" id="ge-fichier-dd"><button onclick="event.stopPropagation();geCreer();geFichierClose()">Créer un dossier</button><button onclick="event.stopPropagation();geImport();geFichierClose()">Importer (JSON)</button></div></span><span>Paramètres</span><span>Extraction</span><span>Traitements</span><span>Administration</span><span>Aide</span></div>'
-      +'<div class="ge-tabs"><button class="ge-tab on">Dossiers</button><button class="ge-tab">Entités</button><button class="ge-tab">Collaborateur</button><button class="ge-tab">Mes Services</button></div>';
-    var yr=(new Date().getFullYear());
-    var foot='<div class="ge-foot"><span class="ge-foot-brand">YADA</span>'+(sel?('<span class="ge-foot-doc">'+esc(sel.nom||'')+(sel.code?(' ('+esc(sel.code)+')'):'')+'</span>'):'')+'<span class="ge-foot-cop">© YADA '+yr+'</span></div>';
-    var body;
-    if(sel){
-      var rec=recents(); if(rec.indexOf(sel.id)<0) rec.unshift(sel.id);
-      var mesd=rec.map(function(id){ var d=dossierById(id); if(!d) return ''; var ini=((d.nom||'?').trim().charAt(0)||'?').toUpperCase(); var on=(d.id===window.__accDossier); return '<button class="ge-tile ge-dtile'+(on?' sel':'')+'" onclick="geSelect(\''+d.id+'\')"><span class="ge-tile-ic">'+ic('building')+'</span><span class="ge-tile-lbl">'+esc(d.nom||'')+'</span></button>'; }).join('');
-      var apps = tile('perm','Dossier permanent',"geApp('perm','du Dossier permanent')")
-        + tile('contacts','Contacts',"geApp('contacts','des Contacts')")
-        + tile('compta','Création de la Comptabilité',"geCompta()")
-        + tile('analytique',"Création de l'Analytique","geApp('analytique','de l\'Analytique')")
-        + tile('invest','Création de Investissements & financements',"geApp('invest','des Investissements et financements')");
-      body='<div class="ge-body ge-body2"><div class="ge-colL">'
-        +'<div class="ge-sect">Mes dossiers</div><div class="ge-grid">'+mesd+'</div>'
-        +'<div class="ge-sect">Gestion des dossiers</div><div class="ge-grid">'+g1+'</div>'
-        +'<div class="ge-sect">Applications multi-dossiers</div><div class="ge-grid">'+g2+'</div>'
-        +'<div class="ge-sect">Mes informations légales</div><div class="ge-grid">'+g3+'</div>'
-        +'</div><div class="ge-colR">'
-        +'<div class="ge-sect">Applications du dossier</div><div class="ge-grid">'+apps+'</div>'
-        +'</div></div>';
-    } else {
-      body='<div class="ge-body">'
-        +'<div class="ge-sect">Gestion des dossiers</div><div class="ge-grid">'+g1+'</div>'
-        +'<div class="ge-sect">Applications multi-dossiers</div><div class="ge-grid">'+g2+'</div>'
-        +'<div class="ge-sect">Mes informations légales</div><div class="ge-grid">'+g3+'</div>'
-        +'</div>';
-    }
-    return head+body+foot+'</div>';
-  }
-
-  /* ── Vue LISTE (fenêtre réduite via geListe) — cartes ────────────────────── */
-  function carte(d){
-    var s=socOf(d.id);
-    var nom=d.nom||s.raison||'(sans nom)';
-    var forme=d.forme||s.formeJur||''; var siren=d.siren||s.siren||''; var ville=d.ville||s.ville||'';
-    var meta=[forme, siren?('SIREN '+siren):'', ville].filter(Boolean).join(' · ');
-    var ini=((nom||'?').trim().charAt(0)||'?').toUpperCase();
-    var search=norm([nom,forme,siren,ville].join(' '));
-    return '<button class="acc-card" data-id="'+esc(d.id)+'" data-search="'+esc(search)+'">'
-      +'<span class="acc-av">'+esc(ini)+'</span>'
-      +'<span class="acc-info"><span class="acc-nom">'+esc(nom)+'</span><span class="acc-meta">'+esc(meta||'Dossier')+'</span></span>'
-      +'<span class="acc-open">Ouvrir →</span></button>';
-  }
-
-  /* ── Rendu ───────────────────────────────────────────────────────────────── */
-  window.accueilPaint=function(){ try{
-    var main=document.getElementById('main'); if(!main) return;
-    var layout=document.querySelector('.layout'); var aside=document.querySelector('aside');
-    if(aside) aside.style.display='none';
-    if(layout) layout.classList.add('solo');
-    try{ document.body.setAttribute('data-page','accueil'); }catch(e){}
-    main.className='login-bleed';
-    main.innerHTML=launcherHTML();
-  }catch(e){} };
-  window.accueilEntrer=function(id){ try{
-    try{ if(window.geListeClose) geListeClose(); }catch(e){}
-    window.__homeView=false;
-    if(typeof choisirDossier==='function'){ try{ choisirDossier(id); }catch(e){ try{ connecte=true; }catch(_e){} } }
-    try{ current='compta'; }catch(e){}
-    window.__homeView=false; render();
-  }catch(e){} };
-  window.accueilRetour=function(){ try{ window.__homeView=true; window.__accDossier=null; render(); }catch(e){} };
-
-  /* ── Fenêtre réduite « Liste des dossiers » ──────────────────────────────── */
-  window.geListe=function(){ try{
-    var ds=dossiers();
-    var ov=document.getElementById('acc-list-ov');
-    if(!ov){ ov=document.createElement('div'); ov.id='acc-list-ov'; ov.className='acc-ov'; document.body.appendChild(ov); ov.addEventListener('click',function(e){ if(e.target===ov) geListeClose(); }); }
-    var body = ds.length ? ds.map(carte).join('') : '<div class="acc-lw-empty">Aucun dossier. Créez-en un depuis « Fichier ▸ Créer un dossier ».</div>';
-    ov.innerHTML='<div class="acc-lw"><div class="acc-lw-bar"><span class="acc-lw-t">Liste des dossiers</span><button class="acc-lw-x" onclick="geListeClose()">✕</button></div>'
-      +(ds.length?('<div class="acc-lw-search"><input id="acc-msearch" type="text" autocomplete="off" placeholder="Rechercher (nom, ville, SIREN…)" oninput="geListeFiltre(this.value)"><span class="acc-lw-count" id="acc-mcount">'+ds.length+' dossier'+(ds.length>1?'s':'')+'</span></div>'):'')
-      +'<div class="acc-lw-body" id="acc-mgrid">'+body+'</div></div>';
-    ov.style.display='flex';
-    var g=document.getElementById('acc-mgrid');
-    if(g){ Array.prototype.forEach.call(g.querySelectorAll('.acc-card'),function(c){ c.onclick=function(){ geListeClose(); geSelect(c.getAttribute('data-id')); }; }); }
-    var inp=document.getElementById('acc-msearch'); if(inp) setTimeout(function(){ try{ inp.focus(); }catch(e){} },30);
-  }catch(e){} };
-  window.geListeClose=function(){ var ov=document.getElementById('acc-list-ov'); if(ov) ov.style.display='none'; };
-  window.geListeFiltre=function(v){ try{
-    var q=norm(v).trim(); var g=document.getElementById('acc-mgrid'); if(!g) return; var n=0;
-    Array.prototype.forEach.call(g.querySelectorAll('.acc-card'),function(c){ var s=c.getAttribute('data-search')||''; var show=!q||s.indexOf(q)>=0; c.style.display=show?'':'none'; if(show)n++; });
-    var cc=document.getElementById('acc-mcount'); if(cc) cc.textContent=n+' dossier'+(n>1?'s':'');
-  }catch(e){} };
-
-  /* ── Sélection / fermeture d'un dossier sur l'accueil ────────────────────── */
-  window.geSelect=function(id){ window.__accDossier=id; addRecent(id); window.__homeView=true; render(); };
-  window.geFermer=function(){ window.__accDossier=null; render(); };
-
-  /* ── Dialogues (création, confirmation, questionnaire) ───────────────────── */
-  window.geDlg=function(html){ var ov=document.getElementById('acc-dlg-ov'); if(!ov){ ov=document.createElement('div'); ov.id='acc-dlg-ov'; ov.className='acc-ov'; document.body.appendChild(ov); ov.addEventListener('click',function(e){ if(e.target===ov) geDlgClose(); }); } ov.innerHTML='<div class="acc-dlg">'+html+'</div>'; ov.style.display='flex'; };
-  window.geDlgClose=function(){ var ov=document.getElementById('acc-dlg-ov'); if(ov) ov.style.display='none'; };
-  window.geConfirm=function(msg,onYes){ window.__geYes=onYes; geDlg('<div class="acc-dlg-bar">Création</div><div class="acc-dlg-body"><div class="acc-dlg-q">'+esc(msg)+'</div></div><div class="acc-dlg-foot"><button class="acc-ok" onclick="geDlgClose();(window.__geYes||function(){})()">Oui</button><button class="acc-cancel" onclick="geDlgClose()">Non</button></div>'); };
-
-  window.geCreer=function(){ geDlg('<div class="acc-dlg-bar">Création d\'un nouveau Dossier</div><div class="acc-dlg-body">'
-    +'<div class="acc-frow"><label>Nom du dossier à créer</label><input id="cd-nom" type="text" autocomplete="off"></div>'
-    +'<div class="acc-frow"><label>Code du dossier à créer</label><input id="cd-code" type="text" autocomplete="off"></div>'
-    +'<div class="acc-frow acc-frow-chk"><label><input id="cd-mdp" type="checkbox"> Protéger par un mot de passe</label></div>'
-    +'</div><div class="acc-dlg-foot"><button class="acc-ok" onclick="geCreerValider()">OK</button><button class="acc-cancel" onclick="geDlgClose()">Annuler</button></div>');
-    setTimeout(function(){ var i=document.getElementById('cd-nom'); if(i) try{ i.focus(); }catch(e){} },30); };
-  window.geCreerValider=function(){ try{
-    var nom=((document.getElementById('cd-nom')||{}).value||'').trim();
-    var code=((document.getElementById('cd-code')||{}).value||'').trim();
-    if(!nom){ if(typeof toast==='function') toast('Indiquez un nom de dossier'); return; }
-    if(!code) code=nom.replace(/\s+/g,'').slice(0,6).toUpperCase();
-    var id=newId();
-    db.cabinet=db.cabinet||{}; if(!Array.isArray(db.cabinet.dossiers)) db.cabinet.dossiers=[];
-    db.cabinet.dossiers.push({id:id,nom:nom,code:code,forme:'',siren:'',ville:'',spaces:{}});
-    addRecent(id); window.__accDossier=id; window.__homeView=true;
-    if(typeof save==='function') save();
-    geDlgClose(); render();
-  }catch(e){} };
-
-  /* ── Applications du dossier ─────────────────────────────────────────────── */
-  window.geApp=function(key,frag){ var id=window.__accDossier; if(!id) return; var d=dossierById(id); var nom=d?(d.nom||''):'';
-    geConfirm('Confirmez-vous la création '+frag+' du dossier '+nom+' ?', function(){
-      try{ if(d){ d.spaces=d.spaces||{}; d.spaces[key]=true; } if(typeof save==='function') save(); }catch(e){}
-      if(typeof toast==='function') toast('Espace créé pour le dossier '+nom);
-      render();
-    });
-  };
-  window.geCompta=function(){ var id=window.__accDossier; if(!id){ geListe(); return; } var d=dossierById(id); var nom=d?(d.nom||''):'';
-    if(hasCompta(id)){ window.accueilEntrer(id); return; }
-    geConfirm('Confirmez-vous la création de la Comptabilité du dossier '+nom+' ?', function(){ geComptaForm(); });
-  };
-  window.geComptaForm=function(){ var o=function(v){return '<option>'+esc(v)+'</option>';};
-    geDlg('<div class="acc-dlg-bar">Comptabilité</div><div class="acc-dlg-body">'
-      +'<div class="acc-frow"><label>Modèle</label><select id="cq-mod"><option>nouveau</option>'+o('COALA - Ciel Up To Experts')+'</select></div>'
-      +'<div class="acc-frow"><label>Plan comptable</label><select id="cq-plan"><option>nouveau</option>'+o('COALA - Plan Comptable Général')+'</select></div>'
-      +'<div class="acc-frow"><label>Plan de journaux</label><select id="cq-jrn"><option>nouveau</option>'+o('COALA - HA, BQ, VT, OD')+'</select></div>'
-      +'<div class="acc-frow"><label>Début d\'exercice</label><input id="cq-deb" type="date" value="2026-01-01"></div>'
-      +'<div class="acc-frow"><label>Fin d\'exercice</label><input id="cq-fin" type="date" value="2026-12-31"></div>'
-      +'<div class="acc-frow acc-frow-chk"><label><input id="cq-ext" type="checkbox"> Paramètres complémentaires Ciel Up To Experts</label></div>'
-      +'</div><div class="acc-dlg-foot"><button class="acc-ok" onclick="geComptaValider()">OK</button><button class="acc-cancel" onclick="geDlgClose()">Annuler</button></div>'); };
-  window.geComptaValider=function(){ try{
-    var id=window.__accDossier; if(!id){ geDlgClose(); return; }
-    var deb=((document.getElementById('cq-deb')||{}).value)||'2026-01-01';
-    var fin=((document.getElementById('cq-fin')||{}).value)||'2026-12-31';
-    window.__homeView=false;
-    if(typeof choisirDossier==='function'){ try{ choisirDossier(id); }catch(e){ try{ connecte=true; }catch(_e){} } }
-    try{ db.societe.exoDebut=deb; db.societe.exoFin=fin; }catch(e){}
-    try{ if(typeof chargerPlanBTP==='function') chargerPlanBTP(); }catch(e){}
-    try{ var d=dossierById(id); if(d){ d.spaces=d.spaces||{}; d.spaces.compta=true; } }catch(e){}
-    try{ if(typeof sgPer!=='undefined') sgPer=null; }catch(e){}
-    try{ if(typeof save==='function') save(); }catch(e){}
-    window.__homeView=false; try{ current='compta'; }catch(e){}
-    geDlgClose(); render();
-  }catch(e){} };
-
-  /* ── Actions diverses ────────────────────────────────────────────────────── */
-  window.geExt=function(u){ try{ window.open(u,'_blank','noopener,noreferrer'); }catch(e){} };
-  window.geImport=function(){ try{ var i=document.getElementById('imp'); if(i) i.click(); }catch(e){} };
-  window.geAide=function(){ try{ if(typeof toast==='function') toast('Centre d’aide — bientôt disponible'); }catch(e){} };
-  window.geParam=function(){ try{ window.__homeView=false; try{ connecte=true; }catch(e){} try{ current='parametrage'; }catch(e){} render(); }catch(e){} };
-  window.geFichier=function(ev){ try{ if(ev) ev.stopPropagation(); }catch(e){} var dd=document.getElementById('ge-fichier-dd'); if(dd) dd.classList.toggle('open'); };
-  window.geFichierClose=function(){ var dd=document.getElementById('ge-fichier-dd'); if(dd) dd.classList.remove('open'); };
-  if(!window.__geMenuWired){ try{ document.addEventListener('click',function(){ var dd=document.getElementById('ge-fichier-dd'); if(dd) dd.classList.remove('open'); }); }catch(e){} window.__geMenuWired=true; }
-  if(!window.__geEscWired){ try{ document.addEventListener('keydown',function(e){ if(e.key==='Escape'){ geListeClose(); geDlgClose(); } }); }catch(e){} window.__geEscWired=true; }
-
-  /* ── Style : NOIR TOTAL ──────────────────────────────────────────────────── */
-  try{ var st=document.createElement('style'); st.id='acc-mod'; st.textContent=
-     '.acc-blk{height:100dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:#000;color:#e8e8e8;display:flex;flex-direction:column;min-height:100dvh}'
-    +'html body .acc-blk,html body .acc-blk *,html body .acc-lw,html body .acc-lw *,html body .acc-dlg,html body .acc-dlg *{font-family:"Segoe UI",-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif !important}'
-    +'.ge-menubar{display:flex;gap:22px;padding:8px 14px;background:#000;border-bottom:1px solid #141414;font-size:13px;flex:0 0 auto}'
-    +'.ge-menubar span{color:#b8b8b8;cursor:default}.ge-menubar span:hover{color:#fff}'
-    +'.ge-menubar .ge-mi{cursor:pointer;position:relative}'
-    +'.ge-dd{display:none;position:absolute;left:-8px;top:24px;background:#0a0a0a;border:1px solid #2a2a2a;border-radius:8px;box-shadow:0 14px 34px rgba(0,0,0,.6);min-width:210px;padding:5px 0;z-index:80}'
-    +'.ge-dd.open{display:block}'
-    +'.ge-dd button{display:block;width:100%;text-align:left;background:none;border:none;color:#e8e8e8;font:inherit;font-size:13px;padding:9px 14px;cursor:pointer}.ge-dd button:hover{background:#1a1a1a}'
-    +'.ge-tabs{display:flex;align-items:center;gap:26px;padding:4px 16px 0;border-bottom:1px solid #1b1b1b;flex:0 0 auto;position:relative}'
-    +'.ge-tab{background:none;border:none;font:inherit;font-size:14px;color:#8a8a8a;padding:8px 2px 12px;cursor:pointer;border-bottom:2px solid transparent}'
-    +'.ge-tab.on{color:#fff;font-weight:600;border-bottom-color:#fff}'
-    +'.ge-body{flex:1;padding:20px 22px 28px}'
-    +'.ge-body2{flex:1;padding:20px 22px 28px;display:grid;grid-template-columns:minmax(340px,1fr) minmax(300px,1.15fr);gap:30px;align-items:start}'
-    +'.ge-sect{font-size:15px;font-weight:700;color:#fff;margin:6px 0 12px}'
-    +'.ge-grid{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px}'
-    +'.ge-tile{width:100px;height:84px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:9px;border-radius:8px;border:1px solid #1c1c1c;background:#0a0a0a;color:#d0d0d0;cursor:pointer;font:inherit;transition:transform .13s ease,border-color .16s ease,background .16s ease}'
-    +'.ge-tile:hover{transform:translateY(-2px);border-color:#3a3a3a;background:#111}'
-    +'.ge-tile.sel{background:linear-gradient(180deg,#123a24,#0e2b1b);border-color:#2f7d4f}'
-    +'.ge-tile.sel .ge-tile-lbl{color:#eafff2}'
-    +'.ge-tile-ic{height:26px;display:flex;align-items:center;justify-content:center}.ge-tile-ic svg{width:24px;height:24px}'
-    +'.ge-brand{font-weight:700;font-size:15px;letter-spacing:.3px;color:#fff}'
-    +'.ge-tile-lbl{font-size:10.5px;text-align:center;line-height:1.2;color:#d5d5d5}'
-    +'.ge-foot{flex:0 0 auto;display:flex;align-items:center;gap:16px;padding:12px 16px;border-top:1px solid #1b1b1b;background:#000}'
-    +'.ge-foot-brand{font-weight:800;color:#fff;letter-spacing:.5px}.ge-foot-doc{color:#9fdcae;font-size:12.5px}.ge-foot-cop{margin-left:auto;color:#6a6a6a;font-size:12px}'
-    /* dialogues */
-    +'.acc-dlg{width:min(460px,94vw);background:#0b0b0b;border:1px solid #2a2a2a;border-radius:12px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.7)}'
-    +'.acc-dlg-bar{padding:12px 16px;background:#111;border-bottom:1px solid #1c1c1c;font-weight:700;font-size:14px;color:#fff}'
-    +'.acc-dlg-body{padding:16px}'
-    +'.acc-dlg-q{color:#e8e8e8;font-size:14px;padding:4px 2px 8px;line-height:1.4}'
-    +'.acc-frow{display:flex;align-items:center;gap:12px;margin-bottom:12px}'
-    +'.acc-frow>label{width:170px;flex:0 0 auto;color:#cfcfcf;font-size:13px}'
-    +'.acc-frow input[type=text],.acc-frow input[type=date],.acc-frow select{flex:1;min-width:0;padding:8px 10px;border-radius:8px;border:1px solid #1c1c1c;background:#0d0d0d;color:#eee;font-size:13px;outline:none}'
-    +'.acc-frow input:focus,.acc-frow select:focus{border-color:#3a3a3a;box-shadow:none;outline:none}'
-    +'.acc-frow input[type=date]::-webkit-calendar-picker-indicator{filter:invert(.8)}'
-    +'.acc-frow-chk>label{width:auto;display:flex;align-items:center;gap:8px;cursor:pointer;color:#cfcfcf;font-size:13px}.acc-frow-chk input{width:auto}'
-    +'.acc-dlg-foot{display:flex;justify-content:flex-end;gap:10px;padding:12px 16px;border-top:1px solid #1c1c1c}'
-    +'.acc-ok{padding:8px 22px;border-radius:8px;border:1px solid #1f7a44;background:#1f7a44;color:#fff;font-weight:700;font-size:13px;cursor:pointer}.acc-ok:hover{filter:brightness(1.12)}'
-    +'.acc-cancel{padding:8px 18px;border-radius:8px;border:1px solid #2a2a2a;background:#0d0d0d;color:#e8e8e8;font-size:13px;cursor:pointer}.acc-cancel:hover{background:#1a1a1a}'
-    /* fenêtre liste */
-    +'.acc-ov{position:fixed;inset:0;background:rgba(0,0,0,.62);display:flex;align-items:center;justify-content:center;z-index:120}'
-    +'.acc-lw{width:min(560px,92vw);max-height:74vh;display:flex;flex-direction:column;background:#0a0a0a;border:1px solid #2a2a2a;border-radius:14px;box-shadow:0 30px 80px rgba(0,0,0,.7);overflow:hidden}'
-    +'.acc-lw-bar{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid #1c1c1c}'
-    +'.acc-lw-t{font-weight:700;font-size:15px;color:#fff}'
-    +'.acc-lw-x{background:none;border:none;color:#9a9a9a;font-size:16px;cursor:pointer;border-radius:8px;padding:4px 9px;line-height:1}.acc-lw-x:hover{background:#1a1a1a;color:#fff}'
-    +'.acc-lw-search{display:flex;gap:10px;align-items:center;padding:11px 16px;border-bottom:1px solid #141414}'
-    +'.acc-lw-search input{flex:1;min-width:0;padding:10px 12px;border-radius:10px;border:1px solid #1c1c1c;background:#0d0d0d;color:#eee;font-size:13.5px;outline:none}.acc-lw-search input:focus{border-color:#3a3a3a;box-shadow:none;outline:none}'
-    +'.acc-lw-count{font-size:12px;color:#8a8a8a;white-space:nowrap}'
-    +'.acc-lw-body{padding:12px 14px;overflow-y:auto;display:flex;flex-direction:column;gap:9px}'
-    +'.acc-lw-empty{color:#8a8a8a;font-size:13px;padding:10px 2px}'
-    +'.acc-card{display:flex;align-items:center;gap:13px;text-align:left;padding:12px 14px;border-radius:12px;border:1px solid #1c1c1c;background:#0a0a0a;color:#e8e8e8;cursor:pointer;font:inherit;transition:transform .13s ease,border-color .16s ease,background .16s ease}'
-    +'.acc-card:hover{transform:translateY(-2px);border-color:#3a3a3a;background:#111}'
-    +'.acc-av{flex:0 0 auto;width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;color:#fff;background:#1c1c1c;border:1px solid #2a2a2a}'
-    +'.acc-info{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1}'
-    +'.acc-nom{font-weight:700;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#f0f0f0}'
-    +'.acc-meta{font-size:12px;color:#8a8a8a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'
-    +'.acc-open{flex:0 0 auto;font-size:13px;color:#c8c8c8;font-weight:600;opacity:.55;transition:opacity .15s,transform .15s}.acc-card:hover .acc-open{opacity:1;transform:translateX(3px)}'
-    +'@media(max-width:820px){.ge-body2{grid-template-columns:1fr}.ge-tile{width:calc(33% - 8px)}}';
-    document.head.appendChild(st); }catch(e){}
-
-  try{ if(window.__homeView===true) render(); }catch(e){}
-  setTimeout(function(){ try{ if(window.__homeView===true) render(); }catch(e){} },120);
-})();
 </script>
 </body>
 </html>
