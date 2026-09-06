@@ -36,7 +36,25 @@
 
 ---
 
-## 🟢 Dernière mise à jour — Accueil : le LOGICIEL occupe tout l'écran (cadre plein viewport) + cartes compactes — v546
+## 🟢 Dernière mise à jour — Cache vidé : fin de « l'ancienne version affichée à l'ouverture » → atterrissage direct sur la nouvelle version (Accueil) — v549
+**Quoi :** à chaque ouverture, l'utilisateur voyait **d'abord la page de l'ANCIENNE version** (un ancien HTML mis en cache, servi en premier avant la mise à jour). Correctif : (1) **cache du service worker vidé** (bump `yada-v143 → yada-v144` → l'`activate` purge tous les caches ≠ courant) ; (2) **purge runtime une fois par version** (`yada-cache-fresh`, drapeau `localStorage 'yada-fresh-549'`) : au démarrage, supprime les anciens caches (Cache Storage) et force `serviceWorker.update()` → on **atterrit directement sur la nouvelle version** (Accueil « Choix du dossier »), sans flash de l'ancien mode. L'anti-flash existant (`#sec-lock` masqué + écran noir tant que l'Accueil n'est pas prêt) est conservé.
+
+**Comment — `yada-cache-fresh` (100% additif, precompta + build V1) :** nouveau script après `yada-addon-reset` : purge `caches.keys()` (garde `yada-v144`) + `navigator.serviceWorker.getRegistrations().update()`, gardé par un drapeau `localStorage` (exécuté une seule fois par version, non destructif, sans boucle de rechargement). `sw.js` `CACHE yada-v144`, badge v549, `version.json` 549.
+
+**Validé :** `node --check` (precompta 243 / V1 242 scripts, 0 erreur) + `sw.js` OK + équilibre (vente 1200=1200, achat 600=600 ✅) + Playwright (démarrage : `__homeView=true`, `.acc-blk` présent = Accueil rendu, drapeau `yada-fresh-549` posé, `yada-cache-fresh` présent, badge v549 ; 0 pageerror). Badge → **v549**.
+
+---
+
+## 🟢 MAJ précédente — Consultation : barre latérale + boutons de fenêtre retirés, barre d'onglets assombrie (page épurée noir total) — v548
+**Quoi :** épuration de la page **Consultation** (seul module conservé) pour un rendu **noir total** sans éléments superflus : (1) **barre latérale masquée** (aside : logo YADA · Accueil · Consultation · Outils) → la Consultation occupe toute la largeur ; (2) **boutons de fenêtre en haut à droite retirés** (⧉ « propager sur un autre écran » + ▢ « réduire ») ; (3) **deux petits boutons ◄ ► retirés** de la barre d'onglets (`.sg-tabnav`) ; (4) **barre d'onglets** (zone gris clair `#e7e7e7` à droite des onglets) **assombrie** au thème noir (`#141414`, filet bleu) ; (5) **bouton et page « Éditions » retirés** de la Consultation (le bouton 🖨 Éditions du bandeau + le routage `current='editions'` renvoyé vers `compta`).
+
+**Comment — `yada-addon-reset` (style `yada-no-login`, 100% additif, precompta + build V1) :** ajout au `_kl.textContent` de `.sg-app .sg-win{display:none!important}` (boutons de fenêtre), `.sg-app .sg-tabnav{display:none!important}` (◄ ►), `.sg-app .sg-tabs{background:#141414!important;border-bottom-color:rgba(30,144,255,.35)!important}` (barre d'onglets assombrie) ; la barre latérale est déjà masquée par `html body aside{display:none!important}` et le routage `current='editions'→'compta'` + `.sg-edlink{display:none}` (v547). **Aucune ligne de la Consultation modifiée** (règle « ne pas toucher Consultation »). `sw.js` yada-v143, badge v548, `version.json` 548.
+
+**Validé :** `node --check` (242 scripts, 0 erreur) + équilibre (vente 1200=1200, achat 600=600 ✅) + Playwright (Consultation : `.sg-win` `display:none`, `.sg-tabnav` `display:none`, `.sg-tabs` fond `rgb(20,20,20)`, `aside` `display:none`, Éditions masquée ; 0 pageerror). Badge → **v548**.
+
+---
+
+## 🟢 MAJ précédente — Accueil : le LOGICIEL occupe tout l'écran (cadre plein viewport) + cartes compactes — v546
 **Quoi :** correctif « le logiciel doit prendre tout l'espace » (≠ agrandir les cartes). L'accueil était **décalé (x:32, y:28, largeur réduite)** à cause de la règle `main:not(.fullbleed){padding:28px 32px 64px}` (l'accueil utilisait `main.login-bleed`). L'accueil est désormais rendu en **`main.fullbleed`** (padding 0) → le cadre `.acc-blk` couvre **tout le viewport (0,0 → 100vw×100dvh)**, barre de menus collée en haut, pied de page tout en bas, aucun bord. Les **cartes reviennent à leur taille compacte** (annulation de l'étirement v545). Anti-flash de l'ancien mode conservé.
 
 **Comment :** `yada-addon-accueil` — `accueilPaint` pose `main.className='fullbleed'` (au lieu de `login-bleed`) ; revert du max-fill v545 (tuiles `100×84`, grilles flex-wrap, `.ge-body` d'origine). `sw.js` yada-v141, badge v546, `version.json` 546.
