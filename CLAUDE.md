@@ -36,7 +36,16 @@
 
 ---
 
-## 🟢 Dernière mise à jour — PAGE D'ACCUEIL refaite façon « Génération Experts » (lanceur à tuiles) — NOIR TOTAL — v538
+## 🟢 Dernière mise à jour — Accueil : barre de titre & barre d'outils retirées + tuiles réduites — v539
+**Quoi :** épuration de la page d'accueil (v538). La **barre de titre** (YADA — Accueil + points/boutons fenêtre) et la **barre d'outils** (★ ☰) sont **supprimées** ; l'accueil commence directement par la **barre de menus** (Fichier · Paramètres · …) puis les **onglets** (Dossiers…). Les **tuiles sont réduites** (152×132 → **112×96 px**, icônes 34→26 px, marque 22→16 px, libellés 12→11 px, grille resserrée gap 11). Le reste (3 groupes, portails, vue liste, pied de page) est inchangé.
+
+**Comment :** `yada-addon-accueil` (precompta + V1) — retrait des blocs HTML `.ge-titlebar` et `.ge-toolbar` dans `launcherHTML()` ; ajustement CSS `.ge-tile`/`.ge-tile-ic`(+`svg`)/`.ge-brand`/`.ge-tile-lbl`/`.ge-grid`. `sw.js` yada-v134, badge v539, `version.json` 539.
+
+**Validé :** `node --check` (242/241, 0 erreur) + `sw.js` OK + équilibre (1200=1200, 600=600 ✅) + Playwright (`.ge-titlebar` absente, `.ge-toolbar` absente, onglets présents, 13 tuiles **112×96**, 0 pageerror) + capture. Badge → **v539**.
+
+---
+
+## 🟢 MAJ précédente — PAGE D'ACCUEIL refaite façon « Génération Experts » (lanceur à tuiles) — NOIR TOTAL — v538
 **Quoi :** la page d'accueil est **reconstruite d'après la maquette Sage « Génération Experts »** fournie, **en NOIR TOTAL** : **barre de titre** (YADA — Accueil), **barre de menus** (Fichier · Paramètres · Extraction · Traitements · Administration · Aide), **barre d'outils** (★ ☰), **onglets** (Dossiers actif · Entités · Collaborateur · Mes Services + icônes à droite), puis **3 groupes de tuiles** et un **pied de page** (YADA · © YADA). Fond `#000`, tuiles `#0a0a0a` à filet `#1e1e1e`, **icônes filaires blanches**, libellés clairs, hover (léger relèvement + filet plus clair).
 - **Gestion des dossiers** : YADA (marque) · Liste des dossiers · Ouvrir un dossier · Créer un dossier → ouvrent la **vue liste** (choix du dossier) / la création.
 - **Applications multi-dossiers** : Importer (JSON) · Paramétrage · Centre d'aide en ligne · Formalités de création (Qonto).

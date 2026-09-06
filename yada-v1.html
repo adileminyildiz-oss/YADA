@@ -11094,7 +11094,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v538';
+    b.textContent='YADA · v539';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -27754,11 +27754,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       + tile('globe','Portail DSN',"geExt('https://www.net-entreprises.fr/declaration/dsn/')")
       + tile('globe','Portail Urssaf',"geExt('https://www.urssaf.fr')");
     return '<div class="acc-scroll acc-blk">'
-      +'<div class="ge-titlebar"><span class="ge-tdots"><i></i><i></i><i></i></span>'
-        +'<span class="ge-title">YADA — Accueil</span>'
-        +'<span class="ge-twin"><i>—</i><i>▢</i><i>✕</i></span></div>'
       +'<div class="ge-menubar"><span>Fichier</span><span>Paramètres</span><span>Extraction</span><span>Traitements</span><span>Administration</span><span>Aide</span></div>'
-      +'<div class="ge-toolbar"><span class="ge-tbic">★</span><span class="ge-tbic">☰</span></div>'
       +'<div class="ge-tabs"><button class="ge-tab on">Dossiers</button><button class="ge-tab">Entités</button><button class="ge-tab">Collaborateur</button><button class="ge-tab">Mes Services</button>'
         +'<span class="ge-tabs-right"><span class="ge-tbic">▤</span><span class="ge-tbic">⚙</span></span></div>'
       +'<div class="ge-body">'
@@ -27846,12 +27842,12 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     +'.ge-tabs-right{margin-left:auto;display:flex;gap:16px}'
     +'.ge-body{flex:1;padding:22px 22px 30px}'
     +'.ge-sect{font-size:15px;font-weight:700;color:#fff;margin:6px 0 12px}'
-    +'.ge-grid{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:26px}'
-    +'.ge-tile{width:152px;height:132px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:13px;padding:14px;border-radius:9px;border:1px solid #1e1e1e;background:#0a0a0a;color:#d0d0d0;cursor:pointer;font:inherit;transition:transform .13s ease,border-color .16s ease,background .16s ease}'
+    +'.ge-grid{display:flex;flex-wrap:wrap;gap:11px;margin-bottom:22px}'
+    +'.ge-tile{width:112px;height:96px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;padding:10px;border-radius:8px;border:1px solid #1e1e1e;background:#0a0a0a;color:#d0d0d0;cursor:pointer;font:inherit;transition:transform .13s ease,border-color .16s ease,background .16s ease}'
     +'.ge-tile:hover{transform:translateY(-2px);border-color:#3a3a3a;background:#111}'
-    +'.ge-tile-ic{height:40px;display:flex;align-items:center;justify-content:center}'
-    +'.ge-brand{font-weight:800;font-size:22px;letter-spacing:1px;color:#fff}'
-    +'.ge-tile-lbl{font-size:12px;text-align:center;line-height:1.28;color:#d5d5d5}'
+    +'.ge-tile-ic{height:28px;display:flex;align-items:center;justify-content:center}'+'.ge-tile-ic svg{width:26px;height:26px}'
+    +'.ge-brand{font-weight:800;font-size:16px;letter-spacing:.5px;color:#fff}'
+    +'.ge-tile-lbl{font-size:11px;text-align:center;line-height:1.25;color:#d5d5d5}'
     +'.ge-foot{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-top:1px solid #1b1b1b;background:#000}'
     +'.ge-foot-brand{font-weight:800;color:#fff;letter-spacing:.5px}.ge-foot-cop{color:#6a6a6a;font-size:12px}'
     /* vue liste (noir) */
