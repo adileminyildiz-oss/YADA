@@ -11094,7 +11094,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v534';
+    b.textContent='YADA · v535';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -27679,6 +27679,73 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
   if(typeof _r==='function'){ window.render=function(){ var x=_r.apply(this,arguments); try{ transform(); }catch(e){} return x; }; }
   setTimeout(function(){ try{ transform(); }catch(e){} },60);
 }catch(e){} })();
+</script>
+
+<script id="yada-addon-reset">
+/* ═══════════════════════════════════════════════════════════════════════════
+   RÉINITIALISATION (reprogrammation, v535)
+   À la demande : suppression de la PAGE DE CONNEXION, de la PAGE D'ACCUEIL et de
+   TOUS les modules — SEULE « Consultation » (module compta) reste, sans y toucher.
+   Mécanique (aucune ligne de Consultation modifiée) :
+     • le verrou de connexion est neutralisé et l'overlay #sec-lock retiré ;
+     • le logiciel s'ouvre DIRECTEMENT sur la Consultation (dossier actif chargé) ;
+     • le routage force en permanence current='compta' → aucune autre page n'existe ;
+     • la barre latérale est réduite à la seule entrée « Consultation ».
+   Le code résiduel des autres pages est désormais inerte (inaccessible) ; il sera
+   physiquement retiré module par module au fil de la reprogrammation.
+   ═══════════════════════════════════════════════════════════════════════════ */
+(function(){
+  try{
+    /* 1) Neutraliser connexion / verrou / 2FA */
+    window.__secLocked=false; window.__tfaPassed=true;
+    try{ if(typeof window.secVerrouiller==='function') window.secVerrouiller=function(){}; }catch(e){}
+    try{ if(typeof window.secDeconnexion==='function') window.secDeconnexion=function(){}; }catch(e){}
+    var lock=document.getElementById('sec-lock'); if(lock&&lock.parentNode) lock.parentNode.removeChild(lock);
+  }catch(e){}
+
+  /* 2) Barre latérale : uniquement « Consultation » */
+  try{ if(typeof buildNav==='function'){
+    buildNav=function(){ try{
+      var nav=document.getElementById('nav'); if(!nav) return;
+      nav.innerHTML='';
+      var s=document.createElement('div'); s.className='nav-sec'; s.textContent='Comptabilité'; nav.appendChild(s);
+      var b=document.createElement('button'); b.className='nav-btn active';
+      b.innerHTML='<span class="ico">≣</span>Consultation';
+      b.onclick=function(){ try{ current='compta'; }catch(e){} render(); };
+      nav.appendChild(b);
+    }catch(e){} };
+  } }catch(e){}
+
+  /* 3) Routage : seule la Consultation est rendue */
+  try{ if(typeof render==='function'){
+    var _r=render;
+    render=function(){
+      try{ connecte=true; }catch(e){}
+      try{ if(current!=='compta') current='compta'; }catch(e){}
+      var x=_r.apply(this,arguments);
+      try{ document.body.removeAttribute('data-noside'); var chip=document.getElementById('ds-back-chip'); if(chip) chip.style.display='none'; }catch(e){}
+      return x;
+    };
+  } }catch(e){}
+
+  /* 4) Ouverture directe sur la Consultation (dossier actif chargé si présent) */
+  function ouvrir(){ try{
+    window.sessionRole='cabinet'; window.selClientMode=false; window.isAdmin=false;
+    try{ sessionStorage.setItem('yada-role','cabinet'); }catch(e){}
+    if(!connecte){
+      var id=(db&&db.activeId)||null;
+      if(!id && db&&db.cabinet&&db.cabinet.dossiers&&db.cabinet.dossiers.length) id=db.cabinet.dossiers[0].id;
+      if(id && typeof choisirDossier==='function'){ try{ choisirDossier(id); }catch(e){ try{ connecte=true; }catch(_e){} } }
+      else { try{ connecte=true; }catch(e){} }
+    }
+    try{ current='compta'; }catch(e){}
+    if(typeof render==='function') render();
+  }catch(e){} }
+
+  ouvrir();
+  setTimeout(ouvrir,60);
+  setTimeout(ouvrir,400);
+})();
 </script>
 </body>
 </html>
