@@ -11094,7 +11094,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v537';
+    b.textContent='YADA · v538';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -27777,51 +27777,99 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
 </script>
 
 <script id="yada-addon-accueil">
-/* v537 — PAGE D'ACCUEIL « Espace dossiers » (choix du dossier), affichée au démarrage.
-   Reconstruite à zéro. Sélection d'une société → ouverture du logiciel (Consultation).
+/* v538 — PAGE D'ACCUEIL façon « Génération Experts » (lanceur), NOIR TOTAL.
+   Barre de titre + barre de menus + onglets + tuiles groupées + pied de page.
+   Vue « launcher » (par défaut) et vue « list » (choix du dossier).
    Pilotée par window.__homeView (voir yada-addon-reset). 100% additif. */
 (function(){
   if(typeof render!=='function') return;
   function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
   function norm(s){ return String(s==null?'':s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,''); }
   function dossiers(){ try{ return (db&&db.cabinet&&db.cabinet.dossiers)?db.cabinet.dossiers.slice():[]; }catch(e){ return []; } }
-  function soc(id){ try{ return (db.dossiersData&&db.dossiersData[id]&&db.dossiersData[id].societe)||{}; }catch(e){ return {}; } }
+  function socOf(id){ try{ return (db.dossiersData&&db.dossiersData[id]&&db.dossiersData[id].societe)||{}; }catch(e){ return {}; } }
 
+  /* ── Icônes filaires (blanches) ─────────────────────────────────────────── */
+  function ic(name){
+    var A='<svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">';
+    var Z='</svg>';
+    switch(name){
+      case 'list': return A+'<path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r=".8"/><circle cx="4" cy="12" r=".8"/><circle cx="4" cy="18" r=".8"/>'+Z;
+      case 'folder': return A+'<path d="M3 7a2 2 0 0 1 2-2h3.5l2 2H19a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>'+Z;
+      case 'folderplus': return A+'<path d="M3 7a2 2 0 0 1 2-2h3.5l2 2H19a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 11v5M9.5 13.5h5"/>'+Z;
+      case 'import': return A+'<path d="M12 3v11m0 0l-4-4m4 4l4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>'+Z;
+      case 'gear': return A+'<circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5 5l2.1 2.1M16.9 16.9L19 19M19 5l-2.1 2.1M7.1 16.9L5 19"/>'+Z;
+      case 'help': return A+'<circle cx="12" cy="12" r="9"/><path d="M9.6 9.2a2.4 2.4 0 1 1 3.4 2.2c-.9.4-1.2 1-1.2 1.9"/><circle cx="11.8" cy="16.4" r=".7" fill="#fff" stroke="none"/>'+Z;
+      case 'globe': return A+'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.8 2.7 2.8 15.3 0 18M12 3c-2.8 2.7-2.8 15.3 0 18"/>'+Z;
+      case 'calendar': return A+'<rect x="3.5" y="4.5" width="17" height="16" rx="2"/><path d="M3.5 9.5h17M8 2.5v4M16 2.5v4"/>'+Z;
+      default: return A+'<rect x="4" y="4" width="16" height="16" rx="2"/>'+Z;
+    }
+  }
+  function tile(icName,label,onclick,brand){
+    var head = brand ? '<span class="ge-tile-ic ge-brand">YADA</span>' : '<span class="ge-tile-ic">'+ic(icName)+'</span>';
+    return '<button class="ge-tile" onclick="'+onclick+'">'+head+'<span class="ge-tile-lbl">'+esc(label)+'</span></button>';
+  }
+
+  /* ── Vue LANCEUR (maquette Génération Experts, noir total) ───────────────── */
+  function launcherHTML(){
+    var g1 = tile('','YADA',"geOpen('list')",true)
+      + tile('list','Liste des dossiers',"geOpen('list')")
+      + tile('folder','Ouvrir un dossier',"geOpen('list')")
+      + tile('folderplus','Créer un dossier',"geCreer()");
+    var g2 = tile('import','Importer (JSON)',"geImport()")
+      + tile('gear','Paramétrage',"geParam()")
+      + tile('help','Centre d\'aide en ligne',"geAide()")
+      + tile('globe','Formalités de création (Qonto)',"geExt('https://qonto.com/fr')");
+    var g3 = tile('globe','Portail DGFIP',"geExt('https://www.impots.gouv.fr')")
+      + tile('calendar','Agenda fiscal',"geExt('https://www.impots.gouv.fr/professionnel')")
+      + tile('globe','Portail Net-Entreprises',"geExt('https://www.net-entreprises.fr')")
+      + tile('globe','Portail DSN',"geExt('https://www.net-entreprises.fr/declaration/dsn/')")
+      + tile('globe','Portail Urssaf',"geExt('https://www.urssaf.fr')");
+    return '<div class="acc-scroll acc-blk">'
+      +'<div class="ge-titlebar"><span class="ge-tdots"><i></i><i></i><i></i></span>'
+        +'<span class="ge-title">YADA — Accueil</span>'
+        +'<span class="ge-twin"><i>—</i><i>▢</i><i>✕</i></span></div>'
+      +'<div class="ge-menubar"><span>Fichier</span><span>Paramètres</span><span>Extraction</span><span>Traitements</span><span>Administration</span><span>Aide</span></div>'
+      +'<div class="ge-toolbar"><span class="ge-tbic">★</span><span class="ge-tbic">☰</span></div>'
+      +'<div class="ge-tabs"><button class="ge-tab on">Dossiers</button><button class="ge-tab">Entités</button><button class="ge-tab">Collaborateur</button><button class="ge-tab">Mes Services</button>'
+        +'<span class="ge-tabs-right"><span class="ge-tbic">▤</span><span class="ge-tbic">⚙</span></span></div>'
+      +'<div class="ge-body">'
+        +'<div class="ge-sect">Gestion des dossiers</div><div class="ge-grid">'+g1+'</div>'
+        +'<div class="ge-sect">Applications multi-dossiers</div><div class="ge-grid">'+g2+'</div>'
+        +'<div class="ge-sect">Mes informations légales</div><div class="ge-grid">'+g3+'</div>'
+      +'</div>'
+      +'<div class="ge-foot"><span class="ge-foot-brand">YADA</span><span class="ge-foot-cop">© YADA '+(new Date().getFullYear())+'</span></div>'
+    +'</div>';
+  }
+
+  /* ── Vue LISTE (choix du dossier, noir total) ────────────────────────────── */
   function carte(d){
-    var s=soc(d.id);
+    var s=socOf(d.id);
     var nom=d.nom||s.raison||'(sans nom)';
-    var forme=d.forme||s.formeJur||'';
-    var siren=d.siren||s.siren||'';
-    var ville=d.ville||s.ville||'';
+    var forme=d.forme||s.formeJur||''; var siren=d.siren||s.siren||''; var ville=d.ville||s.ville||'';
     var meta=[forme, siren?('SIREN '+siren):'', ville].filter(Boolean).join(' · ');
-    var ini=(nom||'?').trim().charAt(0).toUpperCase()||'?';
+    var ini=((nom||'?').trim().charAt(0)||'?').toUpperCase();
     var search=norm([nom,forme,siren,ville].join(' '));
     return '<button class="acc-card" data-id="'+esc(d.id)+'" data-search="'+esc(search)+'">'
       +'<span class="acc-av">'+esc(ini)+'</span>'
       +'<span class="acc-info"><span class="acc-nom">'+esc(nom)+'</span><span class="acc-meta">'+esc(meta||'Dossier')+'</span></span>'
       +'<span class="acc-open">Ouvrir →</span></button>';
   }
-
-  window.accueilHTML=function(){
+  function listHTML(){
     var ds=dossiers();
-    var today=(typeof frDate==='function'&&typeof todayStr==='function')?frDate(todayStr()):'';
     var grid = ds.length
-      ? ('<div class="acc-grid" id="acc-grid">'+ds.map(carte).join('')+'</div>'
-         +'<div class="acc-empty2" id="acc-empty2" style="display:none">Aucun dossier ne correspond à la recherche.</div>')
+      ? ('<div class="acc-grid" id="acc-grid">'+ds.map(carte).join('')+'</div><div class="acc-empty2" id="acc-empty2" style="display:none">Aucun dossier ne correspond.</div>')
       : ('<div class="acc-empty"><h2>Aucun dossier</h2><p>Importez une sauvegarde ou créez un dossier pour commencer.</p></div>');
-    return '<div class="acc-scroll"><div class="acc-wrap">'
-      +'<div class="acc-top"><div class="acc-brand"><span class="acc-logo">YADA</span><span class="acc-tag">Comptabilité · CA3</span></div>'
-        +'<div class="acc-date">'+esc(today)+'</div></div>'
-      +'<div class="acc-hero"><h1 class="acc-h1">Espace dossiers</h1><p class="acc-sub">Choisissez une société pour ouvrir le logiciel.</p></div>'
-      +(ds.length?('<div class="acc-bar"><input id="acc-search" class="acc-search" type="text" autocomplete="off" placeholder="Rechercher un dossier (nom, ville, SIREN…)" oninput="accueilFiltre(this.value)"><div class="acc-count">'+ds.length+' dossier'+(ds.length>1?'s':'')+'</div></div>'):'')
+    return '<div class="acc-scroll acc-blk"><div class="acc-wrap">'
+      +'<div class="acc-lhead"><button class="acc-back" onclick="geOpen(\'launcher\')">← Accueil</button>'
+        +'<h1 class="acc-h1">Liste des dossiers</h1></div>'
+      +'<p class="acc-sub">Choisissez une société pour ouvrir le logiciel.</p>'
+      +(ds.length?('<div class="acc-bar"><input id="acc-search" class="acc-search" type="text" autocomplete="off" placeholder="Rechercher (nom, ville, SIREN…)" oninput="accueilFiltre(this.value)"><div class="acc-count">'+ds.length+' dossier'+(ds.length>1?'s':'')+'</div></div>'):'')
       +grid
-      +'<div class="acc-actions">'
-        +'<button class="acc-btn acc-btn-ghost" onclick="document.getElementById(\'imp\')&&document.getElementById(\'imp\').click()">↥ Importer (JSON)</button>'
-        +'<button class="acc-btn acc-btn-pri" onclick="(typeof ouvrirCreationDossier===\'function\')&&ouvrirCreationDossier()">＋ Créer un dossier</button>'
-      +'</div>'
+      +'<div class="acc-actions"><button class="acc-btn" onclick="geImport()">↥ Importer (JSON)</button><button class="acc-btn acc-btn-pri" onclick="geCreer()">＋ Créer un dossier</button></div>'
     +'</div></div>';
-  };
+  }
 
+  /* ── Rendu + actions ─────────────────────────────────────────────────────── */
   window.accueilPaint=function(){ try{
     var main=document.getElementById('main'); if(!main) return;
     var layout=document.querySelector('.layout'); var aside=document.querySelector('aside');
@@ -27829,63 +27877,84 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     if(layout) layout.classList.add('solo');
     try{ document.body.setAttribute('data-page','accueil'); }catch(e){}
     main.className='login-bleed';
-    main.innerHTML=window.accueilHTML();
+    main.innerHTML=(window.__accView==='list')?listHTML():launcherHTML();
     var g=document.getElementById('acc-grid');
     if(g){ Array.prototype.forEach.call(g.querySelectorAll('.acc-card'),function(c){ c.onclick=function(){ window.accueilEntrer(c.getAttribute('data-id')); }; }); }
   }catch(e){} };
-
+  window.geOpen=function(v){ window.__accView=v; window.__homeView=true; render(); };
   window.accueilEntrer=function(id){ try{
     window.__homeView=false;
     if(typeof choisirDossier==='function'){ try{ choisirDossier(id); }catch(e){ try{ connecte=true; }catch(_e){} } }
     try{ current='compta'; }catch(e){}
-    window.__homeView=false;
-    render();
+    window.__homeView=false; render();
   }catch(e){} };
-
-  window.accueilRetour=function(){ try{ window.__homeView=true; render(); }catch(e){} };
-
+  window.accueilRetour=function(){ try{ window.__homeView=true; window.__accView='launcher'; render(); }catch(e){} };
   window.accueilFiltre=function(v){ try{
     var q=norm(v).trim(); var g=document.getElementById('acc-grid'); if(!g) return; var n=0;
     Array.prototype.forEach.call(g.querySelectorAll('.acc-card'),function(c){ var s=c.getAttribute('data-search')||''; var show=!q||s.indexOf(q)>=0; c.style.display=show?'':'none'; if(show)n++; });
     var em=document.getElementById('acc-empty2'); if(em) em.style.display=(n===0)?'block':'none';
   }catch(e){} };
+  window.geExt=function(u){ try{ window.open(u,'_blank','noopener,noreferrer'); }catch(e){} };
+  window.geImport=function(){ try{ var i=document.getElementById('imp'); if(i) i.click(); }catch(e){} };
+  window.geCreer=function(){ try{ if(typeof ouvrirCreationDossier==='function') ouvrirCreationDossier(); }catch(e){} };
+  window.geAide=function(){ try{ if(typeof toast==='function') toast('Centre d’aide — bientôt disponible'); }catch(e){} };
+  window.geParam=function(){ try{ window.__homeView=false; try{ connecte=true; }catch(e){} try{ current='parametrage'; }catch(e){} render(); }catch(e){} };
 
+  /* ── Style : NOIR TOTAL ──────────────────────────────────────────────────── */
   try{ var st=document.createElement('style'); st.id='acc-mod'; st.textContent=
-     '.acc-scroll{height:100dvh;overflow-y:auto;-webkit-overflow-scrolling:touch}'
-    +'.acc-wrap{max-width:1080px;margin:0 auto;padding:34px 26px 64px;color:#e7eefb}'
-    +'.acc-top{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:24px}'
-    +'.acc-brand{display:flex;flex-direction:column;gap:3px}'
-    +'.acc-logo{font-weight:800;font-size:22px;letter-spacing:1px;color:#e7eefb}'
-    +'.acc-tag{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#5ab0ff}'
-    +'.acc-date{font-size:13px;color:#8ea3c4;white-space:nowrap}'
-    +'.acc-hero{margin:4px 0 22px}'
-    +'.acc-h1{font-size:30px;margin:0 0 6px;font-weight:800;letter-spacing:-.01em;color:#f2f7ff}'
-    +'.acc-sub{margin:0;color:#8ea3c4;font-size:14px}'
+     '.acc-blk{height:100dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:#000;color:#e8e8e8;display:flex;flex-direction:column;min-height:100dvh}'
+    +'.ge-titlebar{display:flex;align-items:center;justify-content:space-between;padding:7px 12px;background:#000;border-bottom:1px solid #1b1b1b;flex:0 0 auto}'
+    +'.ge-title{font-size:12.5px;color:#cfcfcf;letter-spacing:.02em}'
+    +'.ge-tdots{display:flex;gap:6px}.ge-tdots i{width:8px;height:8px;border-radius:50%;background:#2a2a2a;display:block}'
+    +'.ge-twin{display:flex;gap:16px;color:#7a7a7a;font-size:12px}.ge-twin i{font-style:normal;cursor:default}'
+    +'.ge-menubar{display:flex;gap:22px;padding:8px 14px;background:#000;border-bottom:1px solid #141414;font-size:13px;flex:0 0 auto}'
+    +'.ge-menubar span{color:#b8b8b8;cursor:default}.ge-menubar span:hover{color:#fff}'
+    +'.ge-toolbar{display:flex;gap:16px;padding:8px 14px;flex:0 0 auto}'
+    +'.ge-tbic{color:#8a8a8a;font-size:16px;cursor:default}'
+    +'.ge-tabs{display:flex;align-items:center;gap:26px;padding:4px 16px 0;border-bottom:1px solid #1b1b1b;flex:0 0 auto;position:relative}'
+    +'.ge-tab{background:none;border:none;font:inherit;font-size:14px;color:#8a8a8a;padding:8px 2px 12px;cursor:pointer;border-bottom:2px solid transparent}'
+    +'.ge-tab.on{color:#fff;font-weight:600;border-bottom-color:#fff}'
+    +'.ge-tabs-right{margin-left:auto;display:flex;gap:16px}'
+    +'.ge-body{flex:1;padding:22px 22px 30px}'
+    +'.ge-sect{font-size:15px;font-weight:700;color:#fff;margin:6px 0 12px}'
+    +'.ge-grid{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:26px}'
+    +'.ge-tile{width:152px;height:132px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:13px;padding:14px;border-radius:9px;border:1px solid #1e1e1e;background:#0a0a0a;color:#d0d0d0;cursor:pointer;font:inherit;transition:transform .13s ease,border-color .16s ease,background .16s ease}'
+    +'.ge-tile:hover{transform:translateY(-2px);border-color:#3a3a3a;background:#111}'
+    +'.ge-tile-ic{height:40px;display:flex;align-items:center;justify-content:center}'
+    +'.ge-brand{font-weight:800;font-size:22px;letter-spacing:1px;color:#fff}'
+    +'.ge-tile-lbl{font-size:12px;text-align:center;line-height:1.28;color:#d5d5d5}'
+    +'.ge-foot{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-top:1px solid #1b1b1b;background:#000}'
+    +'.ge-foot-brand{font-weight:800;color:#fff;letter-spacing:.5px}.ge-foot-cop{color:#6a6a6a;font-size:12px}'
+    /* vue liste (noir) */
+    +'.acc-wrap{max-width:1080px;margin:0 auto;padding:26px 24px 60px;width:100%;box-sizing:border-box}'
+    +'.acc-lhead{display:flex;align-items:center;gap:16px;margin-bottom:4px}'
+    +'.acc-back{background:#0a0a0a;border:1px solid #1e1e1e;color:#e8e8e8;border-radius:9px;padding:8px 13px;font:inherit;font-size:13px;cursor:pointer}'
+    +'.acc-back:hover{border-color:#3a3a3a;background:#111}'
+    +'.acc-h1{font-size:26px;margin:0;font-weight:800;color:#fff}'
+    +'.acc-sub{margin:6px 0 18px;color:#8a8a8a;font-size:14px}'
     +'.acc-bar{display:flex;align-items:center;gap:14px;margin-bottom:18px}'
-    +'.acc-search{flex:1;min-width:0;padding:12px 15px;border-radius:12px;border:1px solid rgba(47,143,255,.28);background:#0f1626;color:#e7eefb;font-size:14px;outline:none}'
-    +'.acc-search:focus{border-color:#2f8fff;box-shadow:0 0 0 3px rgba(47,143,255,.18)}'
-    +'.acc-search::placeholder{color:#64789e}'
-    +'.acc-count{font-size:12.5px;color:#8ea3c4;white-space:nowrap}'
-    +'.acc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}'
-    +'.acc-card{display:flex;align-items:center;gap:14px;text-align:left;padding:15px 16px;border-radius:14px;border:1px solid rgba(47,143,255,.28);background:#0f1626;color:#e7eefb;cursor:pointer;font:inherit;transition:transform .14s ease,box-shadow .18s ease,border-color .18s ease}'
-    +'.acc-card:hover{transform:translateY(-2px);border-color:#2f8fff;box-shadow:0 12px 30px rgba(4,10,22,.55)}'
-    +'.acc-av{flex:0 0 auto;width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:19px;color:#04101f;background:linear-gradient(135deg,#5ab0ff,#0a64d6)}'
+    +'.acc-search{flex:1;min-width:0;padding:12px 15px;border-radius:11px;border:1px solid #1e1e1e;background:#0a0a0a;color:#e8e8e8;font-size:14px;outline:none}'
+    +'.acc-search:focus{border-color:#4a4a4a}.acc-search::placeholder{color:#6a6a6a}'
+    +'.acc-count{font-size:12.5px;color:#8a8a8a;white-space:nowrap}'
+    +'.acc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:13px}'
+    +'.acc-card{display:flex;align-items:center;gap:14px;text-align:left;padding:15px 16px;border-radius:13px;border:1px solid #1e1e1e;background:#0a0a0a;color:#e8e8e8;cursor:pointer;font:inherit;transition:transform .13s ease,border-color .16s ease,background .16s ease}'
+    +'.acc-card:hover{transform:translateY(-2px);border-color:#3a3a3a;background:#111}'
+    +'.acc-av{flex:0 0 auto;width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:19px;color:#fff;background:#1c1c1c;border:1px solid #2a2a2a}'
     +'.acc-info{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1}'
-    +'.acc-nom{font-weight:700;font-size:15.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'
-    +'.acc-meta{font-size:12px;color:#8ea3c4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'
-    +'.acc-open{flex:0 0 auto;font-size:13px;color:#5ab0ff;font-weight:600;opacity:.6;transition:opacity .15s,transform .15s}'
+    +'.acc-nom{font-weight:700;font-size:15.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#f0f0f0}'
+    +'.acc-meta{font-size:12px;color:#8a8a8a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'
+    +'.acc-open{flex:0 0 auto;font-size:13px;color:#c8c8c8;font-weight:600;opacity:.55;transition:opacity .15s,transform .15s}'
     +'.acc-card:hover .acc-open{opacity:1;transform:translateX(3px)}'
-    +'.acc-empty2{color:#8ea3c4;font-size:13px;padding:14px 4px}'
-    +'.acc-actions{display:flex;gap:12px;margin-top:26px;flex-wrap:wrap}'
-    +'.acc-btn{padding:11px 18px;border-radius:11px;font-size:14px;font-weight:600;cursor:pointer;border:1px solid rgba(47,143,255,.28);background:#0f1626;color:#e7eefb;transition:filter .15s ease,transform .1s ease}'
-    +'.acc-btn:hover{filter:brightness(1.14)}.acc-btn:active{transform:translateY(1px)}'
-    +'.acc-btn-pri{background:linear-gradient(120deg,#2f8fff,#0a64d6);border-color:#2f8fff;color:#04101f;font-weight:700}'
-    +'.acc-empty{padding:44px 24px;text-align:center;border:1px dashed rgba(47,143,255,.35);border-radius:16px;background:#0b111e;color:#8ea3c4}'
-    +'.acc-empty h2{color:#e7eefb;margin:0 0 8px;font-size:18px}'
-    +'@media(max-width:640px){.acc-grid{grid-template-columns:1fr}.acc-bar{flex-direction:column;align-items:stretch}}';
+    +'.acc-empty2{color:#8a8a8a;font-size:13px;padding:14px 4px}'
+    +'.acc-actions{display:flex;gap:12px;margin-top:24px;flex-wrap:wrap}'
+    +'.acc-btn{padding:11px 18px;border-radius:11px;font-size:14px;font-weight:600;cursor:pointer;border:1px solid #1e1e1e;background:#0a0a0a;color:#e8e8e8;transition:filter .15s,border-color .16s,transform .1s}'
+    +'.acc-btn:hover{border-color:#3a3a3a;background:#111}.acc-btn:active{transform:translateY(1px)}'
+    +'.acc-btn-pri{background:#fff;border-color:#fff;color:#000;font-weight:700}.acc-btn-pri:hover{filter:brightness(.92);background:#fff}'
+    +'.acc-empty{padding:44px 24px;text-align:center;border:1px dashed #2a2a2a;border-radius:16px;background:#080808;color:#8a8a8a}'
+    +'.acc-empty h2{color:#fff;margin:0 0 8px;font-size:18px}'
+    +'@media(max-width:640px){.acc-grid{grid-template-columns:1fr}.acc-bar{flex-direction:column;align-items:stretch}.ge-tile{width:calc(50% - 7px)}}';
     document.head.appendChild(st); }catch(e){}
 
-  /* Repeindre l'accueil maintenant que ses fonctions existent (le reset a pu rendre la Consultation avant). */
   try{ if(window.__homeView===true) render(); }catch(e){}
   setTimeout(function(){ try{ if(window.__homeView===true) render(); }catch(e){} },120);
 })();

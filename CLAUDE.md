@@ -36,7 +36,20 @@
 
 ---
 
-## 🟢 Dernière mise à jour — Nouvelle PAGE D'ACCUEIL « Espace dossiers » (choix du dossier) au démarrage — v537
+## 🟢 Dernière mise à jour — PAGE D'ACCUEIL refaite façon « Génération Experts » (lanceur à tuiles) — NOIR TOTAL — v538
+**Quoi :** la page d'accueil est **reconstruite d'après la maquette Sage « Génération Experts »** fournie, **en NOIR TOTAL** : **barre de titre** (YADA — Accueil), **barre de menus** (Fichier · Paramètres · Extraction · Traitements · Administration · Aide), **barre d'outils** (★ ☰), **onglets** (Dossiers actif · Entités · Collaborateur · Mes Services + icônes à droite), puis **3 groupes de tuiles** et un **pied de page** (YADA · © YADA). Fond `#000`, tuiles `#0a0a0a` à filet `#1e1e1e`, **icônes filaires blanches**, libellés clairs, hover (léger relèvement + filet plus clair).
+- **Gestion des dossiers** : YADA (marque) · Liste des dossiers · Ouvrir un dossier · Créer un dossier → ouvrent la **vue liste** (choix du dossier) / la création.
+- **Applications multi-dossiers** : Importer (JSON) · Paramétrage · Centre d'aide en ligne · Formalités de création (Qonto).
+- **Mes informations légales** : Portail DGFIP · Agenda fiscal · Portail Net-Entreprises · Portail DSN · Portail Urssaf → ouvrent les **vrais portails** (nouvel onglet).
+La **vue liste** (choix du dossier, v537) est conservée en noir : bouton « ← Accueil », recherche + compteur, cartes avatar/nom/forme·SIREN·ville, clic → ouvre la **Consultation**. La barre latérale « Accueil » revient au lanceur. **Consultation non modifiée.**
+
+**Comment — `yada-addon-accueil` réécrit (precompta + build V1) :** deux vues pilotées par `window.__accView` (`'launcher'` défaut / `'list'`) ; `launcherHTML()` (barre de titre/menus/onglets/tuiles/pied), `listHTML()` (choix du dossier), icônes SVG filaires (`ic()`), `tile()` ; actions `geOpen(v)` (bascule de vue), `accueilEntrer(id)`→Consultation, `accueilRetour()` (→ lanceur), `accueilFiltre(v)`, `geExt(url)` (portails), `geImport()`/`geCreer()`/`geParam()`/`geAide()`. `<style id="acc-mod">` entièrement noir (`.ge-*` + `.acc-*`). `sw.js` yada-v133, badge v538, `version.json` 538.
+
+**Validé :** `node --check` (precompta 242 / V1 241, 0 erreur) + `sw.js` OK + filet d'équilibre (vente 1200=1200, achat 600=600 ✅) + Playwright (lanceur : 3 sections, 13 tuiles, fond **`rgb(0,0,0)`** ; `geOpen('list')` → 3 cartes + « ← Accueil » ; clic dossier → `current='compta'` `.sg-app` ; barre latérale « Accueil » → retour lanceur ; **0 pageerror**) + capture (accueil noir conforme à la maquette). Badge → **v538**.
+
+---
+
+## 🟢 MAJ précédente — Nouvelle PAGE D'ACCUEIL « Espace dossiers » (choix du dossier) au démarrage — v537
 **Quoi :** reconstruite à zéro (reprogrammation) : une **page d'accueil « Espace dossiers »** s'affiche **au démarrage** (écran d'ouverture). On y **choisit une société** dans la liste du portefeuille (carte avatar + nom + forme · SIREN · ville + « Ouvrir → »), avec **barre de recherche** (nom / ville / SIREN, filtrage en direct) et **compteur de dossiers**. Un clic sur un dossier **ouvre le logiciel sur la Consultation** (dossier chargé). Boutons **« ↥ Importer (JSON) »** et **« ＋ Créer un dossier »** (réutilise `#imp`/`importJSON` et `ouvrirCreationDossier`). État vide → message « Aucun dossier ». Une entrée **« Accueil »** est ajoutée en tête de la barre latérale pour revenir à cet écran à tout moment. Palette bleue « Mar'q ». **Consultation toujours non modifiée.**
 
 **Comment :** (1) `yada-addon-reset` rendu **home-aware** : nouveau drapeau `window.__homeView` ; au **démarrage** l'app affiche l'accueil (`__homeView=true`) au lieu d'ouvrir la Consultation ; le wrapper de `render` court-circuite vers `accueilPaint()` quand `__homeView` est vrai (sinon rendu normal des modules) ; la barre latérale liste **« Accueil » + « Consultation »**. (2) Nouvel addon **`yada-addon-accueil`** : `accueilHTML()`/`accueilPaint()` (rendu plein écran, `aside` masquée, layout `solo`, conteneur `.acc-scroll` défilable), `accueilEntrer(id)` (→ `choisirDossier(id)` + `current='compta'` + `__homeView=false`), `accueilRetour()` (retour accueil), `accueilFiltre(v)` (filtre les cartes sans re-rendu → focus conservé) ; `<style id="acc-mod">` (cartes vitrées bleu, hover, avatar dégradé). `sw.js` yada-v132, badge v537, `version.json` 537.
