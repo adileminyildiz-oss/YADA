@@ -11094,7 +11094,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v540';
+    b.textContent='YADA · v541';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -27813,7 +27813,6 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
   function launcherHTML(){
     var g1 = tile('','YADA',"geOpen('list')",true)
       + tile('list','Liste des dossiers',"geOpen('list')")
-      + tile('folder','Ouvrir un dossier',"geOpen('list')")
       + tile('folderplus','Créer un dossier',"geCreer()");
     var g2 = tile('import','Importer (JSON)',"geImport()")
       + tile('gear','Paramétrage',"geParam()")
@@ -27825,7 +27824,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       + tile('globe','Portail DSN',"geExt('https://www.net-entreprises.fr/declaration/dsn/')")
       + tile('globe','Portail Urssaf',"geExt('https://www.urssaf.fr')");
     return '<div class="acc-scroll acc-blk">'
-      +'<div class="ge-menubar"><span>Fichier</span><span>Paramètres</span><span>Extraction</span><span>Traitements</span><span>Administration</span><span>Aide</span></div>'
+      +'<div class="ge-menubar"><span class="ge-mi" onclick="geFichier(event)">Fichier<div class="ge-dd" id="ge-fichier-dd"><button onclick="event.stopPropagation();geCreer();geFichierClose()">Créer un dossier</button><button onclick="event.stopPropagation();geImport();geFichierClose()">Importer (JSON)</button></div></span><span>Paramètres</span><span>Extraction</span><span>Traitements</span><span>Administration</span><span>Aide</span></div>'
       +'<div class="ge-tabs"><button class="ge-tab on">Dossiers</button><button class="ge-tab">Entités</button><button class="ge-tab">Collaborateur</button><button class="ge-tab">Mes Services</button>'
         +'</div>'
       +'<div class="ge-body">'
@@ -27895,6 +27894,9 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
   window.geCreer=function(){ try{ if(typeof ouvrirCreationDossier==='function') ouvrirCreationDossier(); }catch(e){} };
   window.geAide=function(){ try{ if(typeof toast==='function') toast('Centre d’aide — bientôt disponible'); }catch(e){} };
   window.geParam=function(){ try{ window.__homeView=false; try{ connecte=true; }catch(e){} try{ current='parametrage'; }catch(e){} render(); }catch(e){} };
+  window.geFichier=function(ev){ try{ if(ev) ev.stopPropagation(); }catch(e){} var dd=document.getElementById('ge-fichier-dd'); if(dd) dd.classList.toggle('open'); };
+  window.geFichierClose=function(){ var dd=document.getElementById('ge-fichier-dd'); if(dd) dd.classList.remove('open'); };
+  if(!window.__geMenuWired){ try{ document.addEventListener('click',function(){ var dd=document.getElementById('ge-fichier-dd'); if(dd) dd.classList.remove('open'); }); }catch(e){} window.__geMenuWired=true; }
 
   /* ── Style : NOIR TOTAL ──────────────────────────────────────────────────── */
   try{ var st=document.createElement('style'); st.id='acc-mod'; st.textContent=
@@ -27904,7 +27906,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     +'.ge-tdots{display:flex;gap:6px}.ge-tdots i{width:8px;height:8px;border-radius:50%;background:#2a2a2a;display:block}'
     +'.ge-twin{display:flex;gap:16px;color:#7a7a7a;font-size:12px}.ge-twin i{font-style:normal;cursor:default}'
     +'.ge-menubar{display:flex;gap:22px;padding:8px 14px;background:#000;border-bottom:1px solid #141414;font-size:13px;flex:0 0 auto}'
-    +'.ge-menubar span{color:#b8b8b8;cursor:default}.ge-menubar span:hover{color:#fff}'
+    +'.ge-menubar span{color:#b8b8b8;cursor:default}.ge-menubar span:hover{color:#fff}'+'.ge-menubar .ge-mi{cursor:pointer;position:relative}'+'.ge-dd{display:none;position:absolute;left:-8px;top:24px;background:#0a0a0a;border:1px solid #2a2a2a;border-radius:8px;box-shadow:0 14px 34px rgba(0,0,0,.6);min-width:210px;padding:5px 0;z-index:80}'+'.ge-dd.open{display:block}'+'.ge-dd button{display:block;width:100%;text-align:left;background:none;border:none;color:#e8e8e8;font:inherit;font-size:13px;padding:9px 14px;cursor:pointer}'+'.ge-dd button:hover{background:#1a1a1a}'
     +'.ge-toolbar{display:flex;gap:16px;padding:8px 14px;flex:0 0 auto}'
     +'.ge-tbic{color:#8a8a8a;font-size:16px;cursor:default}'
     +'.ge-tabs{display:flex;align-items:center;gap:26px;padding:4px 16px 0;border-bottom:1px solid #1b1b1b;flex:0 0 auto;position:relative}'

@@ -36,7 +36,16 @@
 
 ---
 
-## 🟢 Dernière mise à jour — Accueil : icônes à droite des onglets retirées — v540
+## 🟢 Dernière mise à jour — Accueil : tuile « Ouvrir un dossier » retirée + menu « Fichier » cliquable (Créer un dossier / Importer) — v541
+**Quoi :** (1) la **tuile « Ouvrir un dossier »** est supprimée (redondante avec « Liste des dossiers ») → le groupe « Gestion des dossiers » = YADA · Liste des dossiers · Créer un dossier. (2) Le menu **« Fichier »** de la barre de menus devient **cliquable** et ouvre un **menu déroulant** : **« Créer un dossier »** (ouvre la fiche de création `ouvrirCreationDossier`) et **« Importer (JSON) »**. Fermeture au clic extérieur.
+
+**Comment :** `yada-addon-accueil` (precompta + V1) — retrait de `tile('folder','Ouvrir un dossier',…)` ; `Fichier` = `<span class="ge-mi" onclick="geFichier(event)">` + `.ge-dd#ge-fichier-dd` (boutons → `geCreer()` / `geImport()` + `geFichierClose()`) ; `geFichier`/`geFichierClose` + écouteur `document click` (fermeture) ; CSS `.ge-mi`/`.ge-dd` (menu noir). `sw.js` yada-v136, badge v541, `version.json` 541.
+
+**Validé :** `node --check` (242/241, 0 erreur) + `sw.js` OK + équilibre (1200=1200, 600=600 ✅) + Playwright (« Ouvrir un dossier » absente ; clic « Fichier » → menu ouvert [Créer un dossier · Importer (JSON)] ; clic « Créer un dossier » → overlay `#cd-overlay` affiché + menu refermé ; 0 pageerror) + capture. Badge → **v541**.
+
+---
+
+## 🟢 MAJ précédente — Accueil : icônes à droite des onglets retirées — v540
 **Quoi :** suppression du bloc d'icônes (`▤ ⚙`) affiché **à droite de la barre d'onglets** de l'accueil. Il ne reste que les onglets (Dossiers · Entités · Collaborateur · Mes Services). Reste inchangé.
 
 **Comment :** `yada-addon-accueil` (precompta + V1) — retrait du `<span class="ge-tabs-right">…</span>` dans `launcherHTML()`. `sw.js` yada-v135, badge v540, `version.json` 540.
