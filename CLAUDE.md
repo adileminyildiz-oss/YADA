@@ -36,7 +36,16 @@
 
 ---
 
-## 🟢 Dernière mise à jour — Accueil : tuile « Ouvrir un dossier » retirée + menu « Fichier » cliquable (Créer un dossier / Importer) — v541
+## 🟢 Dernière mise à jour — Accueil : police système + cartes réduites/ajustées + « Liste des dossiers » ouvre une fenêtre réduite — v542
+**Quoi :** (1) **police modifiée** : l'accueil passe d'IBM Plex à une **police système nette** (Segoe UI / San Francisco / Roboto). (2) **cartes réduites & ajustées** : tuiles 112×96 → **100×84 px** (icônes 24 px, marque 15 px, libellés 10,5 px, filet `#1c1c1c`, gap 10) ; cartes de la liste resserrées (padding, avatar 46→40, nom 15,5→14,5). (3) **« Liste des dossiers » (et la tuile YADA) ouvrent désormais une FENÊTRE RÉDUITE** (modale centrée ~560 px, hauteur ≤ 74vh) affichant **toutes les sociétés créées** — barre de titre + ✕, recherche + compteur, cartes défilables (avatar/nom/forme·SIREN·ville, « Ouvrir → ») ; clic → ouvre la **Consultation** (et ferme la fenêtre). Fermeture par ✕, clic sur le fond, ou **Échap**.
+
+**Comment :** `yada-addon-accueil` (precompta + V1) — surcharge police `html body .acc-blk,html body .acc-blk *{font-family:… !important}` (bat le `!important` global) + idem `.acc-lw` ; valeurs `.ge-tile`/`.acc-card`/`.acc-av` réduites ; tuiles YADA & « Liste des dossiers » → `geListe()` ; `geListe()`/`geListeClose()`/`geListeFiltre()` (modale `#acc-list-ov`/`.acc-lw`, cartes via `carte()`, clic → `accueilEntrer`), fermeture Échap + clic fond ; CSS `.acc-ov`/`.acc-lw*`. `sw.js` yada-v137, badge v542, `version.json` 542.
+
+**Validé :** `node --check` (242/241, 0 erreur) + `sw.js` OK + équilibre (1200=1200, 600=600 ✅) + Playwright (police = « Segoe UI » ; tuile **100×84** ; clic « Liste des dossiers » → fenêtre **560×~360** avec 3 cartes ; recherche « mbc » → 1 ; clic dossier → `current='compta'` `.sg-app` + fenêtre fermée ; 0 pageerror) + capture. Badge → **v542**.
+
+---
+
+## 🟢 MAJ précédente — Accueil : tuile « Ouvrir un dossier » retirée + menu « Fichier » cliquable (Créer un dossier / Importer) — v541
 **Quoi :** (1) la **tuile « Ouvrir un dossier »** est supprimée (redondante avec « Liste des dossiers ») → le groupe « Gestion des dossiers » = YADA · Liste des dossiers · Créer un dossier. (2) Le menu **« Fichier »** de la barre de menus devient **cliquable** et ouvre un **menu déroulant** : **« Créer un dossier »** (ouvre la fiche de création `ouvrirCreationDossier`) et **« Importer (JSON) »**. Fermeture au clic extérieur.
 
 **Comment :** `yada-addon-accueil` (precompta + V1) — retrait de `tile('folder','Ouvrir un dossier',…)` ; `Fichier` = `<span class="ge-mi" onclick="geFichier(event)">` + `.ge-dd#ge-fichier-dd` (boutons → `geCreer()` / `geImport()` + `geFichierClose()`) ; `geFichier`/`geFichierClose` + écouteur `document click` (fermeture) ; CSS `.ge-mi`/`.ge-dd` (menu noir). `sw.js` yada-v136, badge v541, `version.json` 541.
