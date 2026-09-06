@@ -36,7 +36,16 @@
 
 ---
 
-## 🟢 Dernière mise à jour — Accueil : remplissage MAXIMUM de l'écran (tuiles étirées largeur + hauteur) — v545
+## 🟢 Dernière mise à jour — Accueil : le LOGICIEL occupe tout l'écran (cadre plein viewport) + cartes compactes — v546
+**Quoi :** correctif « le logiciel doit prendre tout l'espace » (≠ agrandir les cartes). L'accueil était **décalé (x:32, y:28, largeur réduite)** à cause de la règle `main:not(.fullbleed){padding:28px 32px 64px}` (l'accueil utilisait `main.login-bleed`). L'accueil est désormais rendu en **`main.fullbleed`** (padding 0) → le cadre `.acc-blk` couvre **tout le viewport (0,0 → 100vw×100dvh)**, barre de menus collée en haut, pied de page tout en bas, aucun bord. Les **cartes reviennent à leur taille compacte** (annulation de l'étirement v545). Anti-flash de l'ancien mode conservé.
+
+**Comment :** `yada-addon-accueil` — `accueilPaint` pose `main.className='fullbleed'` (au lieu de `login-bleed`) ; revert du max-fill v545 (tuiles `100×84`, grilles flex-wrap, `.ge-body` d'origine). `sw.js` yada-v141, badge v546, `version.json` 546.
+
+**Validé :** `node --check` (242/241, 0 erreur) + `sw.js` OK + équilibre (1200=1200, 600=600 ✅) + Playwright (`.acc-blk` = **0,0 1440×820** = plein viewport ; tuiles 84 px ; 0 pageerror) + capture. Badge → **v546**.
+
+---
+
+## 🟢 MAJ précédente — Accueil : remplissage MAXIMUM de l'écran (tuiles étirées largeur + hauteur) — v545
 **Quoi :** l'accueil remplit désormais tout l'écran au maximum — les tuiles s'étirent **en largeur ET en hauteur** (grilles `auto-fit`+`grid-auto-rows:1fr`+`align-items:stretch`, tuiles `height:auto` min 78), les groupes occupent toute la hauteur (`.ge-group{flex:1}`), marges réduites (`16px 18px`). Vue « dossier ouvert » (2 colonnes) idem (colonnes étirées). Le correctif anti-flash de l'ancien mode (v544) est conservé.
 
 **Comment :** `yada-addon-accueil` — groupes `.ge-group{flex:1}`, `.ge-grid{flex:1;grid-auto-rows:1fr;align-items:stretch}`, `.ge-tile{height:auto;min-height:78px}`, `.ge-body`/`.ge-body2` en flex/grid pleine hauteur. `sw.js` yada-v140, badge v545, `version.json` 545.
