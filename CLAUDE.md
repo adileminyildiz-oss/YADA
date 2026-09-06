@@ -36,7 +36,18 @@
 
 ---
 
-## 🟢 Dernière mise à jour — Cache vidé : fin de « l'ancienne version affichée à l'ouverture » → atterrissage direct sur la nouvelle version (Accueil) — v549
+## 🟢 Dernière mise à jour — Consultation PLEIN ÉCRAN (fin du vide de la barre latérale) + tuiles « Applications du dossier » : une fois créée, la carte affiche le nom seul et l'OUVRE — v550
+**Quoi :** deux corrections.
+1. **Consultation plein écran** — la barre latérale était masquée (`aside{display:none}`) mais la grille `.layout` restait en **`208px 1fr`** → `main` tombait dans la piste de 208px (l'ancienne place de la barre latérale) et la piste `1fr` restait **vide à droite** → la Consultation (`.sg-app`) ne faisait que **208px**, `.sg-body` = `300px 0px` (le `1fr` écrasé). Désormais la Consultation **remplit tout l'écran**.
+2. **Applications du dossier** — dès qu'un espace est **créé**, sa tuile n'affiche plus « Création de X » mais **le nom seul** (ex. « Création de la Comptabilité » → **« Comptabilité »**, + ✓ vert) et un **clic l'OUVRE** (au lieu de reproposer la création). Même logique pour Analytique, Investissements & financements, Dossier permanent, Contacts.
+
+**Comment :** (1) `yada-addon-reset` (`_kl`) — ajout de `html body .layout:not(.solo){grid-template-columns:1fr!important}` (spécificité 0,2,2 > `.layout:not(.solo)` 0,2,0 d'addon166) + `html body .layout:not(.solo)>main{grid-column:1/-1!important;width:100%!important}`. (2) `yada-addon-accueil` — `launcherHTML()` : les tuiles « Applications du dossier » lisent `sel.spaces[key]` (et `hasCompta`) → libellé « nom seul » + classe `.ge-made` (✓) quand créé, action `geAppOpen(key)` (nouveau : `choisirDossier`+`current=module` compta/analytique/immos/dossier/tiers) au lieu de `geApp`/`geCompta`. CSS `.ge-made`. `sw.js` yada-v145, badge v550, `version.json` 550, purge `yada-fresh-550`.
+
+**Validé :** `node --check` (precompta 243 / V1 242 scripts, 0 erreur) + `sw.js` OK + équilibre (vente 1200=1200, achat 600=600 ✅) + Playwright (Consultation : `main`/`.sg-app` = **1440px**, `.sg-body` = `300px 1138px`, `.sg-right` = 1138px — plein écran ; tuiles : avant « Création de la Comptabilité » → après création `current='compta'` `.sg-app` → retour accueil tuile **« Comptabilité » + ge-made** ; 0 pageerror). Badge → **v550**.
+
+---
+
+## 🟢 MAJ précédente — Cache vidé : fin de « l'ancienne version affichée à l'ouverture » → atterrissage direct sur la nouvelle version (Accueil) — v549
 **Quoi :** à chaque ouverture, l'utilisateur voyait **d'abord la page de l'ANCIENNE version** (un ancien HTML mis en cache, servi en premier avant la mise à jour). Correctif : (1) **cache du service worker vidé** (bump `yada-v143 → yada-v144` → l'`activate` purge tous les caches ≠ courant) ; (2) **purge runtime une fois par version** (`yada-cache-fresh`, drapeau `localStorage 'yada-fresh-549'`) : au démarrage, supprime les anciens caches (Cache Storage) et force `serviceWorker.update()` → on **atterrit directement sur la nouvelle version** (Accueil « Choix du dossier »), sans flash de l'ancien mode. L'anti-flash existant (`#sec-lock` masqué + écran noir tant que l'Accueil n'est pas prêt) est conservé.
 
 **Comment — `yada-cache-fresh` (100% additif, precompta + build V1) :** nouveau script après `yada-addon-reset` : purge `caches.keys()` (garde `yada-v144`) + `navigator.serviceWorker.getRegistrations().update()`, gardé par un drapeau `localStorage` (exécuté une seule fois par version, non destructif, sans boucle de rechargement). `sw.js` `CACHE yada-v144`, badge v549, `version.json` 549.

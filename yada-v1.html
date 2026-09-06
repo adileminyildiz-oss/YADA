@@ -11094,7 +11094,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v549';
+    b.textContent='YADA · v550';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -27629,7 +27629,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     window.__secLocked=false; window.__tfaPassed=true;
     try{ if(typeof window.secVerrouiller==='function') window.secVerrouiller=function(){}; }catch(e){}
     try{ if(typeof window.secDeconnexion==='function') window.secDeconnexion=function(){}; }catch(e){}
-    try{ if(!document.getElementById('yada-no-login')){ var _kl=document.createElement('style'); _kl.id='yada-no-login'; _kl.textContent='#sec-lock{display:none!important}html body aside{display:none!important}html body .layout{grid-template-columns:1fr!important}.sg-edlink{display:none!important}.sg-app .sg-win{display:none!important}.sg-app .sg-tabnav{display:none!important}.sg-app .sg-tabs{background:#141414!important;border-bottom-color:rgba(30,144,255,.35)!important}'; (document.head||document.documentElement).appendChild(_kl); } }catch(e){}
+    try{ if(!document.getElementById('yada-no-login')){ var _kl=document.createElement('style'); _kl.id='yada-no-login'; _kl.textContent='#sec-lock{display:none!important}html body aside{display:none!important}html body .layout{grid-template-columns:1fr!important}html body .layout:not(.solo){grid-template-columns:1fr!important}html body .layout:not(.solo)>main{grid-column:1/-1!important;width:100%!important}.sg-edlink{display:none!important}.sg-app .sg-win{display:none!important}.sg-app .sg-tabnav{display:none!important}.sg-app .sg-tabs{background:#141414!important;border-bottom-color:rgba(30,144,255,.35)!important}'; (document.head||document.documentElement).appendChild(_kl); } }catch(e){}
     var lock=document.getElementById('sec-lock'); if(lock&&lock.parentNode) lock.parentNode.removeChild(lock);
   }catch(e){}
 
@@ -27688,8 +27688,8 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
    service worker → on atterrit directement sur la nouvelle version (Accueil).
    Drapeau localStorage 'yada-fresh-549' → exécuté une seule fois. 100% additif. */
 (function(){
-  var CUR='yada-v144';           /* = CACHE courant du sw.js */
-  var FLAG='yada-fresh-549';
+  var CUR='yada-v145';           /* = CACHE courant du sw.js */
+  var FLAG='yada-fresh-550';
   try{ if(localStorage.getItem(FLAG)) return; }catch(e){}
   try{ localStorage.setItem(FLAG,'1'); }catch(e){}
   try{
@@ -27809,11 +27809,12 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     if(sel){
       var rec=recents(); if(rec.indexOf(sel.id)<0) rec.unshift(sel.id);
       var mesd=rec.map(function(id){ var d=dossierById(id); if(!d) return ''; var ini=((d.nom||'?').trim().charAt(0)||'?').toUpperCase(); var on=(d.id===window.__accDossier); return '<button class="ge-tile ge-dtile'+(on?' sel':'')+'" onclick="geSelect(\''+d.id+'\')"><span class="ge-tile-ic">'+ic('building')+'</span><span class="ge-tile-lbl">'+esc(d.nom||'')+'</span></button>'; }).join('');
-      var apps = tile('perm','Dossier permanent',"geApp('perm','du Dossier permanent')")
-        + tile('contacts','Contacts',"geApp('contacts','des Contacts')")
-        + tile('compta','Création de la Comptabilité',"geCompta()")
-        + tile('analytique',"Création de l'Analytique","geApp('analytique','de l\'Analytique')")
-        + tile('invest','Création de Investissements & financements',"geApp('invest','des Investissements et financements')");
+      var sp=(sel&&sel.spaces)||{}; var comptaMade=hasCompta(sel.id);
+      var apps = tile('perm', sp.perm?'Dossier permanent':'Dossier permanent', sp.perm?"geAppOpen('perm')":"geApp('perm','du Dossier permanent')", false, sp.perm?'ge-made':'')
+        + tile('contacts', 'Contacts', sp.contacts?"geAppOpen('contacts')":"geApp('contacts','des Contacts')", false, sp.contacts?'ge-made':'')
+        + tile('compta', comptaMade?'Comptabilité':'Création de la Comptabilité', "geCompta()", false, comptaMade?'ge-made':'')
+        + tile('analytique', sp.analytique?'Analytique':"Création de l'Analytique", sp.analytique?"geAppOpen('analytique')":"geApp('analytique','de l\'Analytique')", false, sp.analytique?'ge-made':'')
+        + tile('invest', sp.invest?'Investissements & financements':'Création de Investissements & financements', sp.invest?"geAppOpen('invest')":"geApp('invest','des Investissements et financements')", false, sp.invest?'ge-made':'');
       body='<div class="ge-body ge-body2"><div class="ge-colL">'
         +'<div class="ge-sect">Mes dossiers</div><div class="ge-grid">'+mesd+'</div>'
         +'<div class="ge-sect">Gestion des dossiers</div><div class="ge-grid">'+g1+'</div>'
@@ -27922,6 +27923,14 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       render();
     });
   };
+  /* Ouvrir un espace DÉJÀ créé (la carte affiche alors seulement son nom) */
+  window.geAppOpen=function(key){ var id=window.__accDossier; if(!id) return;
+    var mod={compta:'compta',analytique:'analytique',invest:'immos',perm:'dossier',contacts:'tiers'}[key]||'compta';
+    window.__homeView=false;
+    if(typeof choisirDossier==='function'){ try{ choisirDossier(id); }catch(e){ try{ connecte=true; }catch(_e){} } }
+    try{ current=mod; }catch(e){}
+    window.__homeView=false; render();
+  };
   window.geCompta=function(){ var id=window.__accDossier; if(!id){ geListe(); return; } var d=dossierById(id); var nom=d?(d.nom||''):'';
     if(hasCompta(id)){ window.accueilEntrer(id); return; }
     geConfirm('Confirmez-vous la création de la Comptabilité du dossier '+nom+' ?', function(){ geComptaForm(); });
@@ -27981,6 +27990,9 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     +'.ge-tile:hover{transform:translateY(-2px);border-color:#3a3a3a;background:#111}'
     +'.ge-tile.sel{background:linear-gradient(180deg,#123a24,#0e2b1b);border-color:#2f7d4f}'
     +'.ge-tile.sel .ge-tile-lbl{color:#eafff2}'
+    +'.ge-tile.ge-made{border-color:#2f7d4f;background:#0c1a12;position:relative}'
+    +'.ge-tile.ge-made::after{content:"✓";position:absolute;top:5px;right:7px;font-size:10px;font-weight:700;color:#3fbf72;line-height:1}'
+    +'.ge-tile.ge-made .ge-tile-lbl{color:#dff5e8}'
     +'.ge-tile-ic{height:26px;display:flex;align-items:center;justify-content:center}.ge-tile-ic svg{width:24px;height:24px}'
     +'.ge-brand{font-weight:700;font-size:15px;letter-spacing:.3px;color:#fff}'
     +'.ge-tile-lbl{font-size:10.5px;text-align:center;line-height:1.2;color:#d5d5d5}'
