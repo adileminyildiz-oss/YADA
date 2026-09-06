@@ -11094,7 +11094,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v555';
+    b.textContent='YADA · v556';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -27760,7 +27760,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
    Drapeau localStorage 'yada-fresh-549' → exécuté une seule fois. 100% additif. */
 (function(){
   var CUR='yada-v148';           /* = CACHE courant du sw.js */
-  var FLAG='yada-fresh-555';
+  var FLAG='yada-fresh-556';
   try{ if(localStorage.getItem(FLAG)) return; }catch(e){}
   try{ localStorage.setItem(FLAG,'1'); }catch(e){}
   try{
@@ -27876,7 +27876,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     var g3 = tile('dgfip','Portail DGFIP',"geExt('https://www.impots.gouv.fr')")
       + tile('agenda','Agenda fiscal',"geExt('https://www.impots.gouv.fr/professionnel')")
       + tile('netent','Portail Net-Entreprises',"geExt('https://www.net-entreprises.fr')")
-      + tile('globe','Portail DSN',"geExt('https://www.net-entreprises.fr/declaration/dsn/')")
+      + tile('netent','Portail DSN',"geExt('https://www.net-entreprises.fr/declaration/dsn/')")
       + tile('urssaf','Portail Urssaf',"geExt('https://www.urssaf.fr')");
     var head = '<div class="acc-scroll acc-blk">'
       +'<div class="ge-menubar"><span class="ge-mi" onclick="geFichier(event)">Fichier<div class="ge-dd" id="ge-fichier-dd"><button onclick="event.stopPropagation();geCreer();geFichierClose()">Créer un dossier</button><button onclick="event.stopPropagation();geImport();geFichierClose()">Importer (JSON)</button></div></span><span>Paramètres</span><span>Extraction</span><span>Traitements</span><span>Administration</span><span>Aide</span></div>'
