@@ -36,7 +36,25 @@
 
 ---
 
-## 🟢 Dernière mise à jour — Accueil : logos officiels des tuiles en NOIR & BLANC (Qonto, Créer un dossier, DGFIP, Agenda fiscal, Net-Entreprises, Urssaf) — v555
+## 🟢 Dernière mise à jour — Notification « Télécharger » : bouton amélioré (pilule vitrée, anneau à progression réelle, barre bleue + %) — v557
+**Quoi :** la notification **« Télécharger l'application YADA »** (`#yada-dl-banner`) est redessinée (aperçu validé) : **au repos** pilule **vitrée** (dégradé bleu nuit + `backdrop-filter:blur` + halo bleu) à contour bleu, **flèche ⬇ qui flotte** (invite au clic), léger relief au survol ; **au clic** la pilule s'agrandit, la flèche devient un **anneau à progression réelle** (stroke-dashoffset) qui tourne, et le bouton se remplit en **barre BLEUE lumineuse** (dégradé `#0a64d6→#1e90ff→#5ab0ff` + glow) avec le **pourcentage en direct** ; **à la fin** anneau → **✓ vert « Terminé »** (bord vert) puis la notification se referme et le drapeau permanent `yada-dl-done` est posé. Le clic déclenche le **vrai téléchargement** (`yadaDownloadFile()` → `YADA.html`, repli `telechargerApp()`). ✕ = masquage session (réapparition au rechargement), inchangé.
+
+**Comment — `yada-addon-dl-slide` réécrit (precompta + build V1) :** `<style id="dl-slide-mod">` refondu (pilule vitrée, `.dl-track`/`.dl-fill` bleu + `.dl-pct`, `.dl-ring circle` à `stroke-dasharray:56`, keyframes `yadaDlSpin` + `yadaDlBob`) ; `wire()` reconstruit l'innerHTML (flèche `<g class="bob">`, anneau `<circle>`, `.dl-pct`) ; `start()` anime en **requestAnimationFrame** (easeOutQuad 1,8 s : largeur + % + dashoffset), pose `yada-dl-done` à la fin puis retire la pilule. Aucune logique de téléchargement/drapeau modifiée. `sw.js` yada-v152, badge v557, `version.json` 557, purge `yada-fresh-557`.
+
+**Validé :** `node --check` (precompta 245 / V1 244 scripts, 0 erreur) + `sw.js` OK + Playwright (app : bannière rendue, `.dl-ring`+`.dl-pct`+flèche flottante présents ; clic → `.loading`, barre bleue + « 66% » ; 0 pageerror hors le fetch `file://` du téléchargement) + capture. Badge → **v557**.
+
+---
+
+## 🟢 MAJ précédente — Accueil : tuile « Portail DSN » avec le logo Net-Entreprises — v556
+**Quoi :** la tuile **« Portail DSN »** du lanceur reçoit le **logo Net-Entreprises** (cercle + triangle de lecture ▶, monochrome) au lieu du globe générique — la DSN se déclare via net-entreprises.fr.
+
+**Comment :** `launcherHTML()` — `tile('globe','Portail DSN',…)` → `tile('netent','Portail DSN',…)` (precompta + build V1). `sw.js` yada-v151, badge v556, `version.json` 556, purge `yada-fresh-556`.
+
+**Validé :** `node --check` (precompta 245 / V1 244 scripts, 0 erreur) + `sw.js` OK. Badge → **v556**.
+
+---
+
+## 🟢 MAJ précédente — Accueil : logos officiels des tuiles en NOIR & BLANC (Qonto, Créer un dossier, DGFIP, Agenda fiscal, Net-Entreprises, Urssaf) — v555
 **Quoi :** les tuiles du lanceur (« Génération Experts », thème noir) reçoivent des **logos monochromes (blanc sur noir, forme seule, aucune couleur)** conformes aux marques réelles : **Formalités (Qonto)** = 4 pétales pleins ; **Créer un dossier** = dossiers empilés ; **Portail DGFIP** = bloc **« RF » (République Française)** ; **Agenda fiscal** = calendrier ; **Portail Net-Entreprises** = cercle + triangle de lecture (▶) ; **Portail Urssaf** = cercle + 3 quartiers. Le lanceur (Créer un dossier, Importer JSON, Paramétrage, Formalités Qonto, portails) est **conservé tel quel** (base v553) — seules les icônes changent. Portail DSN garde le globe (aucun logo demandé).
 
 **Comment — `ic(name)` du lanceur (precompta + build V1) :** ajout de cas **`qonto` / `folders` / `urssaf` / `netent` / `agenda` / `dgfip`** retournant des `<svg fill="#fff">` à formes pleines (Net-Entreprises en `fill-rule="evenodd"` pour la découpe du ▶ ; DGFIP en filaire `stroke:#fff` + texte « RF » serif). Tuiles `launcherHTML()` recâblées : `folders`→Créer un dossier, `qonto`→Formalités, `dgfip`→DGFIP, `agenda`→Agenda fiscal, `netent`→Net-Entreprises, `urssaf`→Urssaf. `sw.js` yada-v150, badge v555, `version.json` 555, purge `yada-fresh-555`.

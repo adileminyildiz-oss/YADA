@@ -11094,7 +11094,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v556';
+    b.textContent='YADA · v557';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -27760,7 +27760,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
    Drapeau localStorage 'yada-fresh-549' → exécuté une seule fois. 100% additif. */
 (function(){
   var CUR='yada-v148';           /* = CACHE courant du sw.js */
-  var FLAG='yada-fresh-556';
+  var FLAG='yada-fresh-557';
   try{ if(localStorage.getItem(FLAG)) return; }catch(e){}
   try{ localStorage.setItem(FLAG,'1'); }catch(e){}
   try{
@@ -28147,35 +28147,44 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
   if(document.getElementById('dl-slide-mod')) return;
   var s=document.createElement('style'); s.id='dl-slide-mod';
   s.textContent=''
-   +'#yada-dl-banner{background:#0c0c0d!important;border:1px solid #1e90ff!important;border-radius:999px!important;'
-     +'padding:8px 9px 8px 15px!important;gap:11px!important;box-shadow:0 14px 34px rgba(0,0,0,.5)!important;cursor:pointer;align-items:center!important;'
-     +'transition:padding .38s cubic-bezier(.16,1,.3,1),border-radius .38s ease,border-color .3s ease,gap .38s ease!important}'
-   +'#yada-dl-banner:hover{box-shadow:0 16px 40px rgba(30,144,255,.22)!important}'
-   +'#yada-dl-banner .dl-ic{position:relative;width:20px;height:20px;flex:none;color:#5ab0ff;transition:width .38s cubic-bezier(.16,1,.3,1),height .38s cubic-bezier(.16,1,.3,1),color .3s ease}'
-   +'#yada-dl-banner .dl-ic svg{position:absolute;inset:0;margin:auto;transition:opacity .3s ease,transform .45s cubic-bezier(.16,1,.3,1)}'
-   +'#yada-dl-banner .dl-ring{opacity:0;transform:scale(.5) rotate(-90deg);animation:yadaDlSpin 1s linear infinite;animation-play-state:paused}'
-   +'#yada-dl-banner .dl-check{opacity:0;transform:scale(.4);color:#24d17a}'
-   +'#yada-dl-banner .dl-btn{position:relative;overflow:hidden;border:1px solid #1e90ff;border-radius:999px;background:transparent;color:#5ab0ff;font:800 12.5px/1 inherit;letter-spacing:.3px;padding:8px 16px;white-space:nowrap;cursor:pointer;'
-     +'transition:width .42s cubic-bezier(.16,1,.3,1),border-radius .42s ease,padding .42s ease,color .3s ease,background .3s ease,height .42s ease}'
-   +'#yada-dl-banner .dl-btn .lbl{position:relative;z-index:2;transition:color .3s ease}'
-   +'#yada-dl-banner .dl-fill{position:absolute;inset:0;width:0;z-index:1;background:linear-gradient(90deg,#5ab0ff,#1e90ff);transition:width .2s linear}'
-   +'#yada-dl-banner .dl-x{background:none;border:none;color:#777;cursor:pointer;font-size:16px;line-height:1;padding:0 4px;transition:opacity .28s ease,width .28s ease,margin .28s ease;opacity:1}'
-   +'#yada-dl-banner .dl-x:hover{color:#fff}'
-   +'#yada-dl-banner.loading{padding:10px 16px!important;border-radius:16px!important;gap:13px!important;cursor:default;border-color:#2f2f33!important}'
-   +'#yada-dl-banner.loading .dl-ic{width:22px;height:22px;color:#fff}'
-   +'#yada-dl-banner.loading .dl-arrow{opacity:0;transform:scale(.5) rotate(90deg)}'
-   +'#yada-dl-banner.loading .dl-ring{opacity:1;transform:scale(1) rotate(0);animation-play-state:running}'
-   +'#yada-dl-banner.loading .dl-btn{width:210px;height:22px;padding:0;border-radius:999px;border-color:#2f2f33;background:#1b1b1e;display:flex;align-items:center;justify-content:center}'
-   +'#yada-dl-banner.loading .dl-btn .lbl{color:#fff;font-size:11px;letter-spacing:.4px;mix-blend-mode:difference}'
-   +'#yada-dl-banner.loading .dl-fill{background:linear-gradient(90deg,#fff,#eaeaea)}'
-   +'#yada-dl-banner.loading .dl-x{opacity:0;width:0;margin-left:-13px;pointer-events:none}'
-   +'#yada-dl-banner.done{border-color:rgba(36,209,122,.45)!important}'
+   +'#yada-dl-banner{background:linear-gradient(180deg,rgba(16,26,48,.96),rgba(10,16,32,.96))!important;border:1px solid #1e90ff!important;border-radius:999px!important;'
+     +'padding:9px 10px 9px 17px!important;gap:12px!important;box-shadow:0 16px 40px rgba(0,0,0,.5),0 0 0 4px rgba(30,144,255,.08),inset 0 1px 0 rgba(255,255,255,.05)!important;'
+     +'-webkit-backdrop-filter:blur(8px)!important;backdrop-filter:blur(8px)!important;cursor:pointer;align-items:center!important;'
+     +'transition:padding .4s cubic-bezier(.16,1,.3,1),border-radius .4s ease,border-color .35s ease,box-shadow .4s ease,gap .4s ease,transform .25s ease!important}'
+   +'#yada-dl-banner:hover{box-shadow:0 18px 46px rgba(30,144,255,.30),0 0 0 5px rgba(30,144,255,.12)!important;transform:translateY(-1px)}'
+   +'#yada-dl-banner .dl-ic{position:relative;width:22px;height:22px;flex:none;color:#5ab0ff;display:grid;place-items:center;transition:color .3s ease}'
+   +'#yada-dl-banner .dl-ic svg{position:absolute;inset:0;margin:auto;transition:opacity .3s ease,transform .5s cubic-bezier(.16,1,.3,1)}'
+   +'#yada-dl-banner .dl-arrow{opacity:1;transform:none}'
+   +'#yada-dl-banner .dl-arrow .bob{animation:yadaDlBob 1.8s ease-in-out infinite}'
+   +'#yada-dl-banner .dl-ring{opacity:0;transform:scale(.4) rotate(-90deg)}'
+   +'#yada-dl-banner .dl-ring circle{stroke:#5ab0ff;stroke-width:2.6;fill:none;stroke-linecap:round;stroke-dasharray:56;stroke-dashoffset:56;transform-origin:center;transition:stroke-dashoffset .2s linear}'
+   +'#yada-dl-banner .dl-check{opacity:0;transform:scale(.3);color:#24d17a}'
+   +'#yada-dl-banner .dl-btn{position:relative;overflow:hidden;border:1px solid transparent;border-radius:999px;background:transparent;color:#5ab0ff;font:800 13px/1 inherit;letter-spacing:.2px;padding:8px 18px;white-space:nowrap;cursor:pointer;'
+     +'transition:width .45s cubic-bezier(.16,1,.3,1),padding .45s ease,color .3s ease,background .3s ease,border-color .3s ease}'
+   +'#yada-dl-banner .dl-btn .lbl{position:relative;z-index:2;transition:opacity .25s ease}'
+   +'#yada-dl-banner .dl-track{position:absolute;inset:0;z-index:0;background:rgba(255,255,255,.07);opacity:0;transition:opacity .3s ease}'
+   +'#yada-dl-banner .dl-fill{position:absolute;left:0;top:0;bottom:0;width:0;z-index:1;border-radius:999px;background:linear-gradient(90deg,#0a64d6,#1e90ff,#5ab0ff);box-shadow:0 0 14px rgba(30,144,255,.55);transition:width .18s linear}'
+   +'#yada-dl-banner .dl-pct{position:absolute;inset:0;z-index:2;display:grid;place-items:center;font:700 11px/1 inherit;color:#fff;opacity:0;transition:opacity .25s ease;letter-spacing:.5px}'
+   +'#yada-dl-banner .dl-x{background:none;border:none;color:#5f6f8f;cursor:pointer;font-size:17px;line-height:1;padding:0 6px 0 2px;transition:opacity .3s ease,width .3s ease,margin .3s ease,color .2s;opacity:1}'
+   +'#yada-dl-banner .dl-x:hover{color:#eaf1ff}'
+   +'#yada-dl-banner.loading{padding:11px 18px!important;border-radius:16px!important;gap:14px!important;cursor:default;border-color:rgba(120,170,255,.28)!important;box-shadow:0 18px 46px rgba(0,0,0,.55),0 0 0 5px rgba(30,144,255,.10)!important}'
+   +'#yada-dl-banner.loading .dl-arrow{opacity:0;transform:scale(.4) rotate(90deg)}'
+   +'#yada-dl-banner.loading .dl-ring{opacity:1;transform:scale(1) rotate(0);animation:yadaDlSpin 1.1s linear infinite}'
+   +'#yada-dl-banner.loading .dl-btn{width:190px;padding:9px 0;color:transparent}'
+   +'#yada-dl-banner.loading .dl-btn .lbl{opacity:0}'
+   +'#yada-dl-banner.loading .dl-track{opacity:1}'
+   +'#yada-dl-banner.loading .dl-pct{opacity:1}'
+   +'#yada-dl-banner.loading .dl-x{opacity:0;width:0;margin-left:-14px;pointer-events:none}'
+   +'#yada-dl-banner.done{border-color:rgba(36,209,122,.55)!important;box-shadow:0 18px 46px rgba(0,0,0,.5),0 0 0 5px rgba(36,209,122,.12)!important}'
    +'#yada-dl-banner.done .dl-ic{color:#24d17a}'
-   +'#yada-dl-banner.done .dl-ring{animation-play-state:paused;opacity:0}'
+   +'#yada-dl-banner.done .dl-ring{opacity:0;animation:none}'
+   +'#yada-dl-banner.done .dl-arrow{opacity:0}'
    +'#yada-dl-banner.done .dl-check{opacity:1;transform:scale(1)}'
-   +'#yada-dl-banner.done .dl-btn{background:rgba(36,209,122,.16);border-color:rgba(36,209,122,.4)}'
-   +'#yada-dl-banner.done .dl-btn .lbl{color:#bff0d4;mix-blend-mode:normal}'
-   +'@keyframes yadaDlSpin{to{transform:rotate(360deg)}}';
+   +'#yada-dl-banner.done .dl-btn{color:#bff3d6}'
+   +'#yada-dl-banner.done .dl-btn .lbl{opacity:1}'
+   +'#yada-dl-banner.done .dl-track,#yada-dl-banner.done .dl-pct{opacity:0}'
+   +'@keyframes yadaDlSpin{to{transform:rotate(360deg)}}'
+   +'@keyframes yadaDlBob{0%,100%{transform:translateY(-1px)}50%{transform:translateY(1.5px)}}';
   document.head.appendChild(s);
 
   function lset(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
@@ -28188,21 +28197,34 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     b.setAttribute('data-slide','1');
     b.innerHTML=''
       +'<span class="dl-ic" aria-hidden="true">'
-        +'<svg class="dl-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M5 21h14"/></svg>'
-        +'<svg class="dl-ring" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.2-8.6"/></svg>'
-        +'<svg class="dl-check" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m20 6-11 11-5-5"/></svg>'
+        +'<svg class="dl-arrow" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><g class="bob"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/></g><path d="M5 21h14"/></svg>'
+        +'<svg class="dl-ring" width="21" height="21" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg>'
+        +'<svg class="dl-check" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"><path d="m20 6-11 11-5-5"/></svg>'
       +'</span>'
-      +'<button class="dl-btn"><span class="dl-fill"></span><span class="lbl">Télécharger</span></button>'
+      +'<button class="dl-btn"><span class="dl-track"></span><span class="dl-fill"></span><span class="dl-pct">0%</span><span class="lbl">Télécharger</span></button>'
       +'<button class="dl-x" aria-label="Fermer">×</button>';
-    var fill=b.querySelector('.dl-fill'), lbl=b.querySelector('.lbl'), x=b.querySelector('.dl-x'), busy=false, timers=[];
+    var fill=b.querySelector('.dl-fill'), pct=b.querySelector('.dl-pct'), lbl=b.querySelector('.lbl'), x=b.querySelector('.dl-x'), ring=b.querySelector('.dl-ring circle'), busy=false, timers=[], raf=0;
+    var RAF=window.requestAnimationFrame||function(f){return setTimeout(f,16);};
+    function nowMs(){ return (window.performance&&performance.now)?performance.now():Date.now(); }
     function T(fn,ms){ timers.push(setTimeout(fn,ms)); }
     function start(){
       if(busy) return; busy=true;
-      b.classList.remove('done'); b.classList.add('loading'); lbl.textContent='Télécharger'; fill.style.width='0';
+      b.classList.remove('done'); b.classList.add('loading'); lbl.textContent='Télécharger';
+      fill.style.width='0'; if(pct) pct.textContent='0%'; if(ring) ring.style.strokeDashoffset='56';
       dl();
-      T(function(){ fill.style.transition='width 1.2s cubic-bezier(.25,.6,.3,1)'; fill.style.width='100%'; }, 70);
-      T(function(){ b.classList.remove('loading'); b.classList.add('done'); lbl.textContent='Terminé'; fill.style.transition='none'; fill.style.width='100%'; }, 1350);
-      T(function(){ lset('yada-dl-done','1'); if(b&&b.parentNode) b.remove(); }, 2900);
+      var dur=1800, t0=nowMs();
+      (function step(){
+        var p=Math.min(1,(nowMs()-t0)/dur), e=1-Math.pow(1-p,2);
+        fill.style.width=(e*100).toFixed(0)+'%'; if(pct) pct.textContent=Math.round(e*100)+'%';
+        if(ring) ring.style.strokeDashoffset=(56*(1-e)).toFixed(1);
+        if(p<1){ raf=RAF(step); }
+        else{
+          b.classList.remove('loading'); b.classList.add('done'); lbl.textContent='Terminé';
+          fill.style.width='100%'; if(pct) pct.textContent='100%';
+          lset('yada-dl-done','1');
+          T(function(){ if(b&&b.parentNode) b.remove(); }, 2400);
+        }
+      })();
     }
     b.addEventListener('click', function(e){ if(e.target.closest('.dl-x')) return; start(); });
     x.addEventListener('click', function(e){ e.stopPropagation(); if(b&&b.parentNode) b.remove(); });
