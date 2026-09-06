@@ -11094,7 +11094,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v536';
+    b.textContent='YADA · v537';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -27703,23 +27703,28 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     var lock=document.getElementById('sec-lock'); if(lock&&lock.parentNode) lock.parentNode.removeChild(lock);
   }catch(e){}
 
-  /* 2) Barre latérale : uniquement « Consultation » */
+  /* 2) Barre latérale : « Accueil » + « Consultation » */
   try{ if(typeof buildNav==='function'){
     buildNav=function(){ try{
       var nav=document.getElementById('nav'); if(!nav) return;
       nav.innerHTML='';
-      var s=document.createElement('div'); s.className='nav-sec'; s.textContent='Comptabilité'; nav.appendChild(s);
-      var b=document.createElement('button'); b.className='nav-btn'+((typeof current!=='undefined'&&current==='compta')?' active':'');
+      var s=document.createElement('div'); s.className='nav-sec'; s.textContent='Navigation'; nav.appendChild(s);
+      var ha=document.createElement('button'); ha.className='nav-btn'+(window.__homeView===true?' active':'');
+      ha.innerHTML='<span class="ico">⌂</span>Accueil';
+      ha.onclick=function(){ if(typeof window.accueilRetour==='function') window.accueilRetour(); };
+      nav.appendChild(ha);
+      var b=document.createElement('button'); b.className='nav-btn'+((typeof current!=='undefined'&&current==='compta'&&window.__homeView!==true)?' active':'');
       b.innerHTML='<span class="ico">≣</span>Consultation';
-      b.onclick=function(){ try{ current='compta'; }catch(e){} render(); };
+      b.onclick=function(){ try{ window.__homeView=false; current='compta'; }catch(e){} render(); };
       nav.appendChild(b);
     }catch(e){} };
   } }catch(e){}
 
-  /* 3) Routage : seule la Consultation est rendue */
+  /* 3) Routage : ACCUEIL (choix du dossier) au démarrage, puis les modules */
   try{ if(typeof render==='function'){
     var _r=render;
     render=function(){
+      if(window.__homeView===true && typeof window.accueilPaint==='function'){ try{ window.accueilPaint(); }catch(e){} return; }
       try{ connecte=true; }catch(e){}
       var x=_r.apply(this,arguments);
       try{ document.body.removeAttribute('data-noside'); var chip=document.getElementById('ds-back-chip'); if(chip) chip.style.display='none'; }catch(e){}
@@ -27727,17 +27732,11 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     };
   } }catch(e){}
 
-  /* 4) Ouverture directe sur la Consultation (dossier actif chargé si présent) */
+  /* 4) Démarrage : afficher l'ACCUEIL (choix du dossier) */
   function ouvrir(){ try{
     window.sessionRole='cabinet'; window.selClientMode=false; window.isAdmin=false;
     try{ sessionStorage.setItem('yada-role','cabinet'); }catch(e){}
-    if(!connecte){
-      var id=(db&&db.activeId)||null;
-      if(!id && db&&db.cabinet&&db.cabinet.dossiers&&db.cabinet.dossiers.length) id=db.cabinet.dossiers[0].id;
-      if(id && typeof choisirDossier==='function'){ try{ choisirDossier(id); }catch(e){ try{ connecte=true; }catch(_e){} } }
-      else { try{ connecte=true; }catch(e){} }
-    }
-    if(!window.__resetOpened){ try{ current='compta'; }catch(e){} window.__resetOpened=true; }
+    if(!window.__resetOpened){ window.__homeView=true; window.__resetOpened=true; }
     if(typeof render==='function') render();
   }catch(e){} }
 
@@ -27774,6 +27773,121 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
   }catch(e){} }
   var _r=render; render=function(){ var x=_r.apply(this,arguments); try{ inject(); }catch(e){} return x; };
   setTimeout(inject,120); setTimeout(inject,500);
+})();
+</script>
+
+<script id="yada-addon-accueil">
+/* v537 — PAGE D'ACCUEIL « Espace dossiers » (choix du dossier), affichée au démarrage.
+   Reconstruite à zéro. Sélection d'une société → ouverture du logiciel (Consultation).
+   Pilotée par window.__homeView (voir yada-addon-reset). 100% additif. */
+(function(){
+  if(typeof render!=='function') return;
+  function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function norm(s){ return String(s==null?'':s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,''); }
+  function dossiers(){ try{ return (db&&db.cabinet&&db.cabinet.dossiers)?db.cabinet.dossiers.slice():[]; }catch(e){ return []; } }
+  function soc(id){ try{ return (db.dossiersData&&db.dossiersData[id]&&db.dossiersData[id].societe)||{}; }catch(e){ return {}; } }
+
+  function carte(d){
+    var s=soc(d.id);
+    var nom=d.nom||s.raison||'(sans nom)';
+    var forme=d.forme||s.formeJur||'';
+    var siren=d.siren||s.siren||'';
+    var ville=d.ville||s.ville||'';
+    var meta=[forme, siren?('SIREN '+siren):'', ville].filter(Boolean).join(' · ');
+    var ini=(nom||'?').trim().charAt(0).toUpperCase()||'?';
+    var search=norm([nom,forme,siren,ville].join(' '));
+    return '<button class="acc-card" data-id="'+esc(d.id)+'" data-search="'+esc(search)+'">'
+      +'<span class="acc-av">'+esc(ini)+'</span>'
+      +'<span class="acc-info"><span class="acc-nom">'+esc(nom)+'</span><span class="acc-meta">'+esc(meta||'Dossier')+'</span></span>'
+      +'<span class="acc-open">Ouvrir →</span></button>';
+  }
+
+  window.accueilHTML=function(){
+    var ds=dossiers();
+    var today=(typeof frDate==='function'&&typeof todayStr==='function')?frDate(todayStr()):'';
+    var grid = ds.length
+      ? ('<div class="acc-grid" id="acc-grid">'+ds.map(carte).join('')+'</div>'
+         +'<div class="acc-empty2" id="acc-empty2" style="display:none">Aucun dossier ne correspond à la recherche.</div>')
+      : ('<div class="acc-empty"><h2>Aucun dossier</h2><p>Importez une sauvegarde ou créez un dossier pour commencer.</p></div>');
+    return '<div class="acc-scroll"><div class="acc-wrap">'
+      +'<div class="acc-top"><div class="acc-brand"><span class="acc-logo">YADA</span><span class="acc-tag">Comptabilité · CA3</span></div>'
+        +'<div class="acc-date">'+esc(today)+'</div></div>'
+      +'<div class="acc-hero"><h1 class="acc-h1">Espace dossiers</h1><p class="acc-sub">Choisissez une société pour ouvrir le logiciel.</p></div>'
+      +(ds.length?('<div class="acc-bar"><input id="acc-search" class="acc-search" type="text" autocomplete="off" placeholder="Rechercher un dossier (nom, ville, SIREN…)" oninput="accueilFiltre(this.value)"><div class="acc-count">'+ds.length+' dossier'+(ds.length>1?'s':'')+'</div></div>'):'')
+      +grid
+      +'<div class="acc-actions">'
+        +'<button class="acc-btn acc-btn-ghost" onclick="document.getElementById(\'imp\')&&document.getElementById(\'imp\').click()">↥ Importer (JSON)</button>'
+        +'<button class="acc-btn acc-btn-pri" onclick="(typeof ouvrirCreationDossier===\'function\')&&ouvrirCreationDossier()">＋ Créer un dossier</button>'
+      +'</div>'
+    +'</div></div>';
+  };
+
+  window.accueilPaint=function(){ try{
+    var main=document.getElementById('main'); if(!main) return;
+    var layout=document.querySelector('.layout'); var aside=document.querySelector('aside');
+    if(aside) aside.style.display='none';
+    if(layout) layout.classList.add('solo');
+    try{ document.body.setAttribute('data-page','accueil'); }catch(e){}
+    main.className='login-bleed';
+    main.innerHTML=window.accueilHTML();
+    var g=document.getElementById('acc-grid');
+    if(g){ Array.prototype.forEach.call(g.querySelectorAll('.acc-card'),function(c){ c.onclick=function(){ window.accueilEntrer(c.getAttribute('data-id')); }; }); }
+  }catch(e){} };
+
+  window.accueilEntrer=function(id){ try{
+    window.__homeView=false;
+    if(typeof choisirDossier==='function'){ try{ choisirDossier(id); }catch(e){ try{ connecte=true; }catch(_e){} } }
+    try{ current='compta'; }catch(e){}
+    window.__homeView=false;
+    render();
+  }catch(e){} };
+
+  window.accueilRetour=function(){ try{ window.__homeView=true; render(); }catch(e){} };
+
+  window.accueilFiltre=function(v){ try{
+    var q=norm(v).trim(); var g=document.getElementById('acc-grid'); if(!g) return; var n=0;
+    Array.prototype.forEach.call(g.querySelectorAll('.acc-card'),function(c){ var s=c.getAttribute('data-search')||''; var show=!q||s.indexOf(q)>=0; c.style.display=show?'':'none'; if(show)n++; });
+    var em=document.getElementById('acc-empty2'); if(em) em.style.display=(n===0)?'block':'none';
+  }catch(e){} };
+
+  try{ var st=document.createElement('style'); st.id='acc-mod'; st.textContent=
+     '.acc-scroll{height:100dvh;overflow-y:auto;-webkit-overflow-scrolling:touch}'
+    +'.acc-wrap{max-width:1080px;margin:0 auto;padding:34px 26px 64px;color:#e7eefb}'
+    +'.acc-top{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:24px}'
+    +'.acc-brand{display:flex;flex-direction:column;gap:3px}'
+    +'.acc-logo{font-weight:800;font-size:22px;letter-spacing:1px;color:#e7eefb}'
+    +'.acc-tag{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#5ab0ff}'
+    +'.acc-date{font-size:13px;color:#8ea3c4;white-space:nowrap}'
+    +'.acc-hero{margin:4px 0 22px}'
+    +'.acc-h1{font-size:30px;margin:0 0 6px;font-weight:800;letter-spacing:-.01em;color:#f2f7ff}'
+    +'.acc-sub{margin:0;color:#8ea3c4;font-size:14px}'
+    +'.acc-bar{display:flex;align-items:center;gap:14px;margin-bottom:18px}'
+    +'.acc-search{flex:1;min-width:0;padding:12px 15px;border-radius:12px;border:1px solid rgba(47,143,255,.28);background:#0f1626;color:#e7eefb;font-size:14px;outline:none}'
+    +'.acc-search:focus{border-color:#2f8fff;box-shadow:0 0 0 3px rgba(47,143,255,.18)}'
+    +'.acc-search::placeholder{color:#64789e}'
+    +'.acc-count{font-size:12.5px;color:#8ea3c4;white-space:nowrap}'
+    +'.acc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}'
+    +'.acc-card{display:flex;align-items:center;gap:14px;text-align:left;padding:15px 16px;border-radius:14px;border:1px solid rgba(47,143,255,.28);background:#0f1626;color:#e7eefb;cursor:pointer;font:inherit;transition:transform .14s ease,box-shadow .18s ease,border-color .18s ease}'
+    +'.acc-card:hover{transform:translateY(-2px);border-color:#2f8fff;box-shadow:0 12px 30px rgba(4,10,22,.55)}'
+    +'.acc-av{flex:0 0 auto;width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:19px;color:#04101f;background:linear-gradient(135deg,#5ab0ff,#0a64d6)}'
+    +'.acc-info{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1}'
+    +'.acc-nom{font-weight:700;font-size:15.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'
+    +'.acc-meta{font-size:12px;color:#8ea3c4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'
+    +'.acc-open{flex:0 0 auto;font-size:13px;color:#5ab0ff;font-weight:600;opacity:.6;transition:opacity .15s,transform .15s}'
+    +'.acc-card:hover .acc-open{opacity:1;transform:translateX(3px)}'
+    +'.acc-empty2{color:#8ea3c4;font-size:13px;padding:14px 4px}'
+    +'.acc-actions{display:flex;gap:12px;margin-top:26px;flex-wrap:wrap}'
+    +'.acc-btn{padding:11px 18px;border-radius:11px;font-size:14px;font-weight:600;cursor:pointer;border:1px solid rgba(47,143,255,.28);background:#0f1626;color:#e7eefb;transition:filter .15s ease,transform .1s ease}'
+    +'.acc-btn:hover{filter:brightness(1.14)}.acc-btn:active{transform:translateY(1px)}'
+    +'.acc-btn-pri{background:linear-gradient(120deg,#2f8fff,#0a64d6);border-color:#2f8fff;color:#04101f;font-weight:700}'
+    +'.acc-empty{padding:44px 24px;text-align:center;border:1px dashed rgba(47,143,255,.35);border-radius:16px;background:#0b111e;color:#8ea3c4}'
+    +'.acc-empty h2{color:#e7eefb;margin:0 0 8px;font-size:18px}'
+    +'@media(max-width:640px){.acc-grid{grid-template-columns:1fr}.acc-bar{flex-direction:column;align-items:stretch}}';
+    document.head.appendChild(st); }catch(e){}
+
+  /* Repeindre l'accueil maintenant que ses fonctions existent (le reset a pu rendre la Consultation avant). */
+  try{ if(window.__homeView===true) render(); }catch(e){}
+  setTimeout(function(){ try{ if(window.__homeView===true) render(); }catch(e){} },120);
 })();
 </script>
 </body>
