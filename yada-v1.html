@@ -11094,7 +11094,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v552';
+    b.textContent='YADA · v553';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -12964,11 +12964,11 @@ ${lignes}
 
   /* Capturer le prompt natif d'installation (Android/Chrome/Edge) pour la modale */
   window.addEventListener('beforeinstallprompt', function(e){ try{ e.preventDefault(); }catch(_){ } window.__yadaDeferred=e; });
-  window.addEventListener('appinstalled', function(){ window.__yadaDeferred=null; ls('yada-dl-prop','1'); var n=document.getElementById('yada-dl-banner'); if(n)n.remove(); if(typeof toast==='function') toast('YADA installé ✓'); });
+  window.addEventListener('appinstalled', function(){ window.__yadaDeferred=null; ls('yada-dl-done','1'); var n=document.getElementById('yada-dl-banner'); if(n)n.remove(); if(typeof toast==='function') toast('YADA installé ✓'); });
 
   window.yadaInstallPC=function(){
     var d=window.__yadaDeferred, b=document.getElementById('yada-install');
-    if(d){ d.prompt(); d.userChoice.then(function(){ window.__yadaDeferred=null; var x=document.getElementById('yada-install'); if(x)x.remove(); var n=document.getElementById('yada-dl-banner'); if(n){ ls('yada-dl-prop','1'); n.remove(); } }); }
+    if(d){ d.prompt(); d.userChoice.then(function(){ window.__yadaDeferred=null; var x=document.getElementById('yada-install'); if(x)x.remove(); var n=document.getElementById('yada-dl-banner'); if(n){ ls('yada-dl-done','1'); n.remove(); } }); }
     else if(b){ b.click(); }
     else if(typeof toast==='function'){ toast('Utilisez l’icône « Installer » de la barre d’adresse (Chrome/Edge) ou le menu du navigateur.'); }
   };
@@ -12997,7 +12997,7 @@ ${lignes}
   /* Bannière une fois — PC ET mobile, libellé adapté */
   function banner(){
     if(standalone()) return;                 /* déjà installée */
-    if(lg('yada-dl-prop')) return;
+    if(lg('yada-dl-done')) return;
     if(document.getElementById('yada-dl-banner')||!document.body) return;
     var mob=isMobile();
     var b=document.createElement('div'); b.id='yada-dl-banner';
@@ -13007,7 +13007,7 @@ ${lignes}
       +'<button class="dl-b-x" aria-label="Fermer">×</button>';
     document.body.appendChild(b);
     var g=b.querySelector('.dl-b-go'); if(g) g.onclick=function(){ window.telechargerApp(); };
-    var x=b.querySelector('.dl-b-x'); if(x) x.onclick=function(){ ls('yada-dl-prop','1'); b.remove(); };
+    var x=b.querySelector('.dl-b-x'); if(x) x.onclick=function(){ b.remove(); };
   }
   /* Neutraliser l'ancienne bannière mobile (addon62) pour éviter un doublon */
   try{ ls('yada-mob-prop','1'); }catch(e){}
@@ -27688,8 +27688,8 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
    service worker → on atterrit directement sur la nouvelle version (Accueil).
    Drapeau localStorage 'yada-fresh-549' → exécuté une seule fois. 100% additif. */
 (function(){
-  var CUR='yada-v147';           /* = CACHE courant du sw.js */
-  var FLAG='yada-fresh-552';
+  var CUR='yada-v148';           /* = CACHE courant du sw.js */
+  var FLAG='yada-fresh-553';
   try{ if(localStorage.getItem(FLAG)) return; }catch(e){}
   try{ localStorage.setItem(FLAG,'1'); }catch(e){}
   try{
@@ -28124,10 +28124,10 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       dl();
       T(function(){ fill.style.transition='width 1.2s cubic-bezier(.25,.6,.3,1)'; fill.style.width='100%'; }, 70);
       T(function(){ b.classList.remove('loading'); b.classList.add('done'); lbl.textContent='Terminé'; fill.style.transition='none'; fill.style.width='100%'; }, 1350);
-      T(function(){ lset('yada-dl-prop','1'); if(b&&b.parentNode) b.remove(); }, 2900);
+      T(function(){ lset('yada-dl-done','1'); if(b&&b.parentNode) b.remove(); }, 2900);
     }
     b.addEventListener('click', function(e){ if(e.target.closest('.dl-x')) return; start(); });
-    x.addEventListener('click', function(e){ e.stopPropagation(); lset('yada-dl-prop','1'); if(b&&b.parentNode) b.remove(); });
+    x.addEventListener('click', function(e){ e.stopPropagation(); if(b&&b.parentNode) b.remove(); });
   }
   function scan(){ var b=document.getElementById('yada-dl-banner'); if(b) wire(b); }
   var iv=setInterval(scan, 300); setTimeout(function(){ try{clearInterval(iv);}catch(e){} }, 15000);
