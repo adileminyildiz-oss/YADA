@@ -36,7 +36,16 @@
 
 ---
 
-## 🟢 Dernière mise à jour — Notification « Télécharger » proposée sur CHAQUE appareil non téléchargé (fin du masquage définitif au ✕) — v553
+## 🟢 Dernière mise à jour — Accueil : logos officiels des tuiles en NOIR & BLANC (Qonto, Créer un dossier, DGFIP, Agenda fiscal, Net-Entreprises, Urssaf) — v555
+**Quoi :** les tuiles du lanceur (« Génération Experts », thème noir) reçoivent des **logos monochromes (blanc sur noir, forme seule, aucune couleur)** conformes aux marques réelles : **Formalités (Qonto)** = 4 pétales pleins ; **Créer un dossier** = dossiers empilés ; **Portail DGFIP** = bloc **« RF » (République Française)** ; **Agenda fiscal** = calendrier ; **Portail Net-Entreprises** = cercle + triangle de lecture (▶) ; **Portail Urssaf** = cercle + 3 quartiers. Le lanceur (Créer un dossier, Importer JSON, Paramétrage, Formalités Qonto, portails) est **conservé tel quel** (base v553) — seules les icônes changent. Portail DSN garde le globe (aucun logo demandé).
+
+**Comment — `ic(name)` du lanceur (precompta + build V1) :** ajout de cas **`qonto` / `folders` / `urssaf` / `netent` / `agenda` / `dgfip`** retournant des `<svg fill="#fff">` à formes pleines (Net-Entreprises en `fill-rule="evenodd"` pour la découpe du ▶ ; DGFIP en filaire `stroke:#fff` + texte « RF » serif). Tuiles `launcherHTML()` recâblées : `folders`→Créer un dossier, `qonto`→Formalités, `dgfip`→DGFIP, `agenda`→Agenda fiscal, `netent`→Net-Entreprises, `urssaf`→Urssaf. `sw.js` yada-v150, badge v555, `version.json` 555, purge `yada-fresh-555`.
+
+**Validé :** `node --check` (precompta 245 / V1 244 scripts, 0 erreur) + `sw.js` OK + équilibre des écritures ✅ + Playwright (lanceur : 12 tuiles, 6 nouveaux logos monochromes rendus, 0 pageerror) + capture. Badge → **v555**.
+
+---
+
+## 🟢 MAJ précédente — Notification « Télécharger » proposée sur CHAQUE appareil non téléchargé (fin du masquage définitif au ✕) — v553
 **Quoi :** la notification **« Télécharger »** (`#yada-dl-banner`) est désormais **proposée sur chaque PC / téléphone tant que l'application n'y a pas été téléchargée ni installée**. Avant, un clic sur **✕** (ou un téléchargement) posait un drapeau `yada-dl-prop` qui **masquait la proposition pour toujours** sur l'appareil. Désormais : le **✕ ne masque que pour la session en cours** (la proposition **réapparaît au prochain chargement**), et le **drapeau permanent `yada-dl-done`** n'est posé **que lorsque le téléchargement/installation a réellement eu lieu** (fin de l'animation, `appinstalled`, installation PC). Un appareil **déjà installé** (mode `standalone`) ne reçoit pas la proposition. Chaque appareil est indépendant (drapeau local).
 
 **Comment — bascule `yada-dl-prop` → `yada-dl-done` (addon `dl-banner` + `yada-addon-dl-slide` ; precompta + build V1) :** la **garde de la bannière** teste `lg('yada-dl-done')` (au lieu de `yada-dl-prop`) ; les **✕** (base **et** addon animé) **ne posent plus de drapeau** (`b.remove()` seul → réapparition au rechargement) ; le **drapeau permanent `yada-dl-done`** est posé uniquement à la **fin du téléchargement** (timer `done` de l'animation), sur **`appinstalled`** et dans **`yadaInstallPC`**. `sw.js` yada-v148, badge v553, `version.json` 553, purge `yada-fresh-553`.
