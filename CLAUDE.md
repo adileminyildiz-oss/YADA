@@ -36,7 +36,16 @@
 
 ---
 
-## 🟢 Dernière mise à jour — Consultation PLEIN ÉCRAN (fin du vide de la barre latérale) + tuiles « Applications du dossier » : une fois créée, la carte affiche le nom seul et l'OUVRE — v550
+## 🟢 Dernière mise à jour — Accueil épuré : « YADA 2026 » retiré, éléments du bas‑gauche supprimés, nouveau bouton de téléchargement au thème NOIR — v551
+**Quoi :** épuration du bas de l'écran d'accueil (lanceur « Génération Experts », NOIR TOTAL). (1) **« YADA 2026 » (bas‑droite)** — le copyright/année du pied de page (`.ge-foot-cop` « © YADA 2026 ») est **retiré**. (2) **Éléments du bas‑gauche supprimés** — la marque du pied `.ge-foot-brand` (« YADA ») **et** le bouton flottant **« ⤓ Installer YADA »** (`#yada-install`) sont **masqués** (l'installation PC reste disponible via la modale « Télécharger l'application » / l'icône du navigateur). En l'absence de dossier ouvert, **plus aucun pied de page** ; quand un dossier est ouvert, le pied n'affiche que **le nom du dossier ouvert** (indicateur conservé). (3) **Nouveau bouton de téléchargement** — le bandeau **« Télécharger l'application YADA »** (`#yada-dl-banner`) est **redessiné au thème NOIR TOTAL** du lanceur : fond **noir `#0b0b0b`**, **bord gris `#2a2a2a`**, texte clair, et **bouton d'action blanc pur** (fond `#fff` / texte noir, survol relevé) — sobre, premium, cohérent avec les tuiles noires à filet du lanceur.
+
+**Comment :** (a) `launcherHTML()` — le `foot` passe de « marque + doc + © YADA <année> » à `sel?('<div class="ge-foot"><span class="ge-foot-doc">…nom…</span></div>'):''` (retrait de `.ge-foot-brand` et `.ge-foot-cop`, var `yr` supprimée) ; (b) nouvel addon **`yada-addon-dl-noir`** (`<style id="dl-noir-mod">`, injecté en fin de `<body>`) : `#yada-install{display:none!important}` + redesign complet de `#yada-dl-banner` (fond `#0b0b0b`, bord `#2a2a2a`, icône/texte `#eaeaea`, CTA `.dl-b-go` blanc `#fff`/noir, survol `#ededed` + translateY). Precompta + build V1. `sw.js` yada-v146, badge v551, `version.json` 551, purge `yada-fresh-551`.
+
+**Validé :** `node --check` (precompta 244 / V1 243 scripts, 0 erreur) + `sw.js` OK + accolades CSS (2014/2014) + équilibre (vente 1200=1200, achat 600=600 ✅) + Playwright (accueil : `.ge-foot`/`.ge-foot-brand`/`.ge-foot-cop` **absents**, texte « YADA 2026 » **absent**, `#yada-install` absent/masqué, `#yada-dl-banner` fond **`rgb(11,11,11)`** bord **`rgb(42,42,42)`** CTA **blanc `rgb(255,255,255)`/texte noir** ; 0 pageerror). Badge → **v551**.
+
+---
+
+## 🟢 MAJ précédente — Consultation PLEIN ÉCRAN (fin du vide de la barre latérale) + tuiles « Applications du dossier » : une fois créée, la carte affiche le nom seul et l'OUVRE — v550
 **Quoi :** deux corrections.
 1. **Consultation plein écran** — la barre latérale était masquée (`aside{display:none}`) mais la grille `.layout` restait en **`208px 1fr`** → `main` tombait dans la piste de 208px (l'ancienne place de la barre latérale) et la piste `1fr` restait **vide à droite** → la Consultation (`.sg-app`) ne faisait que **208px**, `.sg-body` = `300px 0px` (le `1fr` écrasé). Désormais la Consultation **remplit tout l'écran**.
 2. **Applications du dossier** — dès qu'un espace est **créé**, sa tuile n'affiche plus « Création de X » mais **le nom seul** (ex. « Création de la Comptabilité » → **« Comptabilité »**, + ✓ vert) et un **clic l'OUVRE** (au lieu de reproposer la création). Même logique pour Analytique, Investissements & financements, Dossier permanent, Contacts.

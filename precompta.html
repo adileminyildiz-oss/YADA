@@ -11094,7 +11094,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v550';
+    b.textContent='YADA · v551';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -27759,8 +27759,8 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
    service worker → on atterrit directement sur la nouvelle version (Accueil).
    Drapeau localStorage 'yada-fresh-549' → exécuté une seule fois. 100% additif. */
 (function(){
-  var CUR='yada-v145';           /* = CACHE courant du sw.js */
-  var FLAG='yada-fresh-550';
+  var CUR='yada-v146';           /* = CACHE courant du sw.js */
+  var FLAG='yada-fresh-551';
   try{ if(localStorage.getItem(FLAG)) return; }catch(e){}
   try{ localStorage.setItem(FLAG,'1'); }catch(e){}
   try{
@@ -27874,8 +27874,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     var head = '<div class="acc-scroll acc-blk">'
       +'<div class="ge-menubar"><span class="ge-mi" onclick="geFichier(event)">Fichier<div class="ge-dd" id="ge-fichier-dd"><button onclick="event.stopPropagation();geCreer();geFichierClose()">Créer un dossier</button><button onclick="event.stopPropagation();geImport();geFichierClose()">Importer (JSON)</button></div></span><span>Paramètres</span><span>Extraction</span><span>Traitements</span><span>Administration</span><span>Aide</span></div>'
       +'<div class="ge-tabs"><button class="ge-tab on">Dossiers</button><button class="ge-tab">Entités</button><button class="ge-tab">Collaborateur</button><button class="ge-tab">Mes Services</button></div>';
-    var yr=(new Date().getFullYear());
-    var foot='<div class="ge-foot"><span class="ge-foot-brand">YADA</span>'+(sel?('<span class="ge-foot-doc">'+esc(sel.nom||'')+(sel.code?(' ('+esc(sel.code)+')'):'')+'</span>'):'')+'<span class="ge-foot-cop">© YADA '+yr+'</span></div>';
+    var foot=sel?('<div class="ge-foot"><span class="ge-foot-doc">'+esc(sel.nom||'')+(sel.code?(' ('+esc(sel.code)+')'):'')+'</span></div>'):'';
     var body;
     if(sel){
       var rec=recents(); if(rec.indexOf(sel.id)<0) rec.unshift(sel.id);
@@ -28106,6 +28105,29 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
 
   try{ if(window.__homeView===true) render(); }catch(e){}
   setTimeout(function(){ try{ if(window.__homeView===true) render(); }catch(e){} },120);
+})();
+</script>
+<script id="yada-addon-dl-noir">
+/* Épuration bas d'écran (accueil NOIR TOTAL) :
+   - bouton flottant « Installer YADA » (#yada-install) masqué (installation via la modale)
+   - « Télécharger l'application YADA » (#yada-dl-banner) redessiné au thème noir (bouton amélioré) */
+(function(){
+  if(typeof document==='undefined'||!document.head) return;
+  if(document.getElementById('dl-noir-mod')) return;
+  var s=document.createElement('style'); s.id='dl-noir-mod';
+  s.textContent=''
+   +'#yada-install{display:none!important}'
+   +'#yada-dl-banner{background:#0b0b0b!important;border:1px solid #2a2a2a!important;'
+     +'box-shadow:0 16px 42px rgba(0,0,0,.62)!important;border-radius:14px!important;padding:9px 11px 9px 15px!important;gap:13px!important}'
+   +'#yada-dl-banner .dl-b-ic{color:#eaeaea!important;font-size:17px!important}'
+   +'#yada-dl-banner .dl-b-txt{color:#eaeaea!important;font-weight:600!important;letter-spacing:.2px}'
+   +'#yada-dl-banner .dl-b-go{background:#fff!important;color:#000!important;border:none!important;'
+     +'border-radius:9px!important;padding:7px 16px!important;font-weight:800!important;letter-spacing:.2px;'
+     +'box-shadow:none!important;transition:transform .12s ease,background .12s ease!important}'
+   +'#yada-dl-banner .dl-b-go:hover{background:#ededed!important;transform:translateY(-1px)!important;filter:none!important}'
+   +'#yada-dl-banner .dl-b-x{color:#777!important}'
+   +'#yada-dl-banner .dl-b-x:hover{color:#fff!important}';
+  document.head.appendChild(s);
 })();
 </script>
 </body>
