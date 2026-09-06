@@ -11094,7 +11094,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v535';
+    b.textContent='YADA · v536';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -27638,7 +27638,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       var nav=document.getElementById('nav'); if(!nav) return;
       nav.innerHTML='';
       var s=document.createElement('div'); s.className='nav-sec'; s.textContent='Comptabilité'; nav.appendChild(s);
-      var b=document.createElement('button'); b.className='nav-btn active';
+      var b=document.createElement('button'); b.className='nav-btn'+((typeof current!=='undefined'&&current==='compta')?' active':'');
       b.innerHTML='<span class="ico">≣</span>Consultation';
       b.onclick=function(){ try{ current='compta'; }catch(e){} render(); };
       nav.appendChild(b);
@@ -27650,7 +27650,6 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     var _r=render;
     render=function(){
       try{ connecte=true; }catch(e){}
-      try{ if(current!=='compta') current='compta'; }catch(e){}
       var x=_r.apply(this,arguments);
       try{ document.body.removeAttribute('data-noside'); var chip=document.getElementById('ds-back-chip'); if(chip) chip.style.display='none'; }catch(e){}
       return x;
@@ -27667,13 +27666,43 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       if(id && typeof choisirDossier==='function'){ try{ choisirDossier(id); }catch(e){ try{ connecte=true; }catch(_e){} } }
       else { try{ connecte=true; }catch(e){} }
     }
-    try{ current='compta'; }catch(e){}
+    if(!window.__resetOpened){ try{ current='compta'; }catch(e){} window.__resetOpened=true; }
     if(typeof render==='function') render();
   }catch(e){} }
 
   ouvrir();
   setTimeout(ouvrir,60);
   setTimeout(ouvrir,400);
+})();
+</script>
+
+<script id="yada-addon-fichier-modules">
+/* v536 — Menu « Fichier » de la Consultation : ouvre TOUS les modules.
+   Ajoute en bas du menu Fichier (#sg-fichier) une section « Modules » listant toutes
+   les pages ; un clic ouvre la page (current=<id>; render()). 100% additif : injection
+   post-rendu dans le dropdown existant, Consultation NON modifiée. */
+(function(){
+  if(typeof render!=='function') return;
+  try{ var st=document.createElement('style'); st.id='fmod-mod';
+    st.textContent='.sg-dd .fmod-h{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#0a64d6;padding:7px 12px 2px}'
+      +'.sg-dd .fmod-sec{font-size:10.5px;color:#8a97ad;padding:5px 12px 1px;margin-top:2px}';
+    document.head.appendChild(st); }catch(e){}
+  function inject(){ try{
+    if(typeof current==='undefined' || current!=='compta') return;
+    var dd=document.getElementById('sg-fichier'); if(!dd) return;
+    if(dd.querySelector('.fmod-mark')) return;
+    dd.style.maxHeight='82vh'; dd.style.overflowY='auto';
+    var sep=document.createElement('div'); sep.className='sep fmod-mark'; dd.appendChild(sep);
+    var hd=document.createElement('div'); hd.className='fmod-h'; hd.textContent='Modules'; dd.appendChild(hd);
+    var pages=(typeof PAGES!=='undefined'&&PAGES)?PAGES:[]; var lastSec='';
+    pages.forEach(function(p){ if(!p||!p.id||p.id==='compta') return;
+      if(p.sec && p.sec!==lastSec){ var s=document.createElement('div'); s.className='fmod-sec'; s.textContent=p.sec; dd.appendChild(s); lastSec=p.sec; }
+      var b=document.createElement('button'); b.textContent=String(p.lbl||p.id);
+      b.onclick=function(ev){ try{ ev.stopPropagation(); }catch(e){} try{ if(typeof closeFichier==='function') closeFichier(); else if(typeof closeMenus==='function') closeMenus(); }catch(e){} try{ current=p.id; }catch(e){} render(); };
+      dd.appendChild(b); });
+  }catch(e){} }
+  var _r=render; render=function(){ var x=_r.apply(this,arguments); try{ inject(); }catch(e){} return x; };
+  setTimeout(inject,120); setTimeout(inject,500);
 })();
 </script>
 </body>
