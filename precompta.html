@@ -11094,7 +11094,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v551';
+    b.textContent='YADA · v552';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -27759,8 +27759,8 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
    service worker → on atterrit directement sur la nouvelle version (Accueil).
    Drapeau localStorage 'yada-fresh-549' → exécuté une seule fois. 100% additif. */
 (function(){
-  var CUR='yada-v146';           /* = CACHE courant du sw.js */
-  var FLAG='yada-fresh-551';
+  var CUR='yada-v147';           /* = CACHE courant du sw.js */
+  var FLAG='yada-fresh-552';
   try{ if(localStorage.getItem(FLAG)) return; }catch(e){}
   try{ localStorage.setItem(FLAG,'1'); }catch(e){}
   try{
@@ -28128,6 +28128,82 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
    +'#yada-dl-banner .dl-b-x{color:#777!important}'
    +'#yada-dl-banner .dl-b-x:hover{color:#fff!important}';
   document.head.appendChild(s);
+})();
+</script>
+<script id="yada-addon-dl-slide">
+/* Notification « Télécharger » (piste 05 → 04) : pilule contour bleu au repos ;
+   au clic elle s'agrandit, la flèche ⬇ devient un anneau de chargement et le
+   bouton se remplit en BARRE BLANCHE de progression, puis ✓ terminé. Libellé
+   unique « Télécharger ». Rebuild de #yada-dl-banner (créé par l'addon dl-banner). */
+(function(){
+  if(typeof document==='undefined'||!document.head) return;
+  if(document.getElementById('dl-slide-mod')) return;
+  var s=document.createElement('style'); s.id='dl-slide-mod';
+  s.textContent=''
+   +'#yada-dl-banner{background:#0c0c0d!important;border:1px solid #1e90ff!important;border-radius:999px!important;'
+     +'padding:8px 9px 8px 15px!important;gap:11px!important;box-shadow:0 14px 34px rgba(0,0,0,.5)!important;cursor:pointer;align-items:center!important;'
+     +'transition:padding .38s cubic-bezier(.16,1,.3,1),border-radius .38s ease,border-color .3s ease,gap .38s ease!important}'
+   +'#yada-dl-banner:hover{box-shadow:0 16px 40px rgba(30,144,255,.22)!important}'
+   +'#yada-dl-banner .dl-ic{position:relative;width:20px;height:20px;flex:none;color:#5ab0ff;transition:width .38s cubic-bezier(.16,1,.3,1),height .38s cubic-bezier(.16,1,.3,1),color .3s ease}'
+   +'#yada-dl-banner .dl-ic svg{position:absolute;inset:0;margin:auto;transition:opacity .3s ease,transform .45s cubic-bezier(.16,1,.3,1)}'
+   +'#yada-dl-banner .dl-ring{opacity:0;transform:scale(.5) rotate(-90deg);animation:yadaDlSpin 1s linear infinite;animation-play-state:paused}'
+   +'#yada-dl-banner .dl-check{opacity:0;transform:scale(.4);color:#24d17a}'
+   +'#yada-dl-banner .dl-btn{position:relative;overflow:hidden;border:1px solid #1e90ff;border-radius:999px;background:transparent;color:#5ab0ff;font:800 12.5px/1 inherit;letter-spacing:.3px;padding:8px 16px;white-space:nowrap;cursor:pointer;'
+     +'transition:width .42s cubic-bezier(.16,1,.3,1),border-radius .42s ease,padding .42s ease,color .3s ease,background .3s ease,height .42s ease}'
+   +'#yada-dl-banner .dl-btn .lbl{position:relative;z-index:2;transition:color .3s ease}'
+   +'#yada-dl-banner .dl-fill{position:absolute;inset:0;width:0;z-index:1;background:linear-gradient(90deg,#5ab0ff,#1e90ff);transition:width .2s linear}'
+   +'#yada-dl-banner .dl-x{background:none;border:none;color:#777;cursor:pointer;font-size:16px;line-height:1;padding:0 4px;transition:opacity .28s ease,width .28s ease,margin .28s ease;opacity:1}'
+   +'#yada-dl-banner .dl-x:hover{color:#fff}'
+   +'#yada-dl-banner.loading{padding:10px 16px!important;border-radius:16px!important;gap:13px!important;cursor:default;border-color:#2f2f33!important}'
+   +'#yada-dl-banner.loading .dl-ic{width:22px;height:22px;color:#fff}'
+   +'#yada-dl-banner.loading .dl-arrow{opacity:0;transform:scale(.5) rotate(90deg)}'
+   +'#yada-dl-banner.loading .dl-ring{opacity:1;transform:scale(1) rotate(0);animation-play-state:running}'
+   +'#yada-dl-banner.loading .dl-btn{width:210px;height:22px;padding:0;border-radius:999px;border-color:#2f2f33;background:#1b1b1e;display:flex;align-items:center;justify-content:center}'
+   +'#yada-dl-banner.loading .dl-btn .lbl{color:#fff;font-size:11px;letter-spacing:.4px;mix-blend-mode:difference}'
+   +'#yada-dl-banner.loading .dl-fill{background:linear-gradient(90deg,#fff,#eaeaea)}'
+   +'#yada-dl-banner.loading .dl-x{opacity:0;width:0;margin-left:-13px;pointer-events:none}'
+   +'#yada-dl-banner.done{border-color:rgba(36,209,122,.45)!important}'
+   +'#yada-dl-banner.done .dl-ic{color:#24d17a}'
+   +'#yada-dl-banner.done .dl-ring{animation-play-state:paused;opacity:0}'
+   +'#yada-dl-banner.done .dl-check{opacity:1;transform:scale(1)}'
+   +'#yada-dl-banner.done .dl-btn{background:rgba(36,209,122,.16);border-color:rgba(36,209,122,.4)}'
+   +'#yada-dl-banner.done .dl-btn .lbl{color:#bff0d4;mix-blend-mode:normal}'
+   +'@keyframes yadaDlSpin{to{transform:rotate(360deg)}}';
+  document.head.appendChild(s);
+
+  function lset(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+  function dl(){
+    try{ if(typeof yadaDownloadFile==='function'){ yadaDownloadFile(); return; } }catch(e){}
+    try{ if(typeof telechargerApp==='function'){ telechargerApp(); } }catch(e){}
+  }
+  function wire(b){
+    if(b.getAttribute('data-slide')==='1') return;
+    b.setAttribute('data-slide','1');
+    b.innerHTML=''
+      +'<span class="dl-ic" aria-hidden="true">'
+        +'<svg class="dl-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M5 21h14"/></svg>'
+        +'<svg class="dl-ring" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.2-8.6"/></svg>'
+        +'<svg class="dl-check" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m20 6-11 11-5-5"/></svg>'
+      +'</span>'
+      +'<button class="dl-btn"><span class="dl-fill"></span><span class="lbl">Télécharger</span></button>'
+      +'<button class="dl-x" aria-label="Fermer">×</button>';
+    var fill=b.querySelector('.dl-fill'), lbl=b.querySelector('.lbl'), x=b.querySelector('.dl-x'), busy=false, timers=[];
+    function T(fn,ms){ timers.push(setTimeout(fn,ms)); }
+    function start(){
+      if(busy) return; busy=true;
+      b.classList.remove('done'); b.classList.add('loading'); lbl.textContent='Télécharger'; fill.style.width='0';
+      dl();
+      T(function(){ fill.style.transition='width 1.2s cubic-bezier(.25,.6,.3,1)'; fill.style.width='100%'; }, 70);
+      T(function(){ b.classList.remove('loading'); b.classList.add('done'); lbl.textContent='Terminé'; fill.style.transition='none'; fill.style.width='100%'; }, 1350);
+      T(function(){ lset('yada-dl-prop','1'); if(b&&b.parentNode) b.remove(); }, 2900);
+    }
+    b.addEventListener('click', function(e){ if(e.target.closest('.dl-x')) return; start(); });
+    x.addEventListener('click', function(e){ e.stopPropagation(); lset('yada-dl-prop','1'); if(b&&b.parentNode) b.remove(); });
+  }
+  function scan(){ var b=document.getElementById('yada-dl-banner'); if(b) wire(b); }
+  var iv=setInterval(scan, 300); setTimeout(function(){ try{clearInterval(iv);}catch(e){} }, 15000);
+  scan();
+  try{ new MutationObserver(scan).observe(document.body||document.documentElement,{childList:true}); }catch(e){}
 })();
 </script>
 </body>
