@@ -11094,7 +11094,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v557';
+    b.textContent='YADA · v558';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -12552,6 +12552,8 @@ ${lignes}
     document.getElementById('modal').classList.add('show');
   };
   function banner(){
+    /* v558 — bannière mobile flottante retirée : elle partageait l'ancre exacte du bouton de téléchargement (left:50%;bottom:14px) et dépassait DERRIÈRE la pilule #yada-dl-banner. Le QR / installation mobile reste accessible via la modale « Télécharger » et Paramétrage. */
+    var _mp=document.getElementById('mob-prop'); if(_mp) _mp.remove(); return;
     if(isMobile()) return; if(lg('yada-mob-prop')) return; if(document.getElementById('mob-prop')||!document.body) return;
     var b=document.createElement('div'); b.id='mob-prop';
     b.style.cssText='position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:9998;display:flex;align-items:center;gap:10px;background:linear-gradient(120deg,#0f2138,#121212);color:#fff;border:1px solid rgba(30,144,255,.4);border-radius:12px;padding:9px 13px;box-shadow:0 10px 30px rgba(0,0,0,.45);font:500 12.5px system-ui,sans-serif;max-width:92vw';
@@ -27689,7 +27691,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
    Drapeau localStorage 'yada-fresh-549' → exécuté une seule fois. 100% additif. */
 (function(){
   var CUR='yada-v148';           /* = CACHE courant du sw.js */
-  var FLAG='yada-fresh-557';
+  var FLAG='yada-fresh-558';
   try{ if(localStorage.getItem(FLAG)) return; }catch(e){}
   try{ localStorage.setItem(FLAG,'1'); }catch(e){}
   try{

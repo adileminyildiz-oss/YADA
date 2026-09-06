@@ -36,7 +36,16 @@
 
 ---
 
-## 🟢 Dernière mise à jour — Notification « Télécharger » : bouton amélioré (pilule vitrée, anneau à progression réelle, barre bleue + %) — v557
+## 🟢 Dernière mise à jour — Correctif : bannière mobile flottante retirée (elle apparaissait DERRIÈRE le bouton de téléchargement) — v558
+**Quoi :** une **notification apparaissait derrière le bouton de téléchargement** (`#yada-dl-banner`). Cause : la vieille **bannière flottante « Installez aussi YADA sur votre mobile »** (`#mob-prop`, addon62) partageait **exactement la même ancre** que la pilule de téléchargement (`position:fixed; left:50%; bottom:14px; transform:translateX(-50%)`) mais avec un **z-index inférieur** (9998 < 99990) → étant plus large que la pilule, ses bords **dépassaient derrière** le bouton. Un drapeau `yada-mob-prop` était censé la masquer, mais c'était **fragile** (course des timers 1500 ms/1800 ms, cache périmé, stockage vidé). La bannière `#mob-prop` est désormais **retirée définitivement** — le **QR code / installation mobile reste accessible** via la modale « Télécharger l'application » et via **Paramétrage**.
+
+**Comment — `banner()` de l'addon62 (precompta + build V1) :** ajout en tête de la fonction de `var _mp=document.getElementById('mob-prop'); if(_mp) _mp.remove(); return;` → `#mob-prop` n'est **plus jamais créé** (et tout nœud existant est retiré), quel que soit l'état du drapeau. `sw.js` yada-v153, badge v558, `version.json` 558, purge `yada-fresh-558`.
+
+**Validé :** `node --check` (precompta 245 / V1 244 scripts, 0 erreur) + `sw.js` OK + Playwright **pire cas** (drapeau `yada-mob-prop` retiré à l'init) : `#mob-prop` **jamais présent** (`false`), bouton de téléchargement intact (« Télécharger »), badge **v558**, 0 pageerror (precompta **et** V1). Badge → **v558**.
+
+---
+
+## 🟢 MAJ précédente — Notification « Télécharger » : bouton amélioré (pilule vitrée, anneau à progression réelle, barre bleue + %) — v557
 **Quoi :** la notification **« Télécharger l'application YADA »** (`#yada-dl-banner`) est redessinée (aperçu validé) : **au repos** pilule **vitrée** (dégradé bleu nuit + `backdrop-filter:blur` + halo bleu) à contour bleu, **flèche ⬇ qui flotte** (invite au clic), léger relief au survol ; **au clic** la pilule s'agrandit, la flèche devient un **anneau à progression réelle** (stroke-dashoffset) qui tourne, et le bouton se remplit en **barre BLEUE lumineuse** (dégradé `#0a64d6→#1e90ff→#5ab0ff` + glow) avec le **pourcentage en direct** ; **à la fin** anneau → **✓ vert « Terminé »** (bord vert) puis la notification se referme et le drapeau permanent `yada-dl-done` est posé. Le clic déclenche le **vrai téléchargement** (`yadaDownloadFile()` → `YADA.html`, repli `telechargerApp()`). ✕ = masquage session (réapparition au rechargement), inchangé.
 
 **Comment — `yada-addon-dl-slide` réécrit (precompta + build V1) :** `<style id="dl-slide-mod">` refondu (pilule vitrée, `.dl-track`/`.dl-fill` bleu + `.dl-pct`, `.dl-ring circle` à `stroke-dasharray:56`, keyframes `yadaDlSpin` + `yadaDlBob`) ; `wire()` reconstruit l'innerHTML (flèche `<g class="bob">`, anneau `<circle>`, `.dl-pct`) ; `start()` anime en **requestAnimationFrame** (easeOutQuad 1,8 s : largeur + % + dashoffset), pose `yada-dl-done` à la fin puis retire la pilule. Aucune logique de téléchargement/drapeau modifiée. `sw.js` yada-v152, badge v557, `version.json` 557, purge `yada-fresh-557`.
