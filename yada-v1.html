@@ -11094,7 +11094,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v533';
+    b.textContent='YADA · v534';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -27482,6 +27482,131 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     '.dash-riche .dr-legv{color:#eaf2ff !important}'
   ].join('');
   var st=document.createElement('style'); st.id='marq-palette'; st.textContent=css; document.head.appendChild(st);
+}catch(e){} })();
+</script>
+<script id="yada-addon-factu-b">
+/* Facturation (Espace Cabinet) — RECONSTRUCTION Structure B : barre latérale d'actions + zone principale.
+   100% additif : transformation post-rendu de #main .mod-wrap (comme le shell dossiers-pc).
+   Toutes les cartes existantes (liste, suivi, dépôt, correspondances, catalogue, paramètres,
+   e-facturation, fiches, émettre) sont PRÉSERVÉES et réparties par section ; aucune fonction réécrite. */
+(function(){ try{
+  if(document.getElementById('factu-b-mod')) return;
+  var st=document.createElement('style'); st.id='factu-b-mod'; st.textContent=[
+    '.fpc-shell{display:grid;grid-template-columns:230px 1fr;gap:16px;align-items:start;margin-top:6px}',
+    '.fpc-rail{display:flex;flex-direction:column;gap:9px;position:sticky;top:8px}',
+    '.fpc-abtn{display:flex;align-items:center;gap:10px;background:#0f1626;border:1px solid rgba(47,143,255,.28);border-radius:11px;padding:11px 13px;font-size:13px;font-weight:600;color:#e7eefb;cursor:pointer;text-align:left;width:100%;transition:background .12s,border-color .12s,transform .05s}',
+    '.fpc-abtn:hover{border-color:rgba(47,143,255,.55);background:#121b2e}',
+    '.fpc-abtn:active{transform:translateY(1px)}',
+    '.fpc-abtn .fai{width:30px;height:30px;flex:0 0 auto;border-radius:8px;background:rgba(47,143,255,.14);border:1px solid rgba(47,143,255,.3);display:grid;place-items:center;color:#5ab0ff;font-size:15px}',
+    '.fpc-abtn.on{background:rgba(47,143,255,.16);border-color:#2f8fff}',
+    '.fpc-abtn.on .fai{background:rgba(47,143,255,.28);color:#cfe6ff}',
+    '.fpc-abtn.pri{background:linear-gradient(135deg,#2f8fff,#2f74e6);border-color:transparent;color:#fff;box-shadow:0 8px 22px rgba(47,143,255,.35)}',
+    '.fpc-abtn.pri .fai{background:rgba(255,255,255,.2);border-color:transparent;color:#fff}',
+    '.fpc-mini{background:#0f1626;border:1px solid rgba(47,143,255,.28);border-radius:11px;padding:12px 13px;margin-top:4px}',
+    '.fpc-mini h4{margin:0 0 8px;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:#8ea3c4;font-weight:700}',
+    '.fpc-mini .row{display:flex;justify-content:space-between;font-size:12.5px;padding:3px 0;color:#c7d6ef}',
+    '.fpc-mini .row b{color:#e7eefb}',
+    '.fpc-mini .row b.up{color:#5ab0ff}.fpc-mini .row b.down{color:#2f74e6}',
+    '.fpc-main{min-width:0}',
+    '.fpc-empty{color:#8ea3c4;font-size:13px;background:#0f1626;border:1px dashed rgba(47,143,255,.3);border-radius:12px;padding:22px;text-align:center}',
+    '@media(max-width:900px){.fpc-shell{grid-template-columns:1fr}.fpc-rail{position:static;flex-flow:row wrap}.fpc-abtn{width:auto;flex:1 1 44%}}'
+  ].join('\n');
+  document.head.appendChild(st);
+
+  var SECTIONS=[
+    {key:'factures', ic:'📄', lbl:'Factures'},
+    {key:'depot',    ic:'📥', lbl:'Dépôt'},
+    {key:'recurrence',ic:'🔁',lbl:'Récurrence'},
+    {key:'nouvelle', ic:'✎', lbl:'Saisie manuelle'},
+    {key:'params',   ic:'⚙', lbl:'Paramètres'}
+  ];
+  function noAcc(s){ return (s||'').toString().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,''); }
+  function classer(el){
+    if(el.classList && el.classList.contains('flow')) return 'nouvelle';
+    var h=el.querySelector && el.querySelector('h2'); var t=noAcc(h?h.textContent:'');
+    if(!t) return 'factures';
+    if(/recurrence/.test(t)) return 'recurrence';
+    if(/depos|depot|reception|fiche|inconnu|a valider/.test(t)) return 'depot';
+    if(/parametres de facturation|facturation electronique|e-facturation|catalogue|articles|prestations/.test(t)) return 'params';
+    if(/emettre|document client|saisie/.test(t)) return 'nouvelle';
+    return 'factures'; /* liste, suivi, correspondances, envoyées… */
+  }
+  function moisKPI(){
+    var out={ca:0,enc:0,ret:0,nb:0}; try{
+      var ym=(new Date()).toISOString().slice(0,7);
+      (db.docs||[]).filter(function(d){return d.type==='facture' && (d.date||'').slice(0,7)===ym;}).forEach(function(d){
+        out.ca+=(+d.ttc||0); out.nb++;
+        var f=(db.factures||[]).find(function(x){return x.numero===d.numero;});
+        var reg=f&&typeof reglementDe==='function'?reglementDe(f.id):null;
+        if(!reg||reg.statut!=='regle'){ out.enc+=(+d.ttc||0);
+          if(d.echeance && d.echeance<(new Date()).toISOString().slice(0,10)) out.ret+=(+d.ttc||0); }
+      });
+    }catch(e){}
+    return out;
+  }
+  function fmt(n){ try{ return (typeof eur==='function')?eur(n):(Math.round(n)+' €'); }catch(e){ return n+' €'; } }
+
+  function applySec(root){
+    var sec=window.fpcSec||'factures';
+    var cards=root.querySelectorAll('.fpc-main>[data-fsec]');
+    var any=false;
+    cards.forEach(function(c){ var on=(c.getAttribute('data-fsec')===sec); c.style.display=on?'':'none'; if(on)any=true; });
+    var main=root.querySelector('.fpc-main');
+    var emp=main.querySelector('.fpc-empty'); if(emp) emp.remove();
+    if(!any){ var d=document.createElement('div'); d.className='fpc-empty'; d.textContent='Aucun élément dans cette section.'; main.appendChild(d); }
+    root.querySelectorAll('.fpc-abtn[data-sec]').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-sec')===sec); });
+  }
+  window.fpcGo=function(sec){ window.fpcSec=sec; var root=document.querySelector('#main .mod-wrap.fpc-done'); if(root) applySec(root); };
+  window.fpcNouvelle=function(){ try{ if(typeof factureNouvelleOuvrir==='function') factureNouvelleOuvrir(); else { window.fpcSec='nouvelle'; window.fpcGo('nouvelle'); } }catch(e){} };
+
+  function transform(){
+    if((window.sessionRole||'cabinet')==='client') return;
+    var root=document.querySelector('#main .mod-wrap');
+    if(!root || root.classList.contains('fpc-done')) return;
+    var head=root.querySelector('.page-head');
+    var htit=noAcc((head&&head.querySelector('h1'))?head.querySelector('h1').textContent:'');
+    if(!/facturation/.test(htit)) return; /* page Facturation (cabinet) détectée par le titre */
+    /* enfants à répartir (tout sauf l'en-tête) */
+    var kids=[]; Array.prototype.forEach.call(root.childNodes,function(n){ if(n.nodeType===1 && n!==head) kids.push(n); });
+    if(!kids.length) return;
+    /* présence des sections */
+    var present={}; kids.forEach(function(k){ present[classer(k)]=true; });
+    /* shell */
+    var shell=document.createElement('div'); shell.className='fpc-shell';
+    var rail=document.createElement('div'); rail.className='fpc-rail';
+    var main=document.createElement('div'); main.className='fpc-main';
+    /* bouton principal */
+    var pri=document.createElement('button'); pri.className='fpc-abtn pri'; pri.innerHTML='<span class="fai">＋</span>Nouvelle facture'; pri.onclick=window.fpcNouvelle;
+    rail.appendChild(pri);
+    /* boutons de section (uniquement celles présentes ; Factures toujours) */
+    SECTIONS.forEach(function(s){
+      if(s.key!=='factures' && !present[s.key]) return;
+      var b=document.createElement('button'); b.className='fpc-abtn'; b.setAttribute('data-sec',s.key);
+      b.innerHTML='<span class="fai">'+s.ic+'</span>'+s.lbl;
+      b.onclick=function(){ window.fpcGo(s.key); };
+      rail.appendChild(b);
+    });
+    /* mini KPI du mois */
+    var k=moisKPI();
+    var mini=document.createElement('div'); mini.className='fpc-mini';
+    mini.innerHTML='<h4>Ce mois</h4>'
+      +'<div class="row">CA facturé <b class="up">'+fmt(k.ca)+'</b></div>'
+      +'<div class="row">À encaisser <b>'+fmt(k.enc)+'</b></div>'
+      +'<div class="row">En retard <b class="down">'+fmt(k.ret)+'</b></div>'
+      +'<div class="row">Factures <b>'+k.nb+'</b></div>';
+    rail.appendChild(mini);
+    /* déplacer les cartes dans la zone principale, avec section */
+    kids.forEach(function(kd){ kd.setAttribute('data-fsec', classer(kd)); main.appendChild(kd); });
+    shell.appendChild(rail); shell.appendChild(main);
+    root.appendChild(shell);
+    root.classList.add('fpc-done');
+    if(!window.fpcSec || (window.fpcSec!=='factures' && !present[window.fpcSec])) window.fpcSec='factures';
+    applySec(root);
+  }
+
+  var _r=window.render;
+  if(typeof _r==='function'){ window.render=function(){ var x=_r.apply(this,arguments); try{ transform(); }catch(e){} return x; }; }
+  setTimeout(function(){ try{ transform(); }catch(e){} },60);
 }catch(e){} })();
 </script>
 </body>
