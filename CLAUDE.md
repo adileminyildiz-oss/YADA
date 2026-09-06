@@ -36,7 +36,16 @@
 
 ---
 
-## 🟢 Dernière mise à jour — Accueil : fin du « flash » de l'ancien mode + page élargie plein écran (bord à bord) — v544
+## 🟢 Dernière mise à jour — Accueil : remplissage MAXIMUM de l'écran (tuiles étirées largeur + hauteur) — v545
+**Quoi :** l'accueil remplit désormais tout l'écran au maximum — les tuiles s'étirent **en largeur ET en hauteur** (grilles `auto-fit`+`grid-auto-rows:1fr`+`align-items:stretch`, tuiles `height:auto` min 78), les groupes occupent toute la hauteur (`.ge-group{flex:1}`), marges réduites (`16px 18px`). Vue « dossier ouvert » (2 colonnes) idem (colonnes étirées). Le correctif anti-flash de l'ancien mode (v544) est conservé.
+
+**Comment :** `yada-addon-accueil` — groupes `.ge-group{flex:1}`, `.ge-grid{flex:1;grid-auto-rows:1fr;align-items:stretch}`, `.ge-tile{height:auto;min-height:78px}`, `.ge-body`/`.ge-body2` en flex/grid pleine hauteur. `sw.js` yada-v140, badge v545, `version.json` 545.
+
+**Validé :** `node --check` (242/241, 0 erreur) + `sw.js` OK + équilibre (1200=1200, 600=600 ✅) + Playwright (tuiles ≈439×163, corps ≈ pleine hauteur, 0 pageerror) + capture. Badge → **v545**.
+
+---
+
+## 🟢 MAJ précédente — Accueil : fin du « flash » de l'ancien mode + page élargie plein écran (bord à bord) — v544
 **Quoi :** (1) l'**ancien écran de connexion (`#sec-lock`) ne « flashe » plus** au démarrage : il est **masqué dès le `<head>`** (`#sec-lock{display:none!important}` injecté par le reset) en plus d'être retiré du DOM ; au démarrage, tant que l'accueil n'est pas prêt, on affiche un **écran noir** (plus jamais l'ancien mode ni un module qui clignote). (2) La **page d'accueil est élargie pour remplir tout l'écran** : les tuiles s'**étirent de droite à gauche** (grilles `repeat(auto-fit,minmax(150px,1fr))`, tuiles pleine largeur) et les groupes se **répartissent de haut en bas** (`.ge-body` en flex colonne `justify-content:space-between`, groupes enveloppés dans `.ge-group`) ; idem en vue « dossier ouvert » (2 colonnes étirées). (3) **Cache purgé** (service worker `yada-v138 → yada-v139`).
 
 **Comment :** `yada-addon-reset` — injection `<style id="yada-no-login">` + rendu « écran noir » quand `__homeView` et `accueilPaint` pas encore défini ; `yada-addon-accueil` — groupes `.ge-group`, CSS `.ge-body`/`.ge-body2`/`.ge-colL`/`.ge-colR` (remplissage vertical) + `.ge-grid` en grille auto-fit + `.ge-tile` largeur auto/hauteur 116. `sw.js` yada-v139, badge v544, `version.json` 544.
