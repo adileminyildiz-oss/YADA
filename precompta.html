@@ -11094,7 +11094,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v553';
+    b.textContent='YADA · v555';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -27760,7 +27760,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
    Drapeau localStorage 'yada-fresh-549' → exécuté une seule fois. 100% additif. */
 (function(){
   var CUR='yada-v148';           /* = CACHE courant du sw.js */
-  var FLAG='yada-fresh-553';
+  var FLAG='yada-fresh-555';
   try{ if(localStorage.getItem(FLAG)) return; }catch(e){}
   try{ localStorage.setItem(FLAG,'1'); }catch(e){}
   try{
@@ -27847,6 +27847,13 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       case 'compta': return A+'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>'+Z;
       case 'analytique': return A+'<path d="M4 4v16h16"/><rect x="7" y="12" width="2.6" height="5"/><rect x="11.5" y="8" width="2.6" height="9"/><rect x="16" y="14" width="2.6" height="3"/>'+Z;
       case 'invest': return A+'<path d="M3 9l9-5 9 5"/><path d="M4.5 9v8.5M9.5 9v8.5M14.5 9v8.5M19.5 9v8.5"/><path d="M3 20h18"/>'+Z;
+      /* ── Logos officiels (monochrome, forme pleine blanche) ── */
+      case 'qonto': return '<svg viewBox="0 0 24 24" width="24" height="24" fill="#fff"><path d="M12 12 C 8.4 8.4 8.4 4.2 12 2 C 15.6 4.2 15.6 8.4 12 12 Z" transform="rotate(45 12 12)"/><path d="M12 12 C 8.4 8.4 8.4 4.2 12 2 C 15.6 4.2 15.6 8.4 12 12 Z" transform="rotate(135 12 12)"/><path d="M12 12 C 8.4 8.4 8.4 4.2 12 2 C 15.6 4.2 15.6 8.4 12 12 Z" transform="rotate(225 12 12)"/><path d="M12 12 C 8.4 8.4 8.4 4.2 12 2 C 15.6 4.2 15.6 8.4 12 12 Z" transform="rotate(315 12 12)"/></svg>';
+      case 'folders': return '<svg viewBox="0 0 24 24" width="24" height="24" fill="#fff"><path d="M3 8.2a2 2 0 0 1 2-2h3.1l1.5 1.7H15a2 2 0 0 1 2 2v.6H8.4a2.4 2.4 0 0 0-2.4 2.4v3.9H5a2 2 0 0 1-2-2z"/><path d="M8.4 11.1h9.2a2.2 2.2 0 0 1 2.2 2.2v4.2a2.2 2.2 0 0 1-2.2 2.2H8.4a2.2 2.2 0 0 1-2.2-2.2v-4.2a2.2 2.2 0 0 1 2.2-2.2z"/></svg>';
+      case 'urssaf': return '<svg viewBox="0 0 24 24" width="24" height="24" fill="#fff"><circle cx="7.3" cy="6.8" r="4"/><path d="M12.6 11.4 L19.4 11.4 A7 7 0 0 0 12.6 4.6 Z"/><path d="M11.4 12.6 L11.4 19.4 A7 7 0 0 1 4.6 12.6 Z"/><path d="M12.6 12.6 L19.4 12.6 A7 7 0 0 1 12.6 19.4 Z"/></svg>';
+      case 'netent': return '<svg viewBox="0 0 24 24" width="24" height="24" fill="#fff"><path fill-rule="evenodd" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Z M9.8 8 L16.4 12 L9.8 16 Z"/></svg>';
+      case 'agenda': return '<svg viewBox="0 0 24 24" width="24" height="24" fill="#fff"><rect x="8" y="3.5" width="2.4" height="4.6" rx="1.2"/><rect x="13.6" y="3.5" width="2.4" height="4.6" rx="1.2"/><rect x="4.5" y="6" width="15" height="14.5" rx="2"/><rect x="6.4" y="10" width="11.2" height="8.6" fill="#0b0b0c"/><g fill="#fff"><rect x="7.1" y="10.8" width="1.7" height="1.7"/><rect x="9.6" y="10.8" width="1.7" height="1.7"/><rect x="12.1" y="10.8" width="1.7" height="1.7"/><rect x="14.6" y="10.8" width="1.7" height="1.7"/><rect x="7.1" y="13.2" width="1.7" height="1.7"/><rect x="9.6" y="13.2" width="1.7" height="1.7"/><rect x="12.1" y="13.2" width="1.7" height="1.7"/><rect x="14.6" y="13.2" width="1.7" height="1.7"/><rect x="7.1" y="15.6" width="1.7" height="1.7"/><rect x="9.6" y="15.6" width="1.7" height="1.7"/><rect x="12.1" y="15.6" width="1.7" height="1.7"/><rect x="14.6" y="15.6" width="1.7" height="1.7"/></g></svg>';
+      case 'dgfip': return '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="14" rx="1.8"/><text x="12" y="15.6" font-family="Georgia,\'Times New Roman\',serif" font-weight="700" font-size="8.4" fill="#fff" stroke="none" text-anchor="middle">RF</text></svg>';
       default: return A+'<rect x="4" y="4" width="16" height="16" rx="2"/>'+Z;
     }
   }
@@ -27860,17 +27867,17 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     var sel = window.__accDossier ? dossierById(window.__accDossier) : null;
     var g1 = tile('','YADA',"geListe()",true)
       + tile('list','Liste des dossiers',"geListe()")
-      + tile('folderplus','Créer un dossier',"geCreer()")
+      + tile('folders','Créer un dossier',"geCreer()")
       + (sel ? tile('folder','Fermer '+(sel.nom||''),"geFermer()") : '');
     var g2 = tile('import','Importer (JSON)',"geImport()")
       + tile('gear','Paramétrage',"geParam()")
       + tile('help','Centre d\'aide en ligne',"geAide()")
-      + tile('globe','Formalités de création (Qonto)',"geExt('https://qonto.com/fr')");
-    var g3 = tile('globe','Portail DGFIP',"geExt('https://www.impots.gouv.fr')")
-      + tile('calendar','Agenda fiscal',"geExt('https://www.impots.gouv.fr/professionnel')")
-      + tile('globe','Portail Net-Entreprises',"geExt('https://www.net-entreprises.fr')")
+      + tile('qonto','Formalités de création (Qonto)',"geExt('https://qonto.com/fr')");
+    var g3 = tile('dgfip','Portail DGFIP',"geExt('https://www.impots.gouv.fr')")
+      + tile('agenda','Agenda fiscal',"geExt('https://www.impots.gouv.fr/professionnel')")
+      + tile('netent','Portail Net-Entreprises',"geExt('https://www.net-entreprises.fr')")
       + tile('globe','Portail DSN',"geExt('https://www.net-entreprises.fr/declaration/dsn/')")
-      + tile('globe','Portail Urssaf',"geExt('https://www.urssaf.fr')");
+      + tile('urssaf','Portail Urssaf',"geExt('https://www.urssaf.fr')");
     var head = '<div class="acc-scroll acc-blk">'
       +'<div class="ge-menubar"><span class="ge-mi" onclick="geFichier(event)">Fichier<div class="ge-dd" id="ge-fichier-dd"><button onclick="event.stopPropagation();geCreer();geFichierClose()">Créer un dossier</button><button onclick="event.stopPropagation();geImport();geFichierClose()">Importer (JSON)</button></div></span><span>Paramètres</span><span>Extraction</span><span>Traitements</span><span>Administration</span><span>Aide</span></div>'
       +'<div class="ge-tabs"><button class="ge-tab on">Dossiers</button><button class="ge-tab">Entités</button><button class="ge-tab">Collaborateur</button><button class="ge-tab">Mes Services</button></div>';
