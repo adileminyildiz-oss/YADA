@@ -11094,7 +11094,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v548';
+    b.textContent='YADA · v549';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -27678,6 +27678,34 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
   ouvrir();
   setTimeout(ouvrir,60);
   setTimeout(ouvrir,400);
+})();
+</script>
+
+<script id="yada-cache-fresh">
+/* v549 — Purge du cache (une fois par version) : à chaque OUVERTURE, on voyait
+   d'abord la page de l'ANCIENNE version (HTML mis en cache servi en premier).
+   On vide les anciens caches (Cache Storage) et on force la mise à jour du
+   service worker → on atterrit directement sur la nouvelle version (Accueil).
+   Drapeau localStorage 'yada-fresh-549' → exécuté une seule fois. 100% additif. */
+(function(){
+  var CUR='yada-v144';           /* = CACHE courant du sw.js */
+  var FLAG='yada-fresh-549';
+  try{ if(localStorage.getItem(FLAG)) return; }catch(e){}
+  try{ localStorage.setItem(FLAG,'1'); }catch(e){}
+  try{
+    if(window.caches && caches.keys){
+      caches.keys().then(function(ks){
+        (ks||[]).forEach(function(k){ if(k!==CUR){ try{ caches.delete(k); }catch(e){} } });
+      }).catch(function(){});
+    }
+  }catch(e){}
+  try{
+    if(navigator.serviceWorker && navigator.serviceWorker.getRegistrations){
+      navigator.serviceWorker.getRegistrations().then(function(rs){
+        (rs||[]).forEach(function(r){ try{ r.update(); }catch(e){} });
+      }).catch(function(){});
+    }
+  }catch(e){}
 })();
 </script>
 
