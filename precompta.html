@@ -11094,7 +11094,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v546';
+    b.textContent='YADA · v548';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -27700,7 +27700,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     window.__secLocked=false; window.__tfaPassed=true;
     try{ if(typeof window.secVerrouiller==='function') window.secVerrouiller=function(){}; }catch(e){}
     try{ if(typeof window.secDeconnexion==='function') window.secDeconnexion=function(){}; }catch(e){}
-    try{ if(!document.getElementById('yada-no-login')){ var _kl=document.createElement('style'); _kl.id='yada-no-login'; _kl.textContent='#sec-lock{display:none!important}'; (document.head||document.documentElement).appendChild(_kl); } }catch(e){}
+    try{ if(!document.getElementById('yada-no-login')){ var _kl=document.createElement('style'); _kl.id='yada-no-login'; _kl.textContent='#sec-lock{display:none!important}html body aside{display:none!important}html body .layout{grid-template-columns:1fr!important}.sg-edlink{display:none!important}.sg-app .sg-win{display:none!important}.sg-app .sg-tabnav{display:none!important}.sg-app .sg-tabs{background:#141414!important;border-bottom-color:rgba(30,144,255,.35)!important}'; (document.head||document.documentElement).appendChild(_kl); } }catch(e){}
     var lock=document.getElementById('sec-lock'); if(lock&&lock.parentNode) lock.parentNode.removeChild(lock);
   }catch(e){}
 
@@ -27731,6 +27731,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
         return;
       }
       try{ connecte=true; }catch(e){}
+      try{ if(current==='editions') current='compta'; }catch(e){}
       var x=_r.apply(this,arguments);
       try{ document.body.removeAttribute('data-noside'); var chip=document.getElementById('ds-back-chip'); if(chip) chip.style.display='none'; }catch(e){}
       return x;
@@ -27768,9 +27769,10 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     if(dd.querySelector('.fmod-mark')) return;
     dd.style.maxHeight='82vh'; dd.style.overflowY='auto';
     var sep=document.createElement('div'); sep.className='sep fmod-mark'; dd.appendChild(sep);
+    var ba=document.createElement('button'); ba.textContent='⌂ Accueil'; ba.onclick=function(ev){ try{ev.stopPropagation();}catch(e){} try{ if(typeof closeFichier==='function') closeFichier(); }catch(e){} if(typeof window.accueilRetour==='function') window.accueilRetour(); }; dd.appendChild(ba);
     var hd=document.createElement('div'); hd.className='fmod-h'; hd.textContent='Modules'; dd.appendChild(hd);
     var pages=(typeof PAGES!=='undefined'&&PAGES)?PAGES:[]; var lastSec='';
-    pages.forEach(function(p){ if(!p||!p.id||p.id==='compta') return;
+    pages.forEach(function(p){ if(!p||!p.id||p.id==='compta'||p.id==='editions') return;
       if(p.sec && p.sec!==lastSec){ var s=document.createElement('div'); s.className='fmod-sec'; s.textContent=p.sec; dd.appendChild(s); lastSec=p.sec; }
       var b=document.createElement('button'); b.textContent=String(p.lbl||p.id);
       b.onclick=function(ev){ try{ ev.stopPropagation(); }catch(e){} try{ if(typeof closeFichier==='function') closeFichier(); else if(typeof closeMenus==='function') closeMenus(); }catch(e){} try{ current=p.id; }catch(e){} render(); };
