@@ -11094,7 +11094,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v572';
+    b.textContent='YADA · v573';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -27690,8 +27690,8 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
    service worker → on atterrit directement sur la nouvelle version (Accueil).
    Drapeau localStorage 'yada-fresh-549' → exécuté une seule fois. 100% additif. */
 (function(){
-  var CUR='yada-v167';           /* = CACHE courant du sw.js */
-  var FLAG='yada-fresh-572';
+  var CUR='yada-v168';           /* = CACHE courant du sw.js */
+  var FLAG='yada-fresh-573';
   try{ if(localStorage.getItem(FLAG)) return; }catch(e){}
   try{ localStorage.setItem(FLAG,'1'); }catch(e){}
   try{
@@ -28880,7 +28880,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
   try{ var st=document.createElement('style'); st.id='yada-pc-mod'; st.textContent=
      '.mod-wrap:has(#yada-pc){padding:0!important;max-width:none!important}'
     +'#yada-pc{font-family:Tahoma,"Segoe UI",Geneva,Verdana,sans-serif;color:#e8e8e8;background:#000;min-height:100dvh;display:flex;flex-direction:column}'
-    +'#yada-pc .pc-wrap{flex:1;display:flex;flex-direction:column;min-height:0;width:100%;max-width:1000px;margin:0 auto}'
+    +'#yada-pc .pc-wrap{flex:1;display:flex;flex-direction:column;min-height:0;width:100%;max-width:none;margin:0}'
     +'#yada-pc .pc-head{display:flex;align-items:center;gap:14px;padding:14px 20px 12px;border-bottom:1px solid #1b1b1b}'
     +'#yada-pc .pc-close{margin-left:14px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:#0a0a0a;color:#d0d0d0;border:1.5px solid #3a3a3a;border-radius:9px;cursor:pointer;font:inherit;font-size:15px;line-height:1;transition:border-color .16s ease,background .16s ease,color .16s ease}'
     +'#yada-pc .pc-close:hover{background:#1a1414;border-color:#c0453b;color:#ff8a80}'
