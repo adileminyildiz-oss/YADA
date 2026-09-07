@@ -6310,7 +6310,7 @@ function pageCompta(){
   const resTxt=(res>=0?'Bénéfice':'Perte')+' : '+sageNum(res)+' E';
   const finPer=sgPer?(function(){ const [y,m]=sgPer.split('-').map(Number); const dj=new Date(y, m, 0).getDate(); return String(dj).padStart(2,'0')+'/'+String(m).padStart(2,'0')+'/'+y; })():'31/12/'+year;
   return `<div class="sg-app ${window.sgReduit?'sg-reduit':''}">
-    <div class="sg-title"><span class="sg-exonav"><button class="sg-exoarr" title="Exercice précédent (année N-1)" onclick="event.stopPropagation();exPrecedent()">‹</button><span class="sg-exolbl">Exercice ${year}</span><button class="sg-exoarr" title="Exercice suivant (année N+1)" onclick="event.stopPropagation();exSuivant()">›</button><button class="sg-exoarr sg-edlink" title="Ouvrir les Éditions (Balance, Grand livre, Bilan, Compte de résultat…) — reliées au Centre de Contrôle" onclick="event.stopPropagation();current='editions';render()">🖨 Éditions</button></span>${(db.societe&&db.societe.dossierNom)||'PRÉCOMPTA'} 01/${year.slice(2)}-12/${year.slice(2)} (E) — Analyse · Centre de Contrôle
+    <div class="sg-title"><span class="sg-exonav"><button class="sg-exoarr" title="Exercice précédent (année N-1)" onclick="event.stopPropagation();exPrecedent()">‹</button><span class="sg-exolbl">Exercice ${year}</span><button class="sg-exoarr" title="Exercice suivant (année N+1)" onclick="event.stopPropagation();exSuivant()">›</button><button class="sg-exoarr sg-edlink" title="Ouvrir les Éditions (Balance, Grand livre, Bilan, Compte de résultat…) — reliées au Centre de Contrôle" onclick="event.stopPropagation();current='editions';render()">🖨 Éditions</button></span>${(db.societe&&db.societe.dossierNom)||'PRÉCOMPTA'} 01/${year.slice(2)}-12/${year.slice(2)} (E) — Comptabilité
       <span class="sg-win"><span class="sg-wbtn" title="${window.sgReduit?'Agrandir (plein écran)':'Réduire la fenêtre'}" onclick="event.stopPropagation();sgToggleReduit()">${window.sgReduit?'▣':'▢'}</span></span></div>
     <div class="sg-menu"><span class="mi" onclick="event.stopPropagation();toggleFichier()">Fichier
         <div class="sg-dd" id="sg-fichier">
@@ -11094,7 +11094,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v563';
+    b.textContent='YADA · v565';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -27753,7 +27753,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
    Drapeau localStorage 'yada-fresh-549' → exécuté une seule fois. 100% additif. */
 (function(){
   var CUR='yada-v148';           /* = CACHE courant du sw.js */
-  var FLAG='yada-fresh-563';
+  var FLAG='yada-fresh-565';
   try{ if(localStorage.getItem(FLAG)) return; }catch(e){}
   try{ localStorage.setItem(FLAG,'1'); }catch(e){}
   try{
@@ -28646,23 +28646,25 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
 (function(){ try{
   var st=document.createElement('style'); st.id='consult-nav-mod';
   st.textContent=
-   'html body:not(#_yz) .sg-app .sg-exoarr:not(.sg-edlink),'
-  +'html body:not(#_yz) .sg-app .sg-mois-nav .yc-navbtn,'
+   'html body:not(#_yz) .sg-app .sg-mois-nav .yc-navbtn,'
   +'html body:not(#_yz) #cl-overlay .cl-navb{'
   +'width:26px !important;height:26px !important;min-width:26px !important;min-height:26px !important;'
   +'padding:0 !important;border-radius:50% !important;background:rgba(129,151,181,.20) !important;color:inherit !important;'
   +'border:0 !important;outline:0 !important;display:inline-flex !important;'
   +'align-items:center !important;justify-content:center !important;font-size:14px !important;'
   +'line-height:1 !important;cursor:pointer !important;box-shadow:none !important}'
-  +'html body:not(#_yz) .sg-app .sg-exoarr:not(.sg-edlink):hover,'
   +'html body:not(#_yz) .sg-app .sg-mois-nav .yc-navbtn:hover,'
   +'html body:not(#_yz) #cl-overlay .cl-navb:hover{background:rgba(129,151,181,.40) !important}'
-  +'html body:not(#_yz) .sg-app .sg-exoarr:not(.sg-edlink):active,'
   +'html body:not(#_yz) .sg-app .sg-mois-nav .yc-navbtn:active,'
   +'html body:not(#_yz) #cl-overlay .cl-navb:active{transform:scale(.9) !important}'
-  +'html body:not(#_yz) .sg-app .sg-mois-nav{display:flex;gap:10px;justify-content:center;align-items:center;padding:6px 4px;border-bottom:1px solid rgba(255,255,255,.12)}';
+  +'html body:not(#_yz) .sg-app .sg-mois-nav{display:flex;gap:8px;justify-content:center;align-items:center;padding:6px 4px;border-bottom:1px solid rgba(255,255,255,.12)}'
+  +'html body:not(#_yz) .sg-app .sg-mois-lbl{font-size:12px;color:inherit;white-space:nowrap}'
+  +'html body:not(#_yz) .sg-app .sg-exonav .sg-exoarr:not(.sg-edlink){display:none !important}'
+  +'html body:not(#_yz) .sg-app .sg-exonav .sg-exolbl{display:none !important}'
+  +'html body:not(#_yz) .sg-app .sg-title{padding:2px 10px !important;font-size:11px !important;min-height:0 !important}';
   document.head.appendChild(st);
 
+  // Conservé (inutilisé) pour compat — la navigation du bas pilote désormais l'EXERCICE.
   window.sgMoisNav=function(sens){
     try{
       var items=[].slice.call(document.querySelectorAll('.sg-app .sg-perlist .sg-peritem'));
@@ -28679,17 +28681,17 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
 
   function ensure(){
     try{
-      // ANNÉE : flèches d'exercice ← / →
-      var arrs=document.querySelectorAll('.sg-app .sg-exoarr:not(.sg-edlink)');
-      if(arrs[0] && arrs[0].textContent!=='←') arrs[0].textContent='←';
-      if(arrs[1] && arrs[1].textContent!=='→') arrs[1].textContent='→';
-      // MOIS : barre de navigation au-dessus de la liste des périodes
+      // Flèches d'exercice du HAUT retirées (doublon) — masquées ; le libellé « Exercice … » reste.
+      var top=document.querySelectorAll('.sg-app .sg-exonav .sg-exoarr:not(.sg-edlink)');
+      for(var t=0;t<top.length;t++){ top[t].style.display='none'; }
+      // EXERCICE (année) : les flèches rondes du bas (colonne Périodes) pilotent l'exercice.
       var col=document.querySelector('.sg-app .sg-perlist');
       if(col){ var parent=col.parentNode;
-        if(parent && !parent.querySelector('.sg-mois-nav')){
-          var nav=document.createElement('div'); nav.className='sg-mois-nav';
-          nav.innerHTML='<button type="button" class="yc-navbtn" title="Mois précédent" onclick="sgMoisNav(-1)">←</button>'
-                       +'<button type="button" class="yc-navbtn" title="Mois suivant" onclick="sgMoisNav(1)">→</button>';
+        var nav=parent && parent.querySelector('.sg-mois-nav');
+        if(parent && !nav){
+          nav=document.createElement('div'); nav.className='sg-mois-nav';
+          nav.innerHTML='<button type="button" class="yc-navbtn" title="Exercice précédent (année N-1)" onclick="exPrecedent()">←</button>'
+                       +'<button type="button" class="yc-navbtn" title="Exercice suivant (année N+1)" onclick="exSuivant()">→</button>';
           parent.insertBefore(nav, col);
         }
       }
