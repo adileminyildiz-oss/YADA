@@ -11094,7 +11094,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v567';
+    b.textContent='YADA · v568';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -12642,17 +12642,20 @@ ${lignes}
 /* Bouton « Mettre à jour » (bas-droite) : charge la dernière version du logiciel
    en vidant le cache (PWA / service worker) puis en rechargeant. */
 (function(){
+  /* icône SVG vectorielle (nette à toute résolution / DPI, jamais floue) */
+  var IC='<span class="yj-ic"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg></span>';
   function injectCss(){
     if(document.getElementById('yada-maj-css')) return;
     var st=document.createElement('style'); st.id='yada-maj-css';
     st.textContent=
       '#yada-maj-btn{position:fixed;right:12px;bottom:40px;z-index:100010;width:44px;height:44px;padding:0;'
       +'background:#0b0d10;color:#fff;border:0;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;'
-      +'box-shadow:0 8px 20px rgba(0,0,0,.34);transition:transform .12s,box-shadow .2s}'
+      +'box-shadow:0 8px 20px rgba(0,0,0,.34);transition:transform .12s,box-shadow .2s;-webkit-tap-highlight-color:transparent;transform:translateZ(0)}'
       +'#yada-maj-btn:hover{transform:translateY(-1px);box-shadow:0 11px 26px rgba(0,0,0,.42)}'
       +'#yada-maj-btn:active{transform:scale(.94)}'
       +'#yada-maj-btn[disabled]{cursor:default}'
-      +'#yada-maj-btn .yj-ic{width:18px;height:18px;font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center;color:#fff}'
+      +'#yada-maj-btn .yj-ic{display:flex;align-items:center;justify-content:center;color:#fff}'
+      +'#yada-maj-btn .yj-ic svg{width:19px;height:19px;display:block;shape-rendering:geometricPrecision}'
       +'#yada-maj-btn .yj-sp{width:18px;height:18px;border-radius:50%;border:2px solid rgba(255,255,255,.28);border-top-color:#fff;box-sizing:border-box}'
       +'#yada-maj-btn.run .yj-sp{animation:yjSpin .8s linear infinite}'
       +'@keyframes yjSpin{to{transform:rotate(360deg)}}'
@@ -12685,7 +12688,7 @@ ${lignes}
     injectCss();
     var b=document.getElementById('yada-maj-btn');
     if(!b){ b=document.createElement('button'); b.id='yada-maj-btn'; b.type='button'; b.onclick=window.yadaMajNow; document.body.appendChild(b); }
-    b.innerHTML='<span class="yj-ic">⟳</span>';
+    b.innerHTML=IC;
     b.title='Une nouvelle version du logiciel est disponible'+(remoteVer?(' ('+remoteVer+')'):'')+' — cliquez pour la charger';
     b.style.display='';
   }
@@ -27686,7 +27689,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
    Drapeau localStorage 'yada-fresh-549' → exécuté une seule fois. 100% additif. */
 (function(){
   var CUR='yada-v148';           /* = CACHE courant du sw.js */
-  var FLAG='yada-fresh-567';
+  var FLAG='yada-fresh-568';
   try{ if(localStorage.getItem(FLAG)) return; }catch(e){}
   try{ localStorage.setItem(FLAG,'1'); }catch(e){}
   try{

@@ -36,7 +36,16 @@
 
 ---
 
-## 🟢 Dernière mise à jour — Bouton « Mise à jour » : icône seule ronde NOIRE (spinner blanc), fini la pilule bleue — v567
+## 🟢 Dernière mise à jour — Bouton « Mise à jour » : icône NETTE (glyphe ⟳ → SVG vectoriel), qualité augmentée — v568
+**Quoi :** le **bouton flottant de mise à jour** (`#yada-maj-btn`, bas-droite, addon68) gardait la même forme (cercle noir 44 px, spinner blanc au clic) mais son icône **⟳ était un glyphe de police** → rendu **légèrement flou** (crénelage de la police, visible sur capture). L'icône passe à une **image SVG vectorielle** (flèche circulaire) : **traits nets à toute résolution / tout DPI**, jamais floue (`shape-rendering:geometricPrecision`). Aucun changement de comportement (détection en ligne, spinner blanc au clic, vidage cache + rechargement) — seul le rendu de l'icône est plus net.
+
+**Comment — édition de `yada-addon68` (precompta + V1, retouches chirurgicales) :** (1) constante `IC` = `<span class="yj-ic"><svg viewBox="0 0 24 24" stroke="#fff" stroke-width="2.1" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg></span>` (flèche circulaire vectorielle). (2) `injectCss` : `.yj-ic` sans `font-size` (plus de glyphe) + `.yj-ic svg{width:19px;height:19px;display:block;shape-rendering:geometricPrecision}` + bouton `transform:translateZ(0)` (couche GPU nette) + `-webkit-tap-highlight-color:transparent`. (3) `showBtn` : `b.innerHTML=IC` (au lieu de `<span class="yj-ic">⟳</span>`). Le spinner `.yj-sp` (état « en cours ») est inchangé. `sw.js` yada-v163, badge v568, `version.json` 568, purge `yada-fresh-568`.
+
+**Validé :** `node --check sw.js` OK + addon68 (precompta + V1) `new Function` OK, 0 erreur + Playwright @3× DPI (SVG rendu net, 0 pageerror) + capture (icône vectorielle nette sur cercle noir). Badge → **v568**.
+
+---
+
+## 🟢 MAJ précédente — Bouton « Mise à jour » : icône seule ronde NOIRE (spinner blanc), fini la pilule bleue — v567
 **Quoi :** le **bouton flottant de mise à jour** (`#yada-maj-btn`, bas-droite, addon68) — qui apparaît **uniquement quand une nouvelle version est détectée en ligne** (contrôle de `version.json`/badge au démarrage puis toutes les 5 min, au focus, à la reconnexion) — passe d'une **pilule bleue « ⟳ Mise à jour disponible »** à une **icône seule ronde NOIRE** (maquette B4 choisie) : **cercle noir `#0b0d10` (44 px) + icône ⟳ blanche** au repos ; au **clic**, l'icône devient un **spinner blanc qui tourne** (état « en cours ») avant le vidage du cache + rechargement. Aucune écriture blanche en gras ; texte only dans le `title` (info-bulle). Le mécanisme de détection/auto-mise à jour est **inchangé** (seul l'habillage change).
 
 **Comment — édition de `yada-addon68` (precompta + V1, 3 retouches chirurgicales) :** (1) `injectCss` : `#yada-maj-btn` réécrit → `width/height:44px;padding:0;background:#0b0d10;border:0;border-radius:50%;display:flex;justify-content:center` + `.yj-ic` (⟳ blanc 18 px) + `.yj-sp` (anneau `border-top-color:#fff`) + `#yada-maj-btn.run .yj-sp{animation:yjSpin .8s linear infinite}` + keyframe `yjSpin` (hover translateY, active scale, media mobile conservé). (2) `showBtn` : `b.innerHTML='<span class="yj-ic">⟳</span>'` (au lieu de `textContent` long) + `title` complet (version + invite). (3) `yadaMajNow` : `b.classList.add('run'); b.innerHTML='<span class="yj-sp"></span>'` (spinner) au lieu de `textContent='⟳ Mise à jour…'`. `sw.js` yada-v162, badge v567, `version.json` 567, purge `yada-fresh-567`.
