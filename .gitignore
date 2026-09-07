@@ -9,3 +9,6 @@ package.json
 package-lock.json
 test-results/
 .cft/
+
+# Captures / scripts de test jetables (hors dépôt)
+scratchpad/
