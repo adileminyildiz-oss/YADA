@@ -11094,7 +11094,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v568';
+    b.textContent='YADA · v569';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -27760,7 +27760,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
    Drapeau localStorage 'yada-fresh-549' → exécuté une seule fois. 100% additif. */
 (function(){
   var CUR='yada-v148';           /* = CACHE courant du sw.js */
-  var FLAG='yada-fresh-568';
+  var FLAG='yada-fresh-569';
   try{ if(localStorage.getItem(FLAG)) return; }catch(e){}
   try{ localStorage.setItem(FLAG,'1'); }catch(e){}
   try{
@@ -28793,6 +28793,44 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
   try{ if(typeof window.render==='function'){ var _r=window.render; window.render=function(){ var x=_r.apply(this,arguments); try{ b4(); }catch(e){} return x; }; } }catch(e){}
   try{ setInterval(b4, 700); }catch(e){}
 }catch(e){} })();
+</script>
+
+<script id="yada-addon-restore-demo">
+/* ============================================================
+   RECHARGER LES ANCIENS DOSSIERS — repeuple le portefeuille avec les dossiers
+   de démonstration (ALR CONSEIL · MBC · BY HOLDING) UNIQUEMENT quand il est
+   VIDE (après la purge v386). One-time : le drapeau n'est posé qu'après un
+   rechargement réussi → ne réécrase jamais un dossier créé/importé par
+   l'utilisateur, et respecte une suppression volontaire de tous les dossiers.
+   ============================================================ */
+(function(){
+  var FLAG='yada-restore-demo-569';
+  function restore(){
+    try{
+      if(localStorage.getItem(FLAG)) return false;
+      if(typeof db==='undefined'||!db||!db.cabinet||!Array.isArray(db.cabinet.dossiers)) return false;
+      if(db.cabinet.dossiers.length>0) return false; /* l'utilisateur a déjà des dossiers → ne rien faire */
+      if(typeof construireAMA!=='function'||typeof construireMBC!=='function'||typeof construireSCI42!=='function') return false;
+      if(!db.dossiersData) db.dossiersData={};
+      db.dossiersData['d-ama']=construireAMA();
+      db.dossiersData['d-mbc']=construireMBC();
+      db.dossiersData['d-sci42']=construireSCI42();
+      db.cabinet.dossiers=[
+        {id:'d-ama',nom:'ALR CONSEIL',forme:'SAS',siren:'933729345',activite:'Conseil',ville:'THIAIS',actif:true,favori:true,factFourn:0,factClient:0,docsManquants:0,portail:'Qonto'},
+        {id:'d-mbc',nom:'MBC',forme:'SAS',siren:'',activite:'',ville:'',actif:true,favori:false,factFourn:0,factClient:0,docsManquants:0,portail:'Qonto'},
+        {id:'d-sci42',nom:'BY HOLDING',forme:'SAS',siren:'894221033',activite:'Holding',ville:'PARIS',actif:true,favori:false,factFourn:0,factClient:0,docsManquants:0,portail:'Qonto'}
+      ];
+      db.cabinet.total=db.cabinet.dossiers.length;
+      try{ if(typeof chargerDossier==='function') chargerDossier('d-ama'); }catch(e){}
+      localStorage.setItem(FLAG,'1');
+      try{ if(typeof save==='function') save(); }catch(e){}
+      return true;
+    }catch(e){ return false; }
+  }
+  function run(){ try{ if(restore() && typeof render==='function') render(); }catch(e){} }
+  try{ run(); }catch(e){}
+  setTimeout(run, 300); setTimeout(run, 1200);
+})();
 </script>
 </body>
 </html>
