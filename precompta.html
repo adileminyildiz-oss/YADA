@@ -11094,7 +11094,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v570';
+    b.textContent='YADA · v571';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -27733,7 +27733,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       try{ connecte=true; }catch(e){}
       /* Table rase v569 : toutes les pages sont supprimées SAUF la Consultation.
          Toute page ≠ 'compta' est ramenée à la Consultation (modules inaccessibles). */
-      try{ if(typeof current!=='undefined' && current!=='compta') current='compta'; }catch(e){}
+      try{ if(typeof current!=='undefined' && current!=='compta' && !((window.YADA_OK||[]).indexOf(current)>=0)) current='compta'; }catch(e){}
       var x=_r.apply(this,arguments);
       try{ document.body.removeAttribute('data-noside'); var chip=document.getElementById('ds-back-chip'); if(chip) chip.style.display='none'; }catch(e){}
       return x;
@@ -27761,8 +27761,8 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
    service worker → on atterrit directement sur la nouvelle version (Accueil).
    Drapeau localStorage 'yada-fresh-549' → exécuté une seule fois. 100% additif. */
 (function(){
-  var CUR='yada-v148';           /* = CACHE courant du sw.js */
-  var FLAG='yada-fresh-570';
+  var CUR='yada-v166';           /* = CACHE courant du sw.js */
+  var FLAG='yada-fresh-571';
   try{ if(localStorage.getItem(FLAG)) return; }catch(e){}
   try{ localStorage.setItem(FLAG,'1'); }catch(e){}
   try{
@@ -27788,6 +27788,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
    les pages ; un clic ouvre la page (current=<id>; render()). 100% additif : injection
    post-rendu dans le dropdown existant, Consultation NON modifiée. */
 (function(){
+  return; /* v571 — ancienne version abandonnée : le menu « Fichier » ne liste plus les modules de l'ancien design */
   if(typeof render!=='function') return;
   try{ var st=document.createElement('style'); st.id='fmod-mod';
     st.textContent='.sg-dd .fmod-h{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#0a64d6;padding:7px 12px 2px}'
@@ -28581,6 +28582,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
    (Fichier · Exercice · … · Modules · Aide) → accès direct à TOUS les modules du logiciel,
    pour réduire la navigation par pages séparées. 100% additif (cabinet uniquement). */
 (function(){
+  return; /* v571 — ancienne version abandonnée : l'ancien menu « Modules » (26 pages) est retiré ; remplacé par le menu « Modules » listant uniquement les modules reconstruits (window.YADA_OK) */
   try{ if(typeof SG_MENUS!=='undefined' && SG_MENUS.indexOf('sg-modules')<0) SG_MENUS.push('sg-modules'); }catch(e){}
   var LBL={facturation:'Facturation (Client)',achats:'Fournisseurs',societe:'Portefeuille sociétés',dossier:'Dossier permanent',client:'Espace Client',plancomptable:'Plan comptable',infosociete:'Informations société',coffre:'Coffre-fort',parametrage:'Paramétrage',reglements:'Suivi des règlements',saisiebq:'Saisie journal Banque',fraiskm:'Frais km & carburant',immos:'Immobilisations & financements',tva:'Module TVA (CA3)',editions:'Éditions (Balance, Grand livre…)',fec:'Import / Export FEC',ia:'Assistant IA',journal:'Journal comptable',dash:'Tableau de bord',analytique:'Analytique & rentabilité',pilotage:'Pilotage',salarie:'Salarié',chargespaie:'Charges & paie',tiers:'Tiers',banque:'Banque',rappro:'Rapprochement bancaire'};
   var GROUPES=[
@@ -28832,6 +28834,130 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
   function run(){ try{ if(restore() && typeof render==='function') render(); }catch(e){} }
   try{ run(); }catch(e){}
   setTimeout(run, 300); setTimeout(run, 1200);
+})();
+</script>
+<script id="yada-addon-mod-plancomptable">
+/* ═══ RECONSTRUCTION — MODULE 1 : PLAN COMPTABLE (design ACCUEIL « Génération Experts », noir total) ═══
+   Premier module reconstruit après la table rase v570. Rendu accessible via un menu
+   « Modules » (ne liste QUE les modules reconstruits) dans la barre de la Consultation,
+   et autorisé par le routage (window.YADA_OK). Remplace pagePlanComptable. 100% additif.
+   Habillage = style de la page d'accueil (fond #000, cartes #0a0a0a, filet #1c1c1c,
+   police Tahoma, monochrome blanc, accent vert #1f7a44). Aucune couleur bleue. */
+(function(){
+  window.YADA_OK=(window.YADA_OK||[]);
+  if(window.YADA_OK.indexOf('plancomptable')<0) window.YADA_OK.push('plancomptable');
+  var MODLBL={plancomptable:'Plan comptable'};
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  var CLASSES={'1':'Comptes de capitaux','2':"Comptes d'immobilisations",'3':'Comptes de stocks','4':'Comptes de tiers','5':'Comptes financiers','6':'Comptes de charges','7':'Comptes de produits','8':'Comptes spéciaux'};
+  function comptes(){
+    var map={};
+    try{ if(typeof COMPTES==='object') Object.keys(COMPTES).forEach(function(code){ if(!code) return; map[code]={code:code,lib:COMPTES[code]||'',custom:false}; }); }catch(e){}
+    try{ (db.plan||[]).forEach(function(c){ if(c&&c.code){ var k=String(c.code); map[k]={code:k,lib:c.lib||(map[k]&&map[k].lib)||'',custom:true}; } }); }catch(e){}
+    return Object.keys(map).map(function(k){return map[k];}).sort(function(a,b){ return a.code<b.code?-1:(a.code>b.code?1:0); });
+  }
+  window.pagePlanComptable=function(){
+    var list=comptes(), groups={};
+    list.forEach(function(c){ var cl=String(c.code)[0]||'0'; (groups[cl]=groups[cl]||[]).push(c); });
+    var rows='';
+    Object.keys(groups).sort().forEach(function(cl){
+      var g=groups[cl];
+      rows+='<div class="pc-cls"><span>'+cl+' — '+esc(CLASSES[cl]||'Autres')+'</span><span class="pc-cls-n">'+g.length+' comptes</span></div>';
+      g.forEach(function(c){
+        rows+='<div class="pc-row" data-code="'+esc(c.code)+'" data-lib="'+esc((c.lib||'').toLowerCase())+'">'
+          +'<span class="pc-code">'+esc(c.code)+'</span>'
+          +'<span class="pc-lib">'+esc(c.lib||'')+'</span>'
+          +(c.custom?'<button class="pc-del" title="Supprimer ce compte" onclick="pcDel(\''+esc(c.code)+'\')">✕</button>':'<span></span>')
+          +'</div>';
+      });
+    });
+    return '<div id="yada-pc">'
+      +'<div class="pc-head">'
+        +'<button class="pc-back" onclick="current=\'compta\';render()">← Consultation</button>'
+        +'<div class="pc-title">Plan comptable</div>'
+        +'<div class="pc-count">'+list.length+' comptes</div>'
+      +'</div>'
+      +'<div class="pc-tools">'
+        +'<input id="pc-search" class="pc-inp" placeholder="Rechercher un compte (numéro ou libellé)…" oninput="pcFilter(this.value)">'
+        +'<input id="pc-new-code" class="pc-inp pc-inp-code" placeholder="Numéro (ex. 606100)" inputmode="numeric">'
+        +'<input id="pc-new-lib" class="pc-inp" placeholder="Libellé du compte">'
+        +'<button class="pc-add" onclick="pcAdd()">+ Ajouter</button>'
+      +'</div>'
+      +'<div class="pc-list" id="pc-list">'+rows+'</div>'
+      +'<div class="pc-empty" id="pc-empty" style="display:none">Aucun compte ne correspond.</div>'
+    +'</div>';
+  };
+  window.pcFilter=function(v){
+    var q=(v||'').toLowerCase().trim(); var list=document.getElementById('pc-list'); if(!list) return;
+    var rows=list.querySelectorAll('.pc-row'), shown=0;
+    rows.forEach(function(r){ var ok=!q||r.getAttribute('data-code').toLowerCase().indexOf(q)>=0||(r.getAttribute('data-lib')||'').indexOf(q)>=0; r.style.display=ok?'':'none'; if(ok) shown++; });
+    list.querySelectorAll('.pc-cls').forEach(function(h){ var n=h.nextElementSibling,any=false; while(n&&!n.classList.contains('pc-cls')){ if(n.classList.contains('pc-row')&&n.style.display!=='none'){ any=true; break; } n=n.nextElementSibling; } h.style.display=any?'':'none'; });
+    var e=document.getElementById('pc-empty'); if(e) e.style.display=shown?'none':'block';
+  };
+  window.pcAdd=function(){
+    var ci=document.getElementById('pc-new-code'), li=document.getElementById('pc-new-lib');
+    var code=(ci&&ci.value||'').trim(), lib=(li&&li.value||'').trim();
+    if(!/^[0-9]{2,}$/.test(code)){ if(typeof toast==='function') toast('Numéro de compte invalide (au moins 2 chiffres).'); if(ci) ci.focus(); return; }
+    if(!lib){ if(typeof toast==='function') toast('Indiquez un libellé.'); if(li) li.focus(); return; }
+    if(!Array.isArray(db.plan)) db.plan=[];
+    var ex=db.plan.filter(function(c){return String(c.code)===code;})[0];
+    if(ex) ex.lib=lib; else db.plan.push({code:code,lib:lib});
+    try{ COMPTES[code]=lib; }catch(e){}
+    try{ if(typeof save==='function') save(); }catch(e){}
+    if(typeof toast==='function') toast('Compte '+code+' enregistré.');
+    if(typeof render==='function') render();
+  };
+  window.pcDel=function(code){
+    var go=function(){ db.plan=(db.plan||[]).filter(function(c){return String(c.code)!==String(code);}); try{ if(typeof save==='function') save(); }catch(e){} if(typeof render==='function') render(); };
+    if(typeof yadaConfirm==='function') yadaConfirm('Supprimer le compte '+code+' du plan du dossier ?', go, {danger:true});
+    else if(confirm('Supprimer le compte '+code+' ?')) go();
+  };
+  /* Menu « Modules » (Consultation) : uniquement les modules reconstruits */
+  try{ if(typeof SG_MENUS!=='undefined' && SG_MENUS.indexOf('yada-mods')<0) SG_MENUS.push('yada-mods'); }catch(e){}
+  function ensureMenu(){
+    try{
+      if(typeof current==='undefined'||current!=='compta') return;
+      var menu=document.querySelector('.sg-app .sg-menu'); if(!menu) return;
+      var old=menu.querySelector('#sg-mi-modules'); if(old&&old.parentNode) old.parentNode.removeChild(old);
+      if(menu.querySelector('#yada-mods-mi')) return;
+      var mi=document.createElement('span'); mi.className='mi'; mi.id='yada-mods-mi';
+      mi.setAttribute('onclick',"event.stopPropagation();toggleMenu('yada-mods')");
+      var h='<div class="sg-dd" id="yada-mods">';
+      (window.YADA_OK||[]).forEach(function(id){ h+='<button onclick="event.stopPropagation();closeMenus();current=\''+id+'\';render()">'+(MODLBL[id]||id)+'</button>'; });
+      h+='</div>'; mi.innerHTML='Modules'+h;
+      var aide=menu.lastElementChild; if(aide) menu.insertBefore(mi,aide); else menu.appendChild(mi);
+    }catch(e){}
+  }
+  try{ if(typeof window.render==='function'){ var _r=window.render; window.render=function(){ var x=_r.apply(this,arguments); try{ ensureMenu(); }catch(e){} return x; }; } }catch(e){}
+  try{ setInterval(ensureMenu, 900); }catch(e){}
+  /* Styles — design ACCUEIL « Génération Experts » (noir total, Tahoma), scopé #yada-pc */
+  try{ var st=document.createElement('style'); st.id='yada-pc-mod'; st.textContent=
+     '.mod-wrap:has(#yada-pc){padding:0!important;max-width:none!important}'
+    +'#yada-pc{font-family:Tahoma,"Segoe UI",Geneva,Verdana,sans-serif;color:#e8e8e8;background:#000;min-height:100dvh;display:flex;flex-direction:column}'
+    +'#yada-pc .pc-head{display:flex;align-items:center;gap:14px;padding:12px 20px;border-bottom:1px solid #1b1b1b;background:#000}'
+    +'#yada-pc .pc-back{background:#0a0a0a;color:#d0d0d0;border:1px solid #1c1c1c;border-radius:8px;padding:6px 12px;cursor:pointer;font:inherit;font-size:12.5px;transition:border-color .16s ease,background .16s ease}'
+    +'#yada-pc .pc-back:hover{background:#111;border-color:#3a3a3a;color:#fff}'
+    +'#yada-pc .pc-title{font-size:17px;font-weight:700;color:#fff}'
+    +'#yada-pc .pc-count{margin-left:auto;color:#8a8a8a;font-size:12.5px}'
+    +'#yada-pc .pc-tools{display:flex;gap:9px;padding:12px 20px;flex-wrap:wrap;align-items:center;border-bottom:1px solid #141414;background:#000}'
+    +'#yada-pc .pc-inp{background:#0d0d0d;border:1px solid #1c1c1c;border-radius:8px;color:#eee;padding:8px 11px;font:inherit;font-size:12.5px;outline:none}'
+    +'#yada-pc #pc-search{flex:1;min-width:220px}'
+    +'#yada-pc .pc-inp-code{width:160px}'
+    +'#yada-pc .pc-inp:focus{border-color:#3a3a3a}'
+    +'#yada-pc .pc-inp::placeholder{color:#6a6a6a}'
+    +'#yada-pc .pc-add{background:#1f7a44;color:#fff;border:1px solid #1f7a44;border-radius:8px;padding:8px 15px;cursor:pointer;font:inherit;font-size:12.5px;font-weight:700}'
+    +'#yada-pc .pc-add:hover{filter:brightness(1.12)}'
+    +'#yada-pc .pc-list{flex:1;overflow:auto;padding:4px 0 20px}'
+    +'#yada-pc .pc-cls{display:flex;justify-content:space-between;align-items:center;padding:12px 20px 6px;color:#fff;font-size:13px;font-weight:700;position:sticky;top:0;background:#000;border-bottom:1px solid #141414}'
+    +'#yada-pc .pc-cls-n{color:#8a8a8a;font-weight:400;font-size:11.5px}'
+    +'#yada-pc .pc-row{display:grid;grid-template-columns:130px 1fr 30px;align-items:center;gap:12px;padding:7px 20px;border-bottom:1px solid #111}'
+    +'#yada-pc .pc-row:hover{background:#0d0d0d}'
+    +'#yada-pc .pc-code{color:#cfcfcf;font-variant-numeric:tabular-nums;font-size:12.5px}'
+    +'#yada-pc .pc-lib{color:#e8e8e8;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
+    +'#yada-pc .pc-del{background:transparent;border:0;color:#7a7a7a;cursor:pointer;font-size:13px;border-radius:6px;width:26px;height:26px}'
+    +'#yada-pc .pc-del:hover{background:#2a1414;color:#ff8a80}'
+    +'#yada-pc .pc-empty{padding:26px 20px;color:#8a8a8a;font-size:13px}';
+    document.head.appendChild(st);
+  }catch(e){}
 })();
 </script>
 </body>
