@@ -11094,7 +11094,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v559';
+    b.textContent='YADA · v561';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -27753,7 +27753,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
    Drapeau localStorage 'yada-fresh-549' → exécuté une seule fois. 100% additif. */
 (function(){
   var CUR='yada-v148';           /* = CACHE courant du sw.js */
-  var FLAG='yada-fresh-559';
+  var FLAG='yada-fresh-561';
   try{ if(localStorage.getItem(FLAG)) return; }catch(e){}
   try{ localStorage.setItem(FLAG,'1'); }catch(e){}
   try{
@@ -27840,6 +27840,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       case 'compta': return A+'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>'+Z;
       case 'analytique': return A+'<path d="M4 4v16h16"/><rect x="7" y="12" width="2.6" height="5"/><rect x="11.5" y="8" width="2.6" height="9"/><rect x="16" y="14" width="2.6" height="3"/>'+Z;
       case 'invest': return A+'<path d="M3 9l9-5 9 5"/><path d="M4.5 9v8.5M9.5 9v8.5M14.5 9v8.5M19.5 9v8.5"/><path d="M3 20h18"/>'+Z;
+      case 'marq': return A+'<circle cx="12" cy="12" r="2.2"/><path d="M8.2 8.2a5.4 5.4 0 0 0 0 7.6M15.8 8.2a5.4 5.4 0 0 1 0 7.6M5.6 5.6a9 9 0 0 0 0 12.8M18.4 5.6a9 9 0 0 1 0 12.8"/>'+Z;
       /* ── Logos officiels (monochrome, forme pleine blanche) ── */
       case 'qonto': return '<svg viewBox="0 0 24 24" width="24" height="24" fill="#fff"><path d="M12 12 C 8.4 8.4 8.4 4.2 12 2 C 15.6 4.2 15.6 8.4 12 12 Z" transform="rotate(45 12 12)"/><path d="M12 12 C 8.4 8.4 8.4 4.2 12 2 C 15.6 4.2 15.6 8.4 12 12 Z" transform="rotate(135 12 12)"/><path d="M12 12 C 8.4 8.4 8.4 4.2 12 2 C 15.6 4.2 15.6 8.4 12 12 Z" transform="rotate(225 12 12)"/><path d="M12 12 C 8.4 8.4 8.4 4.2 12 2 C 15.6 4.2 15.6 8.4 12 12 Z" transform="rotate(315 12 12)"/></svg>';
       case 'folders': return '<svg viewBox="0 0 24 24" width="24" height="24" fill="#fff"><path d="M3 8.2a2 2 0 0 1 2-2h3.1l1.5 1.7H15a2 2 0 0 1 2 2v.6H8.4a2.4 2.4 0 0 0-2.4 2.4v3.9H5a2 2 0 0 1-2-2z"/><path d="M8.4 11.1h9.2a2.2 2.2 0 0 1 2.2 2.2v4.2a2.2 2.2 0 0 1-2.2 2.2H8.4a2.2 2.2 0 0 1-2.2-2.2v-4.2a2.2 2.2 0 0 1 2.2-2.2z"/></svg>';
@@ -27862,7 +27863,8 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       + tile('list','Liste des dossiers',"geListe()")
       + tile('folders','Créer un dossier',"geCreer()")
       + (sel ? tile('folder','Fermer '+(sel.nom||''),"geFermer()") : '');
-    var g2 = tile('import','Importer (JSON)',"geImport()")
+    var g2 = tile('marq','Passerelle Mar\'q',"geMarq()")
+      + tile('import','Importer (JSON)',"geImport()")
       + tile('gear','Paramétrage',"geParam()")
       + tile('help','Centre d\'aide en ligne',"geAide()")
       + tile('qonto','Formalités de création (Qonto)',"geExt('https://qonto.com/fr')");
@@ -27947,7 +27949,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       +'<div class="acc-lw-body" id="acc-mgrid">'+body+'</div></div>';
     ov.style.display='flex';
     var g=document.getElementById('acc-mgrid');
-    if(g){ Array.prototype.forEach.call(g.querySelectorAll('.acc-card'),function(c){ c.onclick=function(){ geListeClose(); geSelect(c.getAttribute('data-id')); }; }); }
+    if(g){ Array.prototype.forEach.call(g.querySelectorAll('.acc-card'),function(c){ c.onclick=function(){ geListeClose(); window.accueilEntrer(c.getAttribute('data-id')); }; }); }
     var inp=document.getElementById('acc-msearch'); if(inp) setTimeout(function(){ try{ inp.focus(); }catch(e){} },30);
   }catch(e){} };
   window.geListeClose=function(){ var ov=document.getElementById('acc-list-ov'); if(ov) ov.style.display='none'; };
@@ -28042,7 +28044,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
   /* ── Style : NOIR TOTAL ──────────────────────────────────────────────────── */
   try{ var st=document.createElement('style'); st.id='acc-mod'; st.textContent=
      '.acc-blk{height:100dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:#000;color:#e8e8e8;display:flex;flex-direction:column;min-height:100dvh}'
-    +'html body .acc-blk,html body .acc-blk *,html body .acc-lw,html body .acc-lw *,html body .acc-dlg,html body .acc-dlg *{font-family:"Segoe UI",-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif !important}'
+    +'html body .acc-blk,html body .acc-blk *,html body .acc-lw,html body .acc-lw *,html body .acc-dlg,html body .acc-dlg *{font-family:Tahoma,"Segoe UI",Geneva,Verdana,sans-serif !important}'
     +'.ge-menubar{display:flex;gap:22px;padding:8px 14px;background:#000;border-bottom:1px solid #141414;font-size:13px;flex:0 0 auto}'
     +'.ge-menubar span{color:#b8b8b8;cursor:default}.ge-menubar span:hover{color:#fff}'
     +'.ge-menubar .ge-mi{cursor:pointer;position:relative}'
@@ -28140,25 +28142,25 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
   if(document.getElementById('dl-slide-mod')) return;
   var s=document.createElement('style'); s.id='dl-slide-mod';
   s.textContent=''
-   +'#yada-dl-banner{background:linear-gradient(180deg,rgba(18,30,54,.97),rgba(9,14,28,.97))!important;border:1px solid rgba(90,176,255,.5)!important;border-radius:999px!important;'
-     +'padding:9px 10px 9px 17px!important;gap:12px!important;box-shadow:0 16px 40px rgba(0,0,0,.5),0 0 0 4px rgba(30,144,255,.08),inset 0 1px 0 rgba(255,255,255,.05)!important;'
+   +'#yada-dl-banner{background:linear-gradient(180deg,rgba(18,30,54,.97),rgba(9,14,28,.97))!important;border:1px solid #000!important;border-radius:999px!important;'
+     +'padding:5px 7px 5px 12px!important;gap:8px!important;box-shadow:0 12px 30px rgba(0,0,0,.5),0 0 0 3px rgba(0,0,0,.14),inset 0 1px 0 rgba(255,255,255,.05)!important;'
      +'-webkit-backdrop-filter:blur(8px)!important;backdrop-filter:blur(8px)!important;cursor:pointer;align-items:center!important;'
      +'transition:padding .4s cubic-bezier(.16,1,.3,1),border-radius .4s ease,border-color .35s ease,box-shadow .4s ease,gap .4s ease,transform .25s ease!important}'
-   +'#yada-dl-banner:hover{box-shadow:0 18px 46px rgba(30,144,255,.30),0 0 0 5px rgba(30,144,255,.12)!important;transform:translateY(-1px)}'
-   +'#yada-dl-banner .dl-ic{position:relative;width:22px;height:22px;flex:none;color:#5ab0ff;display:grid;place-items:center;transition:color .3s ease}'
+   +'#yada-dl-banner:hover{box-shadow:0 14px 34px rgba(0,0,0,.42),0 0 0 4px rgba(0,0,0,.14)!important;transform:translateY(-1px)}'
+   +'#yada-dl-banner .dl-ic{position:relative;width:18px;height:18px;flex:none;color:#5ab0ff;display:grid;place-items:center;transition:color .3s ease}'
    +'#yada-dl-banner .dl-ic svg{position:absolute;inset:0;margin:auto;transition:opacity .3s ease,transform .5s cubic-bezier(.16,1,.3,1)}'
    +'#yada-dl-banner .dl-arrow{opacity:1;transform:none}'
    +'#yada-dl-banner .dl-arrow .bob{animation:yadaDlBob 1.8s ease-in-out infinite}'
    +'#yada-dl-banner .dl-ring{opacity:0;transform:scale(.4) rotate(-90deg)}'
    +'#yada-dl-banner .dl-ring circle{stroke:#5ab0ff;stroke-width:2.6;fill:none;stroke-linecap:round;stroke-dasharray:56;stroke-dashoffset:56;transform-origin:center;transition:stroke-dashoffset .2s linear}'
    +'#yada-dl-banner .dl-check{opacity:0;transform:scale(.3);color:#24d17a}'
-   +'#yada-dl-banner .dl-btn{position:relative;overflow:hidden;border:1px solid rgba(90,176,255,.32);border-radius:999px;background:linear-gradient(180deg,rgba(90,176,255,.18),rgba(30,144,255,.10));color:#eaf1ff;font:800 13px/1 inherit;letter-spacing:.2px;padding:8px 18px;white-space:nowrap;cursor:pointer;'
+   +'#yada-dl-banner .dl-btn{position:relative;overflow:hidden;border:1px solid rgba(90,176,255,.32);border-radius:999px;background:linear-gradient(180deg,rgba(90,176,255,.18),rgba(30,144,255,.10));color:#eaf1ff;font-weight:800;font-size:11.5px;line-height:1;font-family:inherit;letter-spacing:.2px;padding:6px 13px;white-space:nowrap;cursor:pointer;'
      +'transition:width .45s cubic-bezier(.16,1,.3,1),padding .45s ease,color .3s ease,background .3s ease,border-color .3s ease}'
    +'#yada-dl-banner .dl-btn .lbl{position:relative;z-index:2;transition:opacity .25s ease}'
    +'#yada-dl-banner .dl-track{position:absolute;inset:0;z-index:0;background:rgba(255,255,255,.07);opacity:0;transition:opacity .3s ease}'
    +'#yada-dl-banner .dl-fill{position:absolute;left:0;top:0;bottom:0;width:0;z-index:1;border-radius:999px;background:linear-gradient(90deg,#0a64d6,#1e90ff,#5ab0ff);box-shadow:0 0 14px rgba(30,144,255,.55);transition:width .18s linear}'
    +'#yada-dl-banner .dl-pct{position:absolute;inset:0;z-index:2;display:grid;place-items:center;font:700 11px/1 inherit;color:#fff;opacity:0;transition:opacity .25s ease;letter-spacing:.5px}'
-   +'#yada-dl-banner .dl-x{background:none;border:none;color:#5f6f8f;cursor:pointer;font-size:17px;line-height:1;padding:0 6px 0 2px;transition:opacity .3s ease,width .3s ease,margin .3s ease,color .2s;opacity:1}'
+   +'#yada-dl-banner .dl-x{background:none;border:none;color:#5f6f8f;cursor:pointer;font-size:15px;line-height:1;padding:0 5px 0 2px;transition:opacity .3s ease,width .3s ease,margin .3s ease,color .2s;opacity:1}'
    +'#yada-dl-banner .dl-x:hover{color:#eaf1ff}'
    +'#yada-dl-banner.loading{padding:11px 18px!important;border-radius:16px!important;gap:14px!important;cursor:default;border-color:rgba(120,170,255,.28)!important;box-shadow:0 18px 46px rgba(0,0,0,.55),0 0 0 5px rgba(30,144,255,.10)!important}'
    +'#yada-dl-banner.loading .dl-arrow{opacity:0;transform:scale(.4) rotate(90deg)}'
@@ -28226,6 +28228,339 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
   var iv=setInterval(scan, 300); setTimeout(function(){ try{clearInterval(iv);}catch(e){} }, 15000);
   scan();
   try{ new MutationObserver(scan).observe(document.body||document.documentElement,{childList:true}); }catch(e){}
+})();
+</script>
+<script id="yada-addon-police">
+/* v560 — Police professionnelle TAHOMA sur toute l'interface YADA (choix utilisateur).
+   Prime sur les anciennes règles IBM Plex Sans (!important, injecté en dernier).
+   Les éditions imprimables (.doc-page/.inv) gardent une police d'impression sobre. */
+(function(){
+  if(typeof document==='undefined'||!document.head) return;
+  if(document.getElementById('yada-police-mod')) return;
+  var s=document.createElement('style'); s.id='yada-police-mod';
+  /* :not(#_yz) ajoute la spécificité d'un id → prime sur les anciennes règles
+     « html body * » IBM Plex (!important, spécificité égale) quel que soit l'ordre. */
+  s.textContent=''
+   +'html body:not(#_yz),html body:not(#_yz) *{font-family:Tahoma,"Segoe UI",Geneva,Verdana,sans-serif !important}'
+   +'html body:not(#_yz) .doc-page,html body:not(#_yz) .doc-page *,html body:not(#_yz) .inv,html body:not(#_yz) .inv *{font-family:"Segoe UI",system-ui,Arial,sans-serif !important}';
+  document.head.appendChild(s);
+})();
+</script>
+<script id="yada-addon-marq">
+/* v560 — PASSERELLE Mar'q → YADA. Réception des dossiers (sociétés) transmis par Mar'q.
+   Deux sous-modules : « Transmissions » (liste reçue + fiche société → Créer le dossier +
+   enregistrer dans Contacts → créer Comptabilité / Immobilisation & Financement) et
+   « Paramétrage » (boîte Apps Script URL+clé + options de réception). Overlay façon accueil,
+   design standard YADA (noir, cartes arrondies, rail + liste + inspecteur, fenêtre de choix
+   à options, notifications colorées) — Tahoma. 100% additif. Mode DÉMO tant que l'URL/clé
+   ne sont pas renseignées (transmissions simulées). Les dossiers créés apparaissent dans la
+   « Liste des dossiers » de l'accueil. */
+(function(){
+  if(typeof document==='undefined') return;
+  function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function mid(){ return 'tx-'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+  function newDid(){ return 'd-'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+  function ini(s){ return ((String(s||'?')).trim().charAt(0)||'?').toUpperCase(); }
+  function store(){
+    db.cabinet=db.cabinet||{};
+    var m=db.cabinet.marq; if(!m){ m=db.cabinet.marq={}; }
+    m.cfg=m.cfg||{url:'',key:''};
+    m.options=m.options||{contacts:true,pieces:true,ack:true};
+    if(!Array.isArray(m.inbox)) m.inbox=[];
+    return m;
+  }
+  function find(id){ var m=store(),a=m.inbox; for(var i=0;i<a.length;i++) if(a[i].id===id) return a[i]; return null; }
+  function saveDB(){ try{ if(typeof save==='function') save(); }catch(e){} }
+
+  /* ── Données de démonstration (transmissions simulées) ───────────────────── */
+  function demoData(){ return [
+    {raison:'ACTION BTP',forme:'SAS',siren:'812 345 678',siret:'812 345 678 00019',ape:'4120A',tvaIntra:'FR32 812345678',adresse:'12 rue des Artisans',cp:'80000',ville:'AMIENS',dirigeant:'M. Bernard',email:'contact@actionbtp.fr',tel:'03 22 00 00 01',activite:'Travaux de construction'},
+    {raison:'BOULANGERIE MARTIN',forme:'SARL',siren:'903 221 447',siret:'903 221 447 00012',ape:'1071C',tvaIntra:'FR11 903221447',adresse:'5 place du Marché',cp:'80000',ville:'AMIENS',dirigeant:'Mme Martin',email:'martin@boulangerie.fr',tel:'03 22 00 00 02',activite:'Boulangerie-pâtisserie'},
+    {raison:'MENUISERIE DURAND',forme:'EURL',siren:'511 900 233',siret:'511 900 233 00021',ape:'4332A',tvaIntra:'FR61 511900233',adresse:'8 zone de la Vallée',cp:'80100',ville:'ABBEVILLE',dirigeant:'M. Durand',email:'durand@menuiserie.fr',tel:'03 22 00 00 03',activite:'Menuiserie bois et PVC'}
+  ]; }
+  function pushDemo(){ var m=store(); demoData().forEach(function(s){ m.inbox.push({id:mid(),recuLe:Date.now(),statut:'pending',dossierId:null,soc:s}); }); saveDB(); }
+
+  /* ── Réception (démo par défaut ; réel via boîte Apps Script si URL/clé) ──── */
+  window.marqRecevoir=function(){
+    var m=store();
+    if(m.cfg.url){
+      /* Mode RÉEL : boîte Google Apps Script (GET→JSONP). Best-effort, sans blocage. */
+      marqToast('info','Connexion à la boîte Mar\'q…','GET '+ (m.cfg.url.slice(0,42)) +'…');
+      try{
+        var u=m.cfg.url+(m.cfg.url.indexOf('?')<0?'?':'&')+'action=yada_pull&key='+encodeURIComponent(m.cfg.key||'');
+        var ctrl=('AbortController' in window)?new AbortController():null;
+        var to=setTimeout(function(){ try{ ctrl&&ctrl.abort(); }catch(e){} },12000);
+        fetch(u,{method:'GET',cache:'no-store',signal:ctrl?ctrl.signal:undefined})
+          .then(function(r){ return r.text(); })
+          .then(function(t){ clearTimeout(to); marqIntegrerPull(t); })
+          .catch(function(){ clearTimeout(to); marqToast('err','Réception impossible','Vérifiez l\'URL/la clé dans Paramétrage.'); });
+      }catch(e){ marqToast('err','Réception impossible','Vérifiez la configuration.'); }
+      return;
+    }
+    /* Mode DÉMO */
+    pushDemo();
+    marqToast('info','Transmissions reçues (démo)','3 dossiers ajoutés à la liste');
+    marqRender();
+  };
+  function marqIntegrerPull(txt){
+    var data; try{ data=JSON.parse(txt); }catch(e){ marqToast('err','Réponse illisible','Le format renvoyé n\'est pas du JSON.'); return; }
+    var lots=(data&&(data.lots||data.dossiers||data.items))||[]; if(!Array.isArray(lots)) lots=[];
+    if(!lots.length){ marqToast('info','Boîte vide','Aucune nouvelle transmission.'); return; }
+    var m=store(),n=0;
+    lots.forEach(function(l){ var s=l.societe||l.soc||l; m.inbox.push({id:l.id||mid(),recuLe:Date.now(),statut:'pending',dossierId:null,lotId:l.id||'',soc:{
+      raison:s.raison||s.nom||'',forme:s.forme||s.formeJur||'',siren:s.siren||'',siret:s.siret||'',ape:s.ape||s.codeAPE||'',tvaIntra:s.tvaIntra||s.tva||'',adresse:s.adresse||'',cp:s.cp||'',ville:s.ville||'',dirigeant:s.dirigeant||'',email:s.email||'',tel:s.tel||'',activite:s.activite||''
+    }}); n++; });
+    saveDB(); marqToast('ok',n+' transmission'+(n>1?'s':'')+' reçue'+(n>1?'s':''),'Prêtes à traiter'); marqRender();
+  }
+
+  /* ── Création du dossier + enregistrement dans Contacts ──────────────────── */
+  window.marqCreer=function(id){
+    var t=find(id); if(!t||t.statut==='created') return;
+    var s=t.soc||{};
+    var did=newDid();
+    var code=(s.raison||'DOSSIER').replace(/\s+/g,'').slice(0,6).toUpperCase();
+    var soc=Object.assign((typeof societeDefaut==='function'?societeDefaut():{}),{
+      raison:s.raison||'',dossierNom:s.raison||'',dossierCode:code,
+      formeJur:s.forme||'SAS',siren:(s.siren||'').replace(/\s/g,''),siret:(s.siret||'').replace(/\s/g,''),
+      codeAPE:s.ape||'',tvaIntra:(s.tvaIntra||'').replace(/\s/g,''),
+      adresse:s.adresse||'',cp:s.cp||'',ville:s.ville||'',dirigeant:s.dirigeant||'',
+      email:s.email||'',tel:s.tel||'',activite:s.activite||'',source:'Mar\'q'
+    });
+    try{
+      db.dossiersData=db.dossiersData||{};
+      db.dossiersData[did]=(typeof datasetVide==='function')?datasetVide(soc):{societe:soc};
+      db.cabinet=db.cabinet||{}; if(!Array.isArray(db.cabinet.dossiers)) db.cabinet.dossiers=[];
+      db.cabinet.dossiers.push({id:did,nom:s.raison||'',code:code,forme:s.forme||'',siren:(s.siren||'').replace(/\s/g,''),ville:s.ville||'',activite:s.activite||'',spaces:{contacts:true},source:'Mar\'q'});
+      try{ db.cabinet.recents=[did].concat((db.cabinet.recents||[]).filter(function(x){return x!==did;})).slice(0,8); }catch(e){}
+      t.statut='created'; t.dossierId=did;
+      if(store().options.ack) marqAck(t);
+      saveDB();
+    }catch(e){ marqToast('err','Création impossible',''); return; }
+    marqToast('ok','Dossier créé','Enregistré dans Contacts · '+(s.raison||''));
+    marqRender();
+    marqModulesModal(id);
+  };
+
+  /* ── Accusé de réception (ferme la fenêtre côté Mar'q) ────────────────────── */
+  function marqAck(t){
+    var m=store(); if(!m.cfg.url||!t.lotId) return; /* démo : rien à envoyer */
+    try{
+      fetch(m.cfg.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body:JSON.stringify({action:'yada_ack',key:m.cfg.key||'',id:t.lotId})}).catch(function(){});
+    }catch(e){}
+  }
+
+  /* ── Fenêtre de choix : créer les modules du dossier ─────────────────────── */
+  window.__marqOpt={compta:true,immo:true};
+  window.marqModulesModal=function(id){
+    var t=find(id); if(!t) return; var nom=(t.soc&&t.soc.raison)||'';
+    window.__marqOpt={compta:true,immo:true};
+    var ov=document.getElementById('marq-modal'); if(!ov){ ov=document.createElement('div'); ov.id='marq-modal'; ov.className='marq-stage'; document.body.appendChild(ov); ov.addEventListener('click',function(e){ if(e.target===ov) marqModalClose(); }); }
+    function opt(key,ic,tt,dd){ var on=window.__marqOpt[key]; return '<div class="marq-opt'+(on?' on':'')+'" data-opt="'+key+'" onclick="marqToggleOpt(this)"><div class="marq-oic">'+ic+'</div><div class="marq-omain"><div class="marq-ot">'+esc(tt)+'</div><div class="marq-od">'+esc(dd)+'</div></div><div class="marq-radio"></div></div>'; }
+    ov.innerHTML='<div class="marq-modal">'
+      +'<div class="marq-mhead"><div class="marq-mtitle">Créer les applications du dossier</div><div class="marq-mx" onclick="marqModalClose()">✕</div></div>'
+      +'<div class="marq-msub">'+esc(nom)+' · choisissez ce qu\'il faut initialiser.</div>'
+      +opt('compta',ICN('compta'),'Comptabilité','Plan comptable, journaux, exercice.')
+      +opt('immo',ICN('immo'),'Immobilisation & Financement','Immobilisations, amortissements, emprunts.')
+      +'<div class="marq-macts"><button class="marq-btn g" onclick="marqModalClose()">Plus tard</button><button class="marq-btn p" onclick="marqCreerModules(\''+id+'\')">Créer</button></div>'
+      +'</div>';
+    ov.style.display='flex';
+  };
+  window.marqModalClose=function(){ var ov=document.getElementById('marq-modal'); if(ov) ov.style.display='none'; };
+  window.marqToggleOpt=function(el){ var k=el.getAttribute('data-opt'); window.__marqOpt[k]=!window.__marqOpt[k]; el.classList.toggle('on', window.__marqOpt[k]); };
+  window.marqCreerModules=function(id){
+    var t=find(id); if(!t||!t.dossierId){ marqModalClose(); return; }
+    var did=t.dossierId, d=null;
+    try{ (db.cabinet.dossiers||[]).forEach(function(x){ if(x.id===did) d=x; }); }catch(e){}
+    var ds=db.dossiersData&&db.dossiersData[did]; if(!ds){ marqModalClose(); return; }
+    if(d) d.spaces=d.spaces||{};
+    if(window.__marqOpt.compta){
+      try{ ds.societe=ds.societe||{}; if(!ds.societe.exoDebut) ds.societe.exoDebut='2026-01-01'; if(!ds.societe.exoFin) ds.societe.exoFin='2026-12-31'; }catch(e){}
+      try{ if(typeof withDataset==='function'&&typeof chargerPlanBTP==='function') withDataset(ds,function(){ chargerPlanBTP(); }); }catch(e){}
+      if(d) d.spaces.compta=true;
+      marqToast('ok','Comptabilité créée','Plan comptable & journaux initialisés');
+    }
+    if(window.__marqOpt.immo){ if(d) d.spaces.invest=true; marqToast('ok','Immobilisation & Financement créée',''); }
+    saveDB(); marqModalClose(); marqRender();
+  };
+
+  /* ── Ouvrir un dossier créé (dans l'accueil) ─────────────────────────────── */
+  window.marqOuvrir=function(id){ var t=find(id); if(!t||!t.dossierId) return; marqClose();
+    try{ if(typeof window.geSelect==='function'){ window.geSelect(t.dossierId); return; } }catch(e){}
+    try{ window.__accDossier=t.dossierId; window.__homeView=true; if(typeof render==='function') render(); }catch(e){}
+  };
+
+  /* ── Paramétrage ─────────────────────────────────────────────────────────── */
+  window.marqParamSave=function(){
+    var m=store();
+    m.cfg.url=((document.getElementById('marq-url')||{}).value||'').trim();
+    m.cfg.key=((document.getElementById('marq-key')||{}).value||'').trim();
+    m.options.contacts=!!((document.getElementById('marq-opt-contacts')||{}).checked);
+    m.options.pieces=!!((document.getElementById('marq-opt-pieces')||{}).checked);
+    m.options.ack=!!((document.getElementById('marq-opt-ack')||{}).checked);
+    saveDB(); marqToast('ok','Paramétrage enregistré', m.cfg.url?'Boîte Mar\'q configurée':'Mode démo (aucune URL)');
+  };
+
+  /* ── Notifications (icônes colorées, réf. validées) ──────────────────────── */
+  window.marqToast=function(kind,title,sub){
+    var ov=document.getElementById('marq-ov'); if(!ov) return;
+    var c=ov.querySelector('#marq-toasts'); if(!c){ c=document.createElement('div'); c.id='marq-toasts'; ov.appendChild(c); }
+    var ic = kind==='ok'?'<svg viewBox="0 0 22 22"><path d="M4 11l5 5 9-10"/></svg>'
+           : kind==='err'?'<svg viewBox="0 0 22 22"><path d="M7 7l8 8M15 7l-8 8"/></svg>'
+           : '<svg viewBox="0 0 22 22"><path d="M11 7v5M11 15h.01"/><circle cx="11" cy="11" r="8"/></svg>';
+    var el=document.createElement('div'); el.className='marq-toast';
+    el.innerHTML='<div class="marq-tic '+esc(kind)+'">'+ic+'</div><div class="marq-tmain"><div class="marq-tt">'+esc(title)+'</div>'+(sub?'<div class="marq-ts">'+esc(sub)+'</div>':'')+'</div><span class="marq-tx">✕</span>';
+    el.querySelector('.marq-tx').onclick=function(){ try{ c.removeChild(el); }catch(e){} };
+    c.appendChild(el); setTimeout(function(){ try{ c.removeChild(el); }catch(e){} },4200);
+  };
+
+  /* ── Icônes ──────────────────────────────────────────────────────────────── */
+  function ICN(n){
+    var A='<svg viewBox="0 0 22 22">',Z='</svg>';
+    switch(n){
+      case 'tx': return A+'<path d="M3 6h16M3 11h16M3 16h10"/>'+Z;
+      case 'param': return A+'<circle cx="11" cy="11" r="3"/><path d="M11 2v3M11 17v3M2 11h3M17 11h3M4.6 4.6l2.1 2.1M15.3 15.3l2.1 2.1M17.4 4.6l-2.1 2.1M6.7 15.3l-2.1 2.1"/>'+Z;
+      case 'compta': return A+'<rect x="4" y="3" width="14" height="16" rx="2"/><path d="M8 7h6M8 11h6M8 15h3"/>'+Z;
+      case 'immo': return A+'<path d="M3 19h16M6 19V9M11 19V5M16 19v-7"/>'+Z;
+      case 'contacts': return A+'<circle cx="9" cy="8" r="3"/><path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/><path d="M16 8h3M16 12h3"/>'+Z;
+      case 'dl': return A+'<path d="M11 3v10m0 0l-4-4m4 4l4-4"/><path d="M4 17v2h14v-2"/>'+Z;
+      default: return A+'<rect x="4" y="4" width="14" height="14" rx="3"/>'+Z;
+    }
+  }
+
+  /* ── Rendu ───────────────────────────────────────────────────────────────── */
+  window.__marqView='tx'; window.__marqSel=null;
+  function railBtn(v,ic,lbl){ return '<div class="marq-rbtn'+(window.__marqView===v?' on':'')+'" title="'+esc(lbl)+'" onclick="marqGo(\''+v+'\')">'+ICN(ic)+'</div>'; }
+
+  function txList(){
+    var m=store(); var rows=m.inbox.slice().reverse();
+    if(!rows.length) return '<div class="marq-empty">Aucune transmission.<br><span>Cliquez « Recevoir » pour récupérer les dossiers envoyés par Mar\'q.</span></div>';
+    return rows.map(function(t){ var s=t.soc||{}; var on=(window.__marqSel===t.id);
+      var pill = t.statut==='created'?'<span class="marq-pill done">Dossier créé</span>':'<span class="marq-pill wait">À traiter</span>';
+      return '<div class="marq-trow'+(on?' sel':'')+'" onclick="marqPick(\''+t.id+'\')"><div class="marq-av">'+esc(ini(s.raison))+'</div><div class="marq-tmn"><div class="marq-nm">'+esc(s.raison||'(sans nom)')+'</div><div class="marq-mt">'+esc([s.forme,s.siren?('SIREN '+s.siren):''].filter(Boolean).join(' · '))+'</div></div>'+pill+'</div>';
+    }).join('');
+  }
+  function kv(k,v){ return '<div class="marq-kv"><span class="marq-k">'+esc(k)+'</span><span class="marq-v">'+esc(v||'—')+'</span></div>'; }
+  function inspector(){
+    var t=window.__marqSel?find(window.__marqSel):null;
+    if(!t){ return '<div class="marq-insp marq-insp-empty">Sélectionnez une transmission pour voir la fiche société.</div>'; }
+    var s=t.soc||{}; var created=(t.statut==='created');
+    var acts = created
+      ? '<button class="marq-btn p" onclick="marqOuvrir(\''+t.id+'\')">Ouvrir le dossier</button><button class="marq-btn g" onclick="marqModulesModal(\''+t.id+'\')">Créer les modules</button>'
+      : '<button class="marq-btn p" onclick="marqCreer(\''+t.id+'\')">Créer le dossier</button>';
+    return '<div class="marq-insp">'
+      +'<div class="marq-itop"><div class="marq-iav">'+esc(ini(s.raison))+'</div><div><div class="marq-inm">'+esc(s.raison||'')+'</div><div class="marq-imt">Transmis par Mar\'q'+(created?' · dossier créé ✓':'')+'</div></div></div>'
+      +'<div class="marq-ilbl">Informations société</div>'
+      +kv('Forme juridique',s.forme)+kv('SIREN',s.siren)+kv('SIRET',s.siret)+kv('Code APE',s.ape)+kv('N° TVA',s.tvaIntra)+kv('Activité',s.activite)+kv('Adresse',[s.adresse,s.cp,s.ville].filter(Boolean).join(', '))+kv('Dirigeant',s.dirigeant)+kv('E-mail',s.email)+kv('Téléphone',s.tel)
+      +'<div class="marq-iacts">'+acts+'</div></div>';
+  }
+  function paramView(){
+    var m=store();
+    function chk(id,on,lbl){ return '<label class="marq-chk"><input type="checkbox" id="'+id+'"'+(on?' checked':'')+'> '+esc(lbl)+'</label>'; }
+    return '<div class="marq-panel marq-param">'
+      +'<div class="marq-ptitle">Paramétrage de la passerelle</div>'
+      +'<div class="marq-psub">Connexion à la « boîte » Mar\'q (Google Apps Script). Sans URL, la passerelle fonctionne en mode démo.</div>'
+      +'<div class="marq-field"><label>URL de la boîte (Apps Script /exec)</label><input id="marq-url" type="text" autocomplete="off" placeholder="https://script.google.com/macros/s/…/exec" value="'+esc(m.cfg.url||'')+'"></div>'
+      +'<div class="marq-field"><label>Clé partagée</label><input id="marq-key" type="text" autocomplete="off" placeholder="clé convenue avec Mar\'q" value="'+esc(m.cfg.key||'')+'"></div>'
+      +'<div class="marq-ilbl">Options de réception</div>'
+      +chk('marq-opt-contacts',m.options.contacts,'Enregistrer les informations dans Contacts')
+      +chk('marq-opt-pieces',m.options.pieces,'Récupérer les pièces jointes')
+      +chk('marq-opt-ack',m.options.ack,'Envoyer un accusé de réception (ferme la fenêtre côté Mar\'q)')
+      +'<div class="marq-macts" style="justify-content:flex-start"><button class="marq-btn p" onclick="marqParamSave()">Enregistrer</button></div>'
+      +'<div class="marq-note">'+(m.cfg.url?'Boîte configurée — la réception interroge Mar\'q.':'Mode démo actif : « Recevoir » ajoute des transmissions simulées.')+'</div>'
+      +'</div>';
+  }
+  function marqRender(){
+    var ov=document.getElementById('marq-ov'); if(!ov) return;
+    var main = window.__marqView==='param'
+      ? paramView()
+      : '<div class="marq-panel"><div class="marq-phead"><div class="marq-ptitle">Transmissions reçues <span class="marq-cnt">'+store().inbox.length+'</span></div><button class="marq-btn p sm" onclick="marqRecevoir()">Recevoir</button></div><div class="marq-tbl">'+txList()+'</div></div>'
+        +inspector();
+    ov.innerHTML='<div class="marq-shell">'
+      +'<div class="marq-rail"><div class="marq-logo">Y</div>'+railBtn('tx','tx','Transmissions')+railBtn('param','param','Paramétrage')+'<div class="marq-rspacer"></div><div class="marq-rbtn marq-rclose" title="Fermer" onclick="marqClose()">✕</div></div>'
+      +'<div class="marq-body">'+main+'</div></div>'
+      +'<div id="marq-toasts"></div>';
+  }
+  window.marqGo=function(v){ window.__marqView=v; marqRender(); };
+  window.marqPick=function(id){ window.__marqSel=id; marqRender(); };
+  window.marqClose=function(){ var ov=document.getElementById('marq-ov'); if(ov) ov.style.display='none'; marqModalClose(); };
+  window.geMarq=function(){
+    var m=store(); if(!m.seeded && !m.inbox.length){ pushDemo(); m.seeded=true; saveDB(); }
+    var ov=document.getElementById('marq-ov');
+    if(!ov){ ov=document.createElement('div'); ov.id='marq-ov'; document.body.appendChild(ov); }
+    if(!window.__marqSel){ var first=store().inbox.slice().reverse()[0]; window.__marqSel=first?first.id:null; }
+    ov.style.display='block'; window.__marqView='tx'; marqRender();
+  };
+  if(!window.__marqEsc){ try{ document.addEventListener('keydown',function(e){ if(e.key==='Escape'){ var mo=document.getElementById('marq-modal'); if(mo&&mo.style.display!=='none'){ marqModalClose(); return; } var ov=document.getElementById('marq-ov'); if(ov&&ov.style.display!=='none') marqClose(); } }); }catch(e){} window.__marqEsc=true; }
+
+  /* ── Styles (standard YADA — réf. validées, Tahoma) ──────────────────────── */
+  try{ if(!document.getElementById('marq-mod')){ var st=document.createElement('style'); st.id='marq-mod'; st.textContent=
+     '#marq-ov{position:fixed;inset:0;z-index:3000;background:#080809;display:none;overflow:auto}'
+    +'#marq-ov,#marq-ov *{font-family:Tahoma,"Segoe UI",Geneva,Verdana,sans-serif !important;box-sizing:border-box}'
+    +'.marq-shell{display:grid;grid-template-columns:60px 1fr 340px;gap:16px;height:100dvh;padding:16px}'
+    +'@media(max-width:900px){.marq-shell{grid-template-columns:1fr;height:auto;min-height:100dvh}}'
+    +'.marq-rail{background:#101113;border-radius:20px;box-shadow:0 8px 30px rgba(0,0,0,.5);display:flex;flex-direction:column;align-items:center;padding:14px 0;gap:6px}'
+    +'.marq-logo{width:34px;height:34px;border-radius:11px;background:#fff;color:#000;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;margin-bottom:10px}'
+    +'.marq-rbtn{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#6b6d72;cursor:pointer;transition:.15s}'
+    +'.marq-rbtn svg{width:19px;height:19px;stroke:currentColor;stroke-width:1.7;fill:none;stroke-linecap:round;stroke-linejoin:round}'
+    +'.marq-rbtn:hover{background:#161719;color:#9a9ca1}.marq-rbtn.on{background:#1b1c1f;color:#fff}'
+    +'.marq-rspacer{flex:1}.marq-rclose:hover{background:#2a1414;color:#ff8a80}'
+    +'.marq-body{display:contents}'
+    +'@media(max-width:900px){.marq-body{display:block}.marq-rail{flex-direction:row;height:auto;border-radius:14px}.marq-rspacer{flex:1}}'
+    +'.marq-panel{background:#101113;border-radius:20px;box-shadow:0 8px 30px rgba(0,0,0,.5);padding:18px;overflow:hidden;display:flex;flex-direction:column;min-height:0}'
+    +'.marq-phead,.marq-mhead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}'
+    +'.marq-ptitle{font-size:15px;font-weight:600;color:#fff}.marq-cnt{color:#6b6d72;font-weight:500;margin-left:6px}'
+    +'.marq-tbl{flex:1;overflow-y:auto;margin:0 -6px}'
+    +'.marq-tbl::-webkit-scrollbar{width:8px}.marq-tbl::-webkit-scrollbar-thumb{background:#26272b;border-radius:8px}'
+    +'.marq-trow{display:flex;align-items:center;gap:13px;padding:11px 12px;border-radius:14px;cursor:pointer;transition:background .13s}'
+    +'.marq-trow:hover{background:#161719}.marq-trow.sel{background:#212226;box-shadow:inset 0 0 0 1px #3a3b40}'
+    +'.marq-av{width:40px;height:40px;border-radius:13px;background:#1b1c1f;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:15px;flex:0 0 40px}'
+    +'.marq-tmn{flex:1;min-width:0}.marq-nm{font-weight:600;font-size:14px;color:#f2f3f5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.marq-mt{font-size:12px;color:#9a9ca1;margin-top:1px}'
+    +'.marq-pill{font-size:10.5px;font-weight:600;padding:4px 9px;border-radius:999px;white-space:nowrap}'
+    +'.marq-pill.wait{background:#1c1d20;color:#c9cbcf}.marq-pill.done{background:#14261b;color:#63c98a}'
+    +'.marq-empty{color:#9a9ca1;font-size:13.5px;text-align:center;padding:40px 16px;line-height:1.7}.marq-empty span{color:#6b6d72;font-size:12.5px}'
+    +'.marq-insp{background:#101113;border-radius:20px;box-shadow:0 8px 30px rgba(0,0,0,.5);padding:20px;display:flex;flex-direction:column;overflow-y:auto;min-height:0}'
+    +'.marq-insp::-webkit-scrollbar{width:8px}.marq-insp::-webkit-scrollbar-thumb{background:#26272b;border-radius:8px}'
+    +'.marq-insp-empty{color:#6b6d72;font-size:13px;align-items:center;justify-content:center;text-align:center}'
+    +'.marq-itop{display:flex;align-items:center;gap:13px;margin-bottom:16px}'
+    +'.marq-iav{width:52px;height:52px;border-radius:16px;background:linear-gradient(160deg,#26282c,#141517);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:#fff}'
+    +'.marq-inm{font-size:16px;font-weight:700;color:#fff}.marq-imt{font-size:12px;color:#9a9ca1;margin-top:2px}'
+    +'.marq-ilbl{font-size:11px;font-weight:700;color:#6b6d72;text-transform:uppercase;letter-spacing:.1em;margin:14px 0 8px}'
+    +'.marq-kv{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid #1e1f22}'
+    +'.marq-kv .marq-k{color:#9a9ca1;font-size:12.5px}.marq-kv .marq-v{color:#e8e9ec;font-size:12.5px;font-weight:500;text-align:right}'
+    +'.marq-iacts{margin-top:auto;padding-top:16px;display:flex;flex-direction:column;gap:8px}'
+    +'.marq-btn{font-size:12px;font-weight:600;padding:7px 13px;border-radius:999px;cursor:pointer;border:0;transition:.14s;display:inline-flex;align-items:center;justify-content:center;gap:6px}'
+    +'.marq-btn.sm{padding:6px 12px}'
+    +'.marq-btn.p{background:#fff;color:#000}.marq-btn.p:hover{background:#e6e6e6}'
+    +'.marq-btn.g{background:#1b1c1f;color:#e8e9ec}.marq-btn.g:hover{background:#25262a}'
+    /* param */
+    +'.marq-param{overflow-y:auto}.marq-psub{font-size:12.5px;color:#9a9ca1;margin:-6px 0 16px}'
+    +'.marq-field{margin-bottom:12px}.marq-field label{display:block;font-size:12px;color:#b8b8b8;margin-bottom:6px}'
+    +'.marq-field input{width:100%;background:#161719;border:0;border-radius:11px;color:#eee;font-size:13px;padding:10px 13px;outline:none}.marq-field input:focus{background:#1b1c1f}'
+    +'.marq-chk{display:flex;align-items:center;gap:9px;color:#cfcfcf;font-size:13px;margin:8px 0;cursor:pointer}.marq-chk input{width:16px;height:16px;accent-color:#fff}'
+    +'.marq-note{margin-top:14px;font-size:12px;color:#6b6d72;background:#0d0e10;border-radius:10px;padding:10px 12px}'
+    /* modal choix */
+    +'.marq-stage{position:fixed;inset:0;z-index:3100;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:20px}'
+    +'.marq-modal{width:430px;max-width:100%;background:#101113;border-radius:22px;box-shadow:0 20px 60px rgba(0,0,0,.6);padding:22px}'
+    +'.marq-mtitle{font-size:16px;font-weight:700;color:#fff}.marq-mx{width:30px;height:30px;border-radius:10px;background:#161719;color:#9a9ca1;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px}.marq-mx:hover{background:#1b1c1f;color:#fff}'
+    +'.marq-msub{font-size:12.5px;color:#9a9ca1;margin:2px 0 16px}'
+    +'.marq-opt{display:flex;align-items:center;gap:14px;padding:14px 15px;border-radius:16px;background:#161719;cursor:pointer;margin-bottom:10px;transition:.14s;box-shadow:inset 0 0 0 1px transparent}'
+    +'.marq-opt:hover{background:#1b1c1f}.marq-opt.on{box-shadow:inset 0 0 0 1.5px #fff;background:#1b1c1f}'
+    +'.marq-oic{width:44px;height:44px;border-radius:13px;background:#1b1c1f;display:flex;align-items:center;justify-content:center;flex:0 0 44px}'
+    +'.marq-oic svg{width:21px;height:21px;stroke:#c9cbcf;stroke-width:1.7;fill:none;stroke-linecap:round;stroke-linejoin:round}.marq-opt.on .marq-oic{background:#fff}.marq-opt.on .marq-oic svg{stroke:#000}'
+    +'.marq-ot{font-size:14px;font-weight:600;color:#f2f3f5}.marq-od{font-size:12px;color:#9a9ca1;margin-top:2px}.marq-omain{flex:1}'
+    +'.marq-radio{width:20px;height:20px;border-radius:50%;box-shadow:inset 0 0 0 1.5px #2a2b2f;flex:0 0 20px}.marq-opt.on .marq-radio{box-shadow:inset 0 0 0 6px #fff}'
+    +'.marq-macts{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}'
+    /* toasts */
+    +'#marq-toasts{position:fixed;top:22px;right:22px;z-index:3200;display:flex;flex-direction:column;gap:12px;max-width:360px}'
+    +'.marq-toast{display:flex;align-items:center;gap:13px;background:#101113;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.6);padding:12px 13px;animation:marqIn .18s ease}'
+    +'@keyframes marqIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}'
+    +'.marq-tic{width:42px;height:42px;border-radius:13px;background:#1b1c1f;display:flex;align-items:center;justify-content:center;flex:0 0 42px}'
+    +'.marq-tic svg{width:20px;height:20px;stroke:#fff;stroke-width:1.9;fill:none;stroke-linecap:round;stroke-linejoin:round}'
+    +'.marq-tic.ok{background:#1f7a44}.marq-tic.info{background:#2f6fe8}.marq-tic.err{background:#c8392e}'
+    +'.marq-tmain{flex:1;min-width:0}.marq-tt{font-size:13.5px;font-weight:600;color:#fff}.marq-ts{font-size:12px;color:#9a9ca1;margin-top:1px}'
+    +'.marq-tx{color:#6b6d72;cursor:pointer;font-size:13px;padding:4px}.marq-tx:hover{color:#fff}';
+    document.head.appendChild(st); } }catch(e){}
 })();
 </script>
 </body>
