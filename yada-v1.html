@@ -11094,7 +11094,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v560';
+    b.textContent='YADA · v561';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -27682,7 +27682,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
    Drapeau localStorage 'yada-fresh-549' → exécuté une seule fois. 100% additif. */
 (function(){
   var CUR='yada-v148';           /* = CACHE courant du sw.js */
-  var FLAG='yada-fresh-560';
+  var FLAG='yada-fresh-561';
   try{ if(localStorage.getItem(FLAG)) return; }catch(e){}
   try{ localStorage.setItem(FLAG,'1'); }catch(e){}
   try{
@@ -27878,7 +27878,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       +'<div class="acc-lw-body" id="acc-mgrid">'+body+'</div></div>';
     ov.style.display='flex';
     var g=document.getElementById('acc-mgrid');
-    if(g){ Array.prototype.forEach.call(g.querySelectorAll('.acc-card'),function(c){ c.onclick=function(){ geListeClose(); geSelect(c.getAttribute('data-id')); }; }); }
+    if(g){ Array.prototype.forEach.call(g.querySelectorAll('.acc-card'),function(c){ c.onclick=function(){ geListeClose(); window.accueilEntrer(c.getAttribute('data-id')); }; }); }
     var inp=document.getElementById('acc-msearch'); if(inp) setTimeout(function(){ try{ inp.focus(); }catch(e){} },30);
   }catch(e){} };
   window.geListeClose=function(){ var ov=document.getElementById('acc-list-ov'); if(ov) ov.style.display='none'; };
@@ -28071,25 +28071,25 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
   if(document.getElementById('dl-slide-mod')) return;
   var s=document.createElement('style'); s.id='dl-slide-mod';
   s.textContent=''
-   +'#yada-dl-banner{background:linear-gradient(180deg,rgba(18,30,54,.97),rgba(9,14,28,.97))!important;border:1px solid rgba(90,176,255,.5)!important;border-radius:999px!important;'
-     +'padding:9px 10px 9px 17px!important;gap:12px!important;box-shadow:0 16px 40px rgba(0,0,0,.5),0 0 0 4px rgba(30,144,255,.08),inset 0 1px 0 rgba(255,255,255,.05)!important;'
+   +'#yada-dl-banner{background:linear-gradient(180deg,rgba(18,30,54,.97),rgba(9,14,28,.97))!important;border:1px solid #000!important;border-radius:999px!important;'
+     +'padding:5px 7px 5px 12px!important;gap:8px!important;box-shadow:0 12px 30px rgba(0,0,0,.5),0 0 0 3px rgba(0,0,0,.14),inset 0 1px 0 rgba(255,255,255,.05)!important;'
      +'-webkit-backdrop-filter:blur(8px)!important;backdrop-filter:blur(8px)!important;cursor:pointer;align-items:center!important;'
      +'transition:padding .4s cubic-bezier(.16,1,.3,1),border-radius .4s ease,border-color .35s ease,box-shadow .4s ease,gap .4s ease,transform .25s ease!important}'
-   +'#yada-dl-banner:hover{box-shadow:0 18px 46px rgba(30,144,255,.30),0 0 0 5px rgba(30,144,255,.12)!important;transform:translateY(-1px)}'
-   +'#yada-dl-banner .dl-ic{position:relative;width:22px;height:22px;flex:none;color:#5ab0ff;display:grid;place-items:center;transition:color .3s ease}'
+   +'#yada-dl-banner:hover{box-shadow:0 14px 34px rgba(0,0,0,.42),0 0 0 4px rgba(0,0,0,.14)!important;transform:translateY(-1px)}'
+   +'#yada-dl-banner .dl-ic{position:relative;width:18px;height:18px;flex:none;color:#5ab0ff;display:grid;place-items:center;transition:color .3s ease}'
    +'#yada-dl-banner .dl-ic svg{position:absolute;inset:0;margin:auto;transition:opacity .3s ease,transform .5s cubic-bezier(.16,1,.3,1)}'
    +'#yada-dl-banner .dl-arrow{opacity:1;transform:none}'
    +'#yada-dl-banner .dl-arrow .bob{animation:yadaDlBob 1.8s ease-in-out infinite}'
    +'#yada-dl-banner .dl-ring{opacity:0;transform:scale(.4) rotate(-90deg)}'
    +'#yada-dl-banner .dl-ring circle{stroke:#5ab0ff;stroke-width:2.6;fill:none;stroke-linecap:round;stroke-dasharray:56;stroke-dashoffset:56;transform-origin:center;transition:stroke-dashoffset .2s linear}'
    +'#yada-dl-banner .dl-check{opacity:0;transform:scale(.3);color:#24d17a}'
-   +'#yada-dl-banner .dl-btn{position:relative;overflow:hidden;border:1px solid rgba(90,176,255,.32);border-radius:999px;background:linear-gradient(180deg,rgba(90,176,255,.18),rgba(30,144,255,.10));color:#eaf1ff;font:800 13px/1 inherit;letter-spacing:.2px;padding:8px 18px;white-space:nowrap;cursor:pointer;'
+   +'#yada-dl-banner .dl-btn{position:relative;overflow:hidden;border:1px solid rgba(90,176,255,.32);border-radius:999px;background:linear-gradient(180deg,rgba(90,176,255,.18),rgba(30,144,255,.10));color:#eaf1ff;font-weight:800;font-size:11.5px;line-height:1;font-family:inherit;letter-spacing:.2px;padding:6px 13px;white-space:nowrap;cursor:pointer;'
      +'transition:width .45s cubic-bezier(.16,1,.3,1),padding .45s ease,color .3s ease,background .3s ease,border-color .3s ease}'
    +'#yada-dl-banner .dl-btn .lbl{position:relative;z-index:2;transition:opacity .25s ease}'
    +'#yada-dl-banner .dl-track{position:absolute;inset:0;z-index:0;background:rgba(255,255,255,.07);opacity:0;transition:opacity .3s ease}'
    +'#yada-dl-banner .dl-fill{position:absolute;left:0;top:0;bottom:0;width:0;z-index:1;border-radius:999px;background:linear-gradient(90deg,#0a64d6,#1e90ff,#5ab0ff);box-shadow:0 0 14px rgba(30,144,255,.55);transition:width .18s linear}'
    +'#yada-dl-banner .dl-pct{position:absolute;inset:0;z-index:2;display:grid;place-items:center;font:700 11px/1 inherit;color:#fff;opacity:0;transition:opacity .25s ease;letter-spacing:.5px}'
-   +'#yada-dl-banner .dl-x{background:none;border:none;color:#5f6f8f;cursor:pointer;font-size:17px;line-height:1;padding:0 6px 0 2px;transition:opacity .3s ease,width .3s ease,margin .3s ease,color .2s;opacity:1}'
+   +'#yada-dl-banner .dl-x{background:none;border:none;color:#5f6f8f;cursor:pointer;font-size:15px;line-height:1;padding:0 5px 0 2px;transition:opacity .3s ease,width .3s ease,margin .3s ease,color .2s;opacity:1}'
    +'#yada-dl-banner .dl-x:hover{color:#eaf1ff}'
    +'#yada-dl-banner.loading{padding:11px 18px!important;border-radius:16px!important;gap:14px!important;cursor:default;border-color:rgba(120,170,255,.28)!important;box-shadow:0 18px 46px rgba(0,0,0,.55),0 0 0 5px rgba(30,144,255,.10)!important}'
    +'#yada-dl-banner.loading .dl-arrow{opacity:0;transform:scale(.4) rotate(90deg)}'
