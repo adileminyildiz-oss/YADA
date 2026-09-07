@@ -11094,7 +11094,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v562';
+    b.textContent='YADA · v563';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -27682,7 +27682,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
    Drapeau localStorage 'yada-fresh-549' → exécuté une seule fois. 100% additif. */
 (function(){
   var CUR='yada-v148';           /* = CACHE courant du sw.js */
-  var FLAG='yada-fresh-562';
+  var FLAG='yada-fresh-563';
   try{ if(localStorage.getItem(FLAG)) return; }catch(e){}
   try{ localStorage.setItem(FLAG,'1'); }catch(e){}
   try{
@@ -28542,6 +28542,94 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     +'body[data-theme="jour"] #sg-modules .sg-dd-grp{color:#0a64d6}';
     document.head.appendChild(st); }catch(e){}
 })();
+</script>
+<script id="yada-addon-consult-ui">
+/* v563 — Consultation : police SEGOE UI + AUCUN format (jamais gras / italique / souligné)
+   + boutons COMPACTS (réduits au maximum). Scopé à la Consultation (.sg-app), à l'éditeur
+   d'écritures (#ec-overlay) et au grand-livre lecture seule (#cl-overlay). Le préfixe
+   `html body:not(#_yz)` bat la règle de police globale (Tahoma v560, même astuce). 100% CSS additif. */
+(function(){ try{
+  var st=document.createElement('style'); st.id='consult-ui-mod';
+  st.textContent=
+   'html body:not(#_yz) .sg-app,html body:not(#_yz) .sg-app *,'
+  +'html body:not(#_yz) #ec-overlay,html body:not(#_yz) #ec-overlay *,'
+  +'html body:not(#_yz) #cl-overlay,html body:not(#_yz) #cl-overlay *{'
+  +'font-family:"Segoe UI",system-ui,Roboto,Arial,sans-serif !important;'
+  +'font-weight:400 !important;font-style:normal !important;text-decoration:none !important;letter-spacing:0 !important}'
+  +'html body:not(#_yz) .sg-app button,html body:not(#_yz) #ec-overlay button,html body:not(#_yz) #cl-overlay button{'
+  +'padding:5px 10px !important;font-size:12px !important;min-width:0 !important;min-height:0 !important;line-height:1.2 !important}'
+  +'html body:not(#_yz) .sg-app .sg-dd button{padding:6px 11px !important;width:100% !important;text-align:left !important}'
+  +'html body:not(#_yz) .sg-app .sg-menu .mi{padding:5px 8px !important;font-size:12px !important}'
+  +'html body:not(#_yz) .sg-app .sg-exoarr{padding:2px 8px !important;font-size:14px !important}'
+  +'html body:not(#_yz) .sg-app .sg-wbtn{padding:2px 6px !important}';
+  document.head.appendChild(st);
+}catch(e){} })();
+</script>
+<script id="yada-addon-consult-nav">
+/* v563 — Consultation : boutons RONDS NOIRS à flèche (← précédent / → suivant) pour la
+   navigation, d'après les repères fournis. Appliqués à : (1) l'ANNÉE (exercice, .sg-exoarr),
+   (2) le MOIS / la période (nouvelle barre au-dessus de la liste des périodes → sgMoisNav),
+   (3) le COMPTE (grand-livre lecture seule #cl-overlay, clNav). 100% additif. */
+(function(){ try{
+  var st=document.createElement('style'); st.id='consult-nav-mod';
+  st.textContent=
+   'html body:not(#_yz) .sg-app .sg-exoarr:not(.sg-edlink),'
+  +'html body:not(#_yz) .sg-app .sg-mois-nav .yc-navbtn,'
+  +'html body:not(#_yz) #cl-overlay .cl-navb{'
+  +'width:26px !important;height:26px !important;min-width:26px !important;min-height:26px !important;'
+  +'padding:0 !important;border-radius:50% !important;background:rgba(129,151,181,.20) !important;color:inherit !important;'
+  +'border:0 !important;outline:0 !important;display:inline-flex !important;'
+  +'align-items:center !important;justify-content:center !important;font-size:14px !important;'
+  +'line-height:1 !important;cursor:pointer !important;box-shadow:none !important}'
+  +'html body:not(#_yz) .sg-app .sg-exoarr:not(.sg-edlink):hover,'
+  +'html body:not(#_yz) .sg-app .sg-mois-nav .yc-navbtn:hover,'
+  +'html body:not(#_yz) #cl-overlay .cl-navb:hover{background:rgba(129,151,181,.40) !important}'
+  +'html body:not(#_yz) .sg-app .sg-exoarr:not(.sg-edlink):active,'
+  +'html body:not(#_yz) .sg-app .sg-mois-nav .yc-navbtn:active,'
+  +'html body:not(#_yz) #cl-overlay .cl-navb:active{transform:scale(.9) !important}'
+  +'html body:not(#_yz) .sg-app .sg-mois-nav{display:flex;gap:10px;justify-content:center;align-items:center;padding:6px 4px;border-bottom:1px solid rgba(255,255,255,.12)}';
+  document.head.appendChild(st);
+
+  window.sgMoisNav=function(sens){
+    try{
+      var items=[].slice.call(document.querySelectorAll('.sg-app .sg-perlist .sg-peritem'));
+      var vals=items.map(function(it){ var m=(it.getAttribute('onclick')||'').match(/sgSetPer\('([^']+)'\)/); return m?m[1]:null; }).filter(Boolean);
+      if(!vals.length || typeof sgSetPer!=='function') return;
+      var on=document.querySelector('.sg-app .sg-perlist .sg-peritem.on');
+      var cur=on?((on.getAttribute('onclick')||'').match(/sgSetPer\('([^']+)'\)/)||[])[1]:null;
+      var i=vals.indexOf(cur);
+      var ni = (i<0) ? (sens>0?0:vals.length-1) : i+sens;
+      if(ni<0) ni=0; if(ni>=vals.length) ni=vals.length-1;
+      sgSetPer(vals[ni]);
+    }catch(e){}
+  };
+
+  function ensure(){
+    try{
+      // ANNÉE : flèches d'exercice ← / →
+      var arrs=document.querySelectorAll('.sg-app .sg-exoarr:not(.sg-edlink)');
+      if(arrs[0] && arrs[0].textContent!=='←') arrs[0].textContent='←';
+      if(arrs[1] && arrs[1].textContent!=='→') arrs[1].textContent='→';
+      // MOIS : barre de navigation au-dessus de la liste des périodes
+      var col=document.querySelector('.sg-app .sg-perlist');
+      if(col){ var parent=col.parentNode;
+        if(parent && !parent.querySelector('.sg-mois-nav')){
+          var nav=document.createElement('div'); nav.className='sg-mois-nav';
+          nav.innerHTML='<button type="button" class="yc-navbtn" title="Mois précédent" onclick="sgMoisNav(-1)">←</button>'
+                       +'<button type="button" class="yc-navbtn" title="Mois suivant" onclick="sgMoisNav(1)">→</button>';
+          parent.insertBefore(nav, col);
+        }
+      }
+      // COMPTE : grand-livre lecture seule ← / →
+      var navb=document.querySelectorAll('#cl-overlay .cl-navb');
+      if(navb[0] && navb[0].textContent!=='←') navb[0].textContent='←';
+      if(navb[1] && navb[1].textContent!=='→') navb[1].textContent='→';
+    }catch(e){}
+  }
+  try{ if(typeof window.render==='function'){ var _r=window.render; window.render=function(){ var x=_r.apply(this,arguments); try{ ensure(); }catch(e){} return x; }; } }catch(e){}
+  try{ if(typeof window.clRender==='function'){ var _c=window.clRender; window.clRender=function(){ var x=_c.apply(this,arguments); try{ ensure(); }catch(e){} return x; }; } }catch(e){}
+  try{ setInterval(ensure, 900); }catch(e){}
+}catch(e){} })();
 </script>
 </body>
 </html>
