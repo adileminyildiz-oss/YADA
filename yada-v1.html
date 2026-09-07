@@ -11094,7 +11094,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v561';
+    b.textContent='YADA · v562';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -27682,7 +27682,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
    Drapeau localStorage 'yada-fresh-549' → exécuté une seule fois. 100% additif. */
 (function(){
   var CUR='yada-v148';           /* = CACHE courant du sw.js */
-  var FLAG='yada-fresh-561';
+  var FLAG='yada-fresh-562';
   try{ if(localStorage.getItem(FLAG)) return; }catch(e){}
   try{ localStorage.setItem(FLAG,'1'); }catch(e){}
   try{
@@ -28490,6 +28490,57 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     +'.marq-tmain{flex:1;min-width:0}.marq-tt{font-size:13.5px;font-weight:600;color:#fff}.marq-ts{font-size:12px;color:#9a9ca1;margin-top:1px}'
     +'.marq-tx{color:#6b6d72;cursor:pointer;font-size:13px;padding:4px}.marq-tx:hover{color:#fff}';
     document.head.appendChild(st); } }catch(e){}
+})();
+</script>
+<script id="yada-addon-consult-hub">
+/* v562 — La Consultation est le COCKPIT du dossier : menu « Modules » dans la barre du haut
+   (Fichier · Exercice · … · Modules · Aide) → accès direct à TOUS les modules du logiciel,
+   pour réduire la navigation par pages séparées. 100% additif (cabinet uniquement). */
+(function(){
+  try{ if(typeof SG_MENUS!=='undefined' && SG_MENUS.indexOf('sg-modules')<0) SG_MENUS.push('sg-modules'); }catch(e){}
+  var LBL={facturation:'Facturation (Client)',achats:'Fournisseurs',societe:'Portefeuille sociétés',dossier:'Dossier permanent',client:'Espace Client',plancomptable:'Plan comptable',infosociete:'Informations société',coffre:'Coffre-fort',parametrage:'Paramétrage',reglements:'Suivi des règlements',saisiebq:'Saisie journal Banque',fraiskm:'Frais km & carburant',immos:'Immobilisations & financements',tva:'Module TVA (CA3)',editions:'Éditions (Balance, Grand livre…)',fec:'Import / Export FEC',ia:'Assistant IA',journal:'Journal comptable',dash:'Tableau de bord',analytique:'Analytique & rentabilité',pilotage:'Pilotage',salarie:'Salarié',chargespaie:'Charges & paie',tiers:'Tiers',banque:'Banque',rappro:'Rapprochement bancaire'};
+  var GROUPES=[
+    ['Pilotage & analyse',['dash','pilotage','analytique','societe']],
+    ['Comptabilité',['journal','editions','fec','ia','plancomptable']],
+    ['Déclarations',['tva']],
+    ['Tiers & facturation',['tiers','facturation','achats']],
+    ['Trésorerie',['banque','saisiebq','rappro','reglements']],
+    ['Immobilisations',['immos','fraiskm']],
+    ['Ressources humaines',['chargespaie','salarie']],
+    ['Dossier & réglages',['infosociete','dossier','coffre','parametrage','client']]
+  ];
+  function lblOf(id){ if(LBL[id]) return LBL[id]; try{ var p=(PAGES||[]).filter(function(x){return x.id===id;})[0]; if(p) return p.lbl; }catch(e){} return id; }
+  function ddHTML(){
+    var h='<div class="sg-dd" id="sg-modules">';
+    GROUPES.forEach(function(g,gi){
+      if(gi>0) h+='<div class="sep"></div>';
+      h+='<div class="sg-dd-grp">'+g[0]+'</div>';
+      g[1].forEach(function(id){
+        h+='<button onclick="event.stopPropagation();closeMenus();current=\''+id+'\';render()">'+lblOf(id)+'</button>';
+      });
+    });
+    h+='</div>'; return h;
+  }
+  function ensure(){
+    try{
+      if(typeof current==='undefined'||current!=='compta') return;
+      if((window.sessionRole||'cabinet')==='client') return;
+      var menu=document.querySelector('.sg-app .sg-menu'); if(!menu) return;
+      if(menu.querySelector('#sg-mi-modules')) return;
+      var mi=document.createElement('span'); mi.className='mi'; mi.id='sg-mi-modules';
+      mi.setAttribute('onclick',"event.stopPropagation();toggleMenu('sg-modules')");
+      mi.innerHTML='Modules'+ddHTML();
+      var aide=menu.lastElementChild;
+      if(aide) menu.insertBefore(mi,aide); else menu.appendChild(mi);
+    }catch(e){}
+  }
+  try{ if(typeof window.render==='function'){ var _r=window.render; window.render=function(){ var x=_r.apply(this,arguments); try{ ensure(); }catch(e){} return x; }; } }catch(e){}
+  try{ setInterval(ensure, 900); }catch(e){}
+  try{ var st=document.createElement('style'); st.id='consult-hub-mod';
+    st.textContent='#sg-modules{min-width:292px;max-height:82vh;overflow:auto}'
+    +'#sg-modules .sg-dd-grp{font:700 10.5px/1.2 inherit;text-transform:uppercase;letter-spacing:.08em;color:#5ab0ff;padding:8px 12px 3px}'
+    +'body[data-theme="jour"] #sg-modules .sg-dd-grp{color:#0a64d6}';
+    document.head.appendChild(st); }catch(e){}
 })();
 </script>
 </body>
