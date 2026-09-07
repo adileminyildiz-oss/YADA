@@ -11094,7 +11094,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v565';
+    b.textContent='YADA · v566';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -27682,7 +27682,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
    Drapeau localStorage 'yada-fresh-549' → exécuté une seule fois. 100% additif. */
 (function(){
   var CUR='yada-v148';           /* = CACHE courant du sw.js */
-  var FLAG='yada-fresh-565';
+  var FLAG='yada-fresh-566';
   try{ if(localStorage.getItem(FLAG)) return; }catch(e){}
   try{ localStorage.setItem(FLAG,'1'); }catch(e){}
   try{
@@ -27790,7 +27790,6 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     var sel = window.__accDossier ? dossierById(window.__accDossier) : null;
     var g1 = tile('','YADA',"geListe()",true)
       + tile('list','Liste des dossiers',"geListe()")
-      + tile('folders','Créer un dossier',"geCreer()")
       + (sel ? tile('folder','Fermer '+(sel.nom||''),"geFermer()") : '');
     var g2 = tile('marq','Passerelle Mar\'q',"geMarq()")
       + tile('import','Importer (JSON)',"geImport()")
@@ -27869,7 +27868,12 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
 
   /* ── Fenêtre réduite « Liste des dossiers » ──────────────────────────────── */
   window.geListe=function(){ try{
-    var ds=dossiers();
+    var ds=(db.cabinet&&db.cabinet.dossiers)?db.cabinet.dossiers.slice():[];
+    try{ var _seen={}; ds.forEach(function(d){ if(d&&d.id) _seen[d.id]=1; });
+      var _dd=db.dossiersData||{};
+      Object.keys(_dd).forEach(function(id){ if(!_seen[id]){ var s=(_dd[id]&&_dd[id].societe)||{}; ds.push({id:id,nom:s.raison||s.dossierNom||id,forme:s.formeJur||'',siren:s.siren||'',ville:s.ville||''}); } });
+    }catch(e){}
+    ds.sort(function(a,b){ return String(a.nom||'').localeCompare(String(b.nom||''),'fr',{sensitivity:'base',numeric:true}); });
     var ov=document.getElementById('acc-list-ov');
     if(!ov){ ov=document.createElement('div'); ov.id='acc-list-ov'; ov.className='acc-ov'; document.body.appendChild(ov); ov.addEventListener('click',function(e){ if(e.target===ov) geListeClose(); }); }
     var body = ds.length ? ds.map(carte).join('') : '<div class="acc-lw-empty">Aucun dossier. Créez-en un depuis « Fichier ▸ Créer un dossier ».</div>';
@@ -28631,6 +28635,83 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
   try{ if(typeof window.render==='function'){ var _r=window.render; window.render=function(){ var x=_r.apply(this,arguments); try{ ensure(); }catch(e){} return x; }; } }catch(e){}
   try{ if(typeof window.clRender==='function'){ var _c=window.clRender; window.clRender=function(){ var x=_c.apply(this,arguments); try{ ensure(); }catch(e){} return x; }; } }catch(e){}
   try{ setInterval(ensure, 900); }catch(e){}
+}catch(e){} })();
+</script>
+<script id="yada-addon-notif-b4">
+/* v566 — Notifications & bouton de téléchargement (maquettes choisies) :
+   (1) toast() = PILULE VITRÉE HARMONISÉE (N4) + BADGE À ICÔNE COLORÉE (N3, ok/info/err) ;
+   (2) bouton de téléchargement #yada-dl-banner = ICÔNE SEULE, RONDE (B4) — l'ancien
+   système de notification animé (anneau/barre/%) est remplacé par cette icône ronde.
+   100% additif. Aucun texte en gras/italique/souligné ; boutons réduits. */
+(function(){ try{
+  var st=document.createElement('style'); st.id='notif-b4-mod';
+  st.textContent=
+   /* Toast : pilule vitrée harmonisée + badge coloré */
+   'html body #toast.toast{display:flex !important;align-items:center !important;gap:10px !important;'
+  +'background:rgba(129,151,181,.20) !important;-webkit-backdrop-filter:blur(12px) saturate(1.2) !important;'
+  +'backdrop-filter:blur(12px) saturate(1.2) !important;border:0 !important;border-radius:12px !important;'
+  +'padding:9px 13px !important;box-shadow:0 12px 30px rgba(0,0,0,.38) !important;color:#eef3fa !important;'
+  +'font-weight:400 !important;font-style:normal !important;text-decoration:none !important;letter-spacing:0 !important;'
+  +'max-width:min(420px,86vw) !important}'
+  +'html body #toast .tn-badge{flex:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;'
+  +'font-size:13px;font-weight:400;line-height:1;color:#fff;background:#5ab0ff}'
+  +'html body #toast.tn-ok .tn-badge{background:#24d17a}'
+  +'html body #toast.tn-err .tn-badge{background:#e0574d}'
+  +'html body #toast.tn-info .tn-badge{background:#5ab0ff}'
+  +'html body #toast .tn-txt{font-size:12.5px;line-height:1.35;color:#eef3fa;font-weight:400}'
+   /* Bouton de téléchargement : icône seule, ronde (B4) */
+  +'html body #yada-dl-banner{background:transparent !important;border:0 !important;box-shadow:none !important;'
+  +'padding:0 !important;border-radius:0 !important;overflow:visible !important;min-width:0 !important;width:auto !important;'
+  +'-webkit-backdrop-filter:none !important;backdrop-filter:none !important;display:block !important}'
+  +'html body #yada-dl-banner>*{display:none !important}'
+  +'html body #yada-dl-banner>.dl-b4-btn{display:inline-flex !important}'
+  +'.dl-b4-btn{width:46px;height:46px;padding:0;border-radius:50%;background:#fff;border:0;'
+  +'color:#111418;font-size:22px;line-height:1;display:inline-flex;align-items:center;justify-content:center;'
+  +'cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.35);transition:background .2s,color .2s,transform .1s,box-shadow .2s}'
+  +'.dl-b4-btn:hover{transform:translateY(-1px);box-shadow:0 9px 24px rgba(0,0,0,.42)}'
+  +'.dl-b4-btn:active{transform:scale(.92)}'
+  +'.dl-b4-btn.done{background:#111418;color:#fff}';
+  document.head.appendChild(st);
+
+  // (1) toast : rebuild en pilule vitrée + badge coloré
+  try{
+    var _toast=window.toast;
+    window.toast=function(msg){
+      try{ _toast.apply(this,arguments); }catch(e){}
+      try{
+        var t=document.getElementById('toast'); if(!t) return;
+        var txt=(msg==null?(t.textContent||''):String(msg));
+        var nat = /✗|⚠|erreur|échec|echec|impossible|refus|invalide|non soldé|non solde/i.test(txt) ? 'err'
+                : /✓|enregistr|généré|genere|cré|ajout|envoy|valid|termin|import|sauvegard|comptabilis|supprim|payé|paye/i.test(txt) ? 'ok'
+                : 'info';
+        t.classList.remove('tn-ok','tn-info','tn-err'); t.classList.add('tn-'+nat);
+        var ic = nat==='ok' ? '✓' : nat==='err' ? '!' : 'i';
+        t.innerHTML='<span class="tn-badge">'+ic+'</span><span class="tn-txt"></span>';
+        t.querySelector('.tn-txt').textContent=txt;
+      }catch(e){}
+    };
+  }catch(e){}
+
+  // (2) bouton de téléchargement : icône ronde (B4)
+  function b4(){
+    try{
+      var b=document.getElementById('yada-dl-banner'); if(!b) return;
+      if(!b.querySelector('.dl-b4-btn')){
+        var btn=document.createElement('button');
+        btn.type='button'; btn.className='dl-b4-btn';
+        btn.title="Télécharger l'application"; btn.setAttribute('aria-label','Télécharger'); btn.textContent='⬇';
+        btn.onclick=function(ev){ try{ev.stopPropagation();}catch(e){}
+          try{ if(typeof yadaDownloadFile==='function') yadaDownloadFile(); else if(typeof telechargerApp==='function') telechargerApp(); }catch(e){}
+          try{ btn.classList.add('done'); btn.textContent='✓'; btn.title='Téléchargé';
+            clearTimeout(btn._t); btn._t=setTimeout(function(){ btn.classList.remove('done'); btn.textContent='⬇'; btn.title="Télécharger l'application"; },4000);
+          }catch(e){}
+        };
+        b.appendChild(btn);
+      }
+    }catch(e){}
+  }
+  try{ if(typeof window.render==='function'){ var _r=window.render; window.render=function(){ var x=_r.apply(this,arguments); try{ b4(); }catch(e){} return x; }; } }catch(e){}
+  try{ setInterval(b4, 700); }catch(e){}
 }catch(e){} })();
 </script>
 </body>
