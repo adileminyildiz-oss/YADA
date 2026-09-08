@@ -11095,7 +11095,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v587';
+    b.textContent='YADA · v588';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -27762,8 +27762,8 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
    service worker → on atterrit directement sur la nouvelle version (Accueil).
    Drapeau localStorage 'yada-fresh-549' → exécuté une seule fois. 100% additif. */
 (function(){
-  var CUR='yada-v182';           /* = CACHE courant du sw.js */
-  var FLAG='yada-fresh-587';
+  var CUR='yada-v183';           /* = CACHE courant du sw.js */
+  var FLAG='yada-fresh-588';
   try{ if(localStorage.getItem(FLAG)) return; }catch(e){}
   try{ localStorage.setItem(FLAG,'1'); }catch(e){}
   try{
@@ -30535,6 +30535,139 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     /* garde-fou noir & blanc : items sélectionnés en noir sur blanc */
     +'#yada-rp .rp-it.on .rp-mn,#yada-rp .rp-it.on .rp-et{color:#000!important}'
     +'@media(max-width:820px){#yada-rp .rp-top{grid-template-columns:1fr}#yada-rp .rp-per,#yada-rp .rp-jr{border-right:0;border-bottom:1px solid #1b1b1b}}';
+    document.head.appendChild(st);
+  }catch(e){}
+})();
+</script>
+<script id="yada-addon-mod-fec">
+/* ═══ RECONSTRUCTION — MODULE 13 : IMPORT / EXPORT FEC (maquette B : assistant d'import guidé, noir & blanc) ═══
+   Assistant vertical à étapes : 1. format → 2. fichier → 3. analyse (→ Intégrer) → 4. intégration.
+   Export en barre compacte + historique. Réutilise importFEC / afficherPropositionFEC /
+   confirmerImportFEC / annulerImportFEC / exportFEC — aucune logique FEC réécrite.
+   Croix ✕ = Consultation. 100% additif, B&W. */
+(function(){
+  window.YADA_OK=(window.YADA_OK||[]);
+  if(window.YADA_OK.indexOf('fec')<0) window.YADA_OK.push('fec');
+  window.YADA_LBL=window.YADA_LBL||{}; window.YADA_LBL.fec='Import / Export FEC';
+  function e2(x){ return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+  function FD(x){ return (typeof frDate==='function')?frDate(x):x; }
+  window.fecPickFile=function(ev){
+    try{ window.__fecFileName=((ev.target.files||[])[0]||{}).name||''; }catch(e){ window.__fecFileName=''; }
+    try{ importFEC(ev); }catch(e){}
+    var n=document.getElementById('fe-s2n'); if(n){ n.textContent='✓'; var st=n.closest('.fe-step'); if(st)st.classList.add('done'); }
+    var d=document.getElementById('fe-s2d'); if(d && window.__fecFileName) d.textContent=e2(window.__fecFileName)+' · prêt à analyser';
+    var s3=document.getElementById('fe-s3'); if(s3) s3.classList.add('active');
+  };
+  window.pageFEC=function(){
+    var s=(typeof db!=='undefined'&&db.societe)?db.societe:{};
+    var log=(typeof db!=='undefined'&&db.fecLog)?db.fecLog:[];
+    var last=null; for(var i=log.length-1;i>=0;i--){ if(log[i].sens==='import'){ last=log[i]; break; } }
+    var fileName=window.__fecFileName||'';
+    var rows=log.slice().reverse().map(function(e){
+      return '<tr><td><span class="fe-tg">'+(e.sens==='import'?'Import':'Export')+'</span></td>'
+        +'<td>'+e2(e.fichier||'')+'</td><td class="dim">'+e2(e.format||'')+'</td>'
+        +'<td class="r num">'+(e.nbEcr!=null?e.nbEcr:'—')+'</td>'
+        +'<td class="dim num">'+e2(e.date||'')+(e.heure?(' '+e2(e.heure)):'')+'</td></tr>';
+    }).join('')||'<tr><td colspan="5" class="fe-empty">Aucun import / export pour le moment.</td></tr>';
+    return '<div id="yada-fe"><div class="fe-wrap">'
+      +'<div class="fe-head"><div class="fe-title">Import / Export FEC</div>'
+        +'<span class="fe-exo">Exercice '+FD(s.exoDebut)+' → '+FD(s.exoFin)+'</span>'
+        +'<button class="fe-close" onclick="feFermer()" title="Revenir à la Consultation" aria-label="Fermer">✕</button></div>'
+      +'<div class="fe-sub">Fichier des Écritures Comptables · '+e2(s.raison||'')+(s.formeJur?(' ('+e2(s.formeJur)+')'):'')+'</div>'
+
+      /* ── Assistant d'import ── */
+      +'<div class="fe-card"><div class="fe-h">⤒ Importer un FEC</div>'
+        +'<div class="fe-step done"><div class="fe-n">✓</div><div class="fe-sc">'
+          +'<div class="fe-st">1. Choisir le format</div>'
+          +'<div class="fe-sd"><select id="fec-imfmt" class="fe-in">'
+            +'<option>Format FEC</option><option>Sage XML</option><option>Sage ONE</option><option>Ciel Compta</option>'
+            +'<option>Ciel Compta Evolution</option><option>Sage 100</option><option>Sage Expert</option></select></div>'
+        +'</div></div>'
+        +'<div class="fe-step'+(fileName?' done':'')+'"><div class="fe-n" id="fe-s2n">'+(fileName?'✓':'2')+'</div><div class="fe-sc">'
+          +'<div class="fe-st">2. Charger le fichier</div>'
+          +'<div class="fe-sd" id="fe-s2d">'+(fileName?(e2(fileName)+' · prêt à analyser'):'TXT tabulé · XML · CSV · FEC')+'</div>'
+          +'<button class="fe-btn" onclick="document.getElementById(\'fec-file\').click()">Choisir un fichier…</button>'
+          +'<input type="file" id="fec-file" hidden accept=".txt,.csv,.xml,.fec" onchange="fecPickFile(event)">'
+        +'</div></div>'
+        +'<div class="fe-step active" id="fe-s3"><div class="fe-n">3</div><div class="fe-sc">'
+          +'<div class="fe-st">3. Vérifier l’analyse</div>'
+          +'<div class="fe-sd">Bornes de dates, équilibre et exercice contrôlés avant intégration.</div>'
+          +'<div id="fec-result" class="fe-result"></div>'
+        +'</div></div>'
+        +'<div class="fe-step"><div class="fe-n">4</div><div class="fe-sc">'
+          +'<div class="fe-st">4. Intégration</div>'
+          +'<div class="fe-sd">'+(last?('Dernier import : '+e2(last.fichier||'')+' · '+ (last.nbEcr!=null?last.nbEcr:'?') +' écriture(s) · '+e2(last.date||'')):'Écritures + tiers + banque reconstruits ; exercice élargi si besoin.')+'</div>'
+        +'</div></div>'
+      +'</div>'
+
+      /* ── Export ── */
+      +'<div class="fe-card"><div class="fe-h">⤓ Exporter le FEC</div>'
+        +'<div class="fe-tool">'
+          +'<select id="fec-exfmt" class="fe-in" style="max-width:170px"><option value="txt">TXT (tabulé)</option><option value="xml">XML</option><option value="fec">FEC</option></select>'
+          +'<button class="fe-btn fe-pri" onclick="exportFEC()">Exporter le FEC</button>'
+          +'<span class="fe-note">Nom normalisé : SIREN + FEC + clôture (AAAAMMJJ).</span>'
+        +'</div>'
+      +'</div>'
+
+      /* ── Historique ── */
+      +'<div class="fe-card"><div class="fe-h">Historique <span class="fe-cnt">'+log.length+'</span></div>'
+        +'<div class="fe-twrap"><table class="fe-t"><thead><tr><th>Type</th><th>Fichier</th><th>Format</th><th class="r">Écr.</th><th>Date</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+      +'</div>'
+
+      +'</div></div>';
+  };
+  window.feFermer=function(){ try{current='compta';}catch(e){} if(typeof render==='function')render(); };
+  try{ var st=document.createElement('style'); st.id='yada-fe-mod'; st.textContent=
+     '.mod-wrap:has(#yada-fe),.fullbleed:has(#yada-fe){padding:0!important;max-width:none!important}'
+    +'#yada-fe{font-family:Tahoma,"Segoe UI",Geneva,Verdana,sans-serif;color:#fff;background:#000;min-height:100dvh}'
+    +'#yada-fe .fe-wrap{max-width:900px;margin:0 auto;padding:0 18px 26px}'
+    +'#yada-fe .fe-head{display:flex;align-items:center;gap:12px;padding:14px 4px 6px;border-bottom:1px solid #1b1b1b}'
+    +'#yada-fe .fe-title{font-size:17px;font-weight:700}'
+    +'#yada-fe .fe-exo{margin-left:auto;color:#8a8a8a!important;font-size:12px}'
+    +'#yada-fe .fe-close{width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:#000;color:#fff!important;border:1.5px solid #fff;border-radius:9px;cursor:pointer;font:inherit;font-size:15px}'
+    +'#yada-fe .fe-close:hover{background:#fff;color:#000!important}'
+    +'#yada-fe .fe-sub{color:#8a8a8a!important;font-size:11.5px;padding:8px 4px 16px}'
+    +'#yada-fe .fe-card{background:#0a0a0a;border:1px solid #1c1c1c;border-radius:12px;padding:16px 18px;margin-bottom:14px}'
+    +'#yada-fe .fe-h{font-size:13px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px}'
+    +'#yada-fe .fe-cnt{border:1px solid #444;border-radius:999px;padding:0 9px;font-size:10.5px;font-weight:400;color:#c8c8c8!important}'
+    +'#yada-fe .fe-step{display:flex;gap:13px;margin-bottom:14px}'
+    +'#yada-fe .fe-step:last-child{margin-bottom:0}'
+    +'#yada-fe .fe-n{width:28px;height:28px;flex:none;border:1.5px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:700;color:#fff!important;background:#000}'
+    +'#yada-fe .fe-step.done .fe-n{background:#fff;color:#000!important}'
+    +'#yada-fe .fe-step:not(.done):not(.active) .fe-n{border-color:#555;color:#888!important}'
+    +'#yada-fe .fe-sc{flex:1;min-width:0}'
+    +'#yada-fe .fe-st{font-size:12.5px;font-weight:700}'
+    +'#yada-fe .fe-sd{font-size:11px;color:#8a8a8a!important;margin-top:3px}'
+    +'#yada-fe .fe-in{background:#000!important;color:#fff!important;border:1px solid #444!important;border-radius:7px;padding:7px 9px;font:inherit;font-size:11.5px;outline:none;margin-top:6px}'
+    +'#yada-fe .fe-in:focus{border-color:#fff!important}'
+    +'#yada-fe select.fe-in option{background:#000;color:#fff}'
+    +'#yada-fe .fe-btn{display:inline-block;background:#000;color:#fff!important;border:1px solid #fff;border-radius:8px;padding:8px 13px;cursor:pointer;font:inherit;font-size:11.5px;margin-top:8px;white-space:nowrap}'
+    +'#yada-fe .fe-btn:hover{background:#fff;color:#000!important}'
+    +'#yada-fe .fe-btn.fe-pri{background:#fff;color:#000!important;font-weight:700;margin-top:0}#yada-fe .fe-btn.fe-pri:hover{background:#ddd}'
+    +'#yada-fe .fe-tool{display:flex;gap:10px;align-items:center;flex-wrap:wrap}'
+    +'#yada-fe .fe-tool .fe-in{margin-top:0}'
+    +'#yada-fe .fe-note{color:#8a8a8a!important;font-size:10.5px}'
+    +'#yada-fe .fe-result{margin-top:10px}'
+    +'#yada-fe .fe-result:empty{display:none}'
+    /* garde-fou B&W : les cartes injectées par afficherPropositionFEC / confirmerImportFEC */
+    +'#yada-fe .fe-result .card{background:#050505!important;border:1px solid #333!important;border-radius:10px;padding:14px 15px;color:#fff}'
+    +'#yada-fe .fe-result .card h2,#yada-fe .fe-result .card .cre,#yada-fe .fe-result .card .deb{color:#fff!important;-webkit-text-fill-color:#fff!important;font-size:13px}'
+    +'#yada-fe .fe-result .card p{color:#c8c8c8!important;font-size:11.5px;margin:6px 0}'
+    +'#yada-fe .fe-result .card b{color:#fff!important}'
+    +'#yada-fe .fe-result .card .hint{color:#8a8a8a!important;font-size:10.5px}'
+    +'#yada-fe .fe-result .card .right{display:flex;gap:8px;justify-content:flex-end;margin-top:10px;flex-wrap:wrap}'
+    +'#yada-fe .fe-result .btn{background:#000!important;color:#fff!important;border:1px solid #fff!important;border-radius:8px;padding:7px 12px;cursor:pointer;font:inherit;font-size:11.5px}'
+    +'#yada-fe .fe-result .btn:hover{background:#fff!important;color:#000!important}'
+    +'#yada-fe .fe-result .btn-pri{background:#fff!important;color:#000!important;font-weight:700}'
+    +'#yada-fe .fe-result .btn-ghost{background:#000!important;color:#fff!important}'
+    +'#yada-fe .fe-twrap{overflow:auto}'
+    +'#yada-fe .fe-t{width:100%;border-collapse:collapse;font-size:11.5px}'
+    +'#yada-fe .fe-t th{text-align:left;color:#8a8a8a!important;background:#000!important;background-image:none!important;font-weight:400;padding:8px 10px;border-bottom:1px solid #222!important;white-space:nowrap}'
+    +'#yada-fe .fe-t td{padding:8px 10px;border-bottom:1px solid #131313}'
+    +'#yada-fe .fe-tg{display:inline-block;border:1px solid #444;border-radius:999px;padding:1px 9px;font-size:9.5px}'
+    +'#yada-fe .fe-empty{color:#8a8a8a!important;text-align:center;padding:16px}'
+    +'#yada-fe .dim{color:#8a8a8a!important}#yada-fe .r{text-align:right}#yada-fe .num{font-variant-numeric:tabular-nums}'
+    +'#yada-fe a{color:#fff!important}';
     document.head.appendChild(st);
   }catch(e){}
 })();
