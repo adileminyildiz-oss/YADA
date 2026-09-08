@@ -11094,7 +11094,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v578';
+    b.textContent='YADA · v579';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -27690,8 +27690,8 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
    service worker → on atterrit directement sur la nouvelle version (Accueil).
    Drapeau localStorage 'yada-fresh-549' → exécuté une seule fois. 100% additif. */
 (function(){
-  var CUR='yada-v173';           /* = CACHE courant du sw.js */
-  var FLAG='yada-fresh-578';
+  var CUR='yada-v174';           /* = CACHE courant du sw.js */
+  var FLAG='yada-fresh-579';
   try{ if(localStorage.getItem(FLAG)) return; }catch(e){}
   try{ localStorage.setItem(FLAG,'1'); }catch(e){}
   try{
@@ -29159,6 +29159,151 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     +'#yada-set .set-embed .btn,#yada-set .set-embed .btn-pri,#yada-set .set-embed .btn-gold,#yada-set .set-embed .btn-ghost{background:#000!important;color:#fff!important;border:1px solid #fff!important;filter:none!important;background-image:none!important}'
     +'#yada-set .set-embed .btn:hover,#yada-set .set-embed .btn-pri:hover,#yada-set .set-embed .btn-gold:hover{background:#fff!important;color:#000!important}'
     +'@media(max-width:760px){#yada-set .set-grid{grid-template-columns:1fr}}';
+    document.head.appendChild(st);
+  }catch(e){}
+})();
+</script>
+<script id="yada-addon-mod-coffre">
+/* ═══ RECONSTRUCTION — MODULE 4 : COFFRE-FORT (maquette B améliorée : deux volets, noir & blanc) ═══
+   Volet gauche : recherche + liste des organismes (pastille ● renseigné / ○ vide) + banques
+   (ajout/suppression). Volet droit : identifiants du sélectionné (révéler / copier / ouvrir).
+   Réutilise les fonctions réelles : coffreInit / coffreSaveOrg / coffreSaveBanque / coffreCopy.
+   Croix ✕ = revient à la Consultation. 100% additif, strictement noir & blanc. */
+(function(){
+  window.YADA_OK=(window.YADA_OK||[]);
+  if(window.YADA_OK.indexOf('coffre')<0) window.YADA_OK.push('coffre');
+  window.YADA_LBL=window.YADA_LBL||{}; window.YADA_LBL.coffre='Coffre-fort';
+  function esc(x){ return String(x==null?'':x).replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+  function filled(o){ return !!((o&&(o.id||o.pwd))); }
+  var LOCK='<svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
+  function sel(cr){
+    var s=window.__cfSel;
+    if(s&&s.type==='bank'){ if(!(cr.banques&&cr.banques[s.key])) s=null; }
+    if(s&&s.type==='org'){ if(!(cr.orgs&&cr.orgs[s.key])){ s=null; } }
+    if(!s) s={type:'org',key:(COFFRE_ORGS[0]&&COFFRE_ORGS[0].k)||'urssaf'};
+    window.__cfSel=s; return s;
+  }
+  function field(label,id,val,opts){
+    opts=opts||{};
+    var input='<input id="'+id+'"'+(opts.pwd?' type="password"':'')+' value="'+esc(val)+'" autocomplete="off" spellcheck="false">';
+    var tools='';
+    if(opts.pwd) tools+='<button class="cf-tool" type="button" onclick="cfReveal(\''+id+'\',this)">Afficher</button>';
+    if(opts.copy!==false) tools+='<button class="cf-tool" type="button" onclick="if(window.coffreCopy)coffreCopy(\''+id+'\')">⧉ Copier</button>';
+    if(opts.open) tools+='<a class="cf-tool cf-open" href="'+esc(val||opts.open)+'" target="_blank" rel="noopener">Ouvrir ↗</a>';
+    return '<div class="cf-f"><label>'+label+'</label><div class="cf-row"><div class="cf-inpwrap">'+input+'</div>'+tools+'</div></div>';
+  }
+  function detailOrg(cr,k){
+    var o=COFFRE_ORGS.filter(function(x){return x.k===k;})[0]||{k:k,nom:k}; var c=cr.orgs[k]||{};
+    var url=c.url||o.url||'';
+    var h='<div class="cf-dh"><span class="cf-dic">'+LOCK+'</span><div class="cf-dt">'+esc(o.nom)+'</div>'
+      +(url?'<a class="cf-conn" href="'+esc(url)+'" target="_blank" rel="noopener">Se connecter ↗</a>':'')+'</div>';
+    h+=field('Identifiant','cfid-'+k,c.id||'');
+    h+=field('Mot de passe','cfpw-'+k,c.pwd||'',{pwd:true});
+    if(o.secret) h+=field('Réponse à la question secrète (Impôts)','cfsc-'+k,c.secret||'',{});
+    h+=field('Lien du portail','cfurl-'+k,url,{copy:false,open:url||o.url||'https://'});
+    h+='<div class="cf-actions"><button class="cf-save" onclick="coffreSaveOrg(\''+k+'\','+(o.secret?'true':'false')+')">Enregistrer</button></div>';
+    return h;
+  }
+  function detailBank(cr,i){
+    var b=cr.banques[i]||{};
+    var h='<div class="cf-dh"><span class="cf-dic">'+LOCK+'</span><div class="cf-dt">'+esc(b.nom||('Banque '+(i+1)))+'</div>'
+      +'<button class="cf-del" onclick="cfDelBank('+i+')">Supprimer</button></div>';
+    h+=field('Nom de la banque','cfbnom-'+i,b.nom||'',{copy:false});
+    h+=field('Identifiant','cfbid-'+i,b.id||'');
+    h+=field('Mot de passe','cfbpw-'+i,b.pwd||'',{pwd:true});
+    h+=field('Lien de la banque','cfburl-'+i,b.url||'',{copy:false,open:b.url||'https://'});
+    h+='<div class="cf-actions"><button class="cf-save" onclick="coffreSaveBanque('+i+')">Enregistrer</button></div>';
+    return h;
+  }
+  window.pageCoffre=function(){
+    var cr=coffreInit(); var s=sel(cr);
+    var nOrg=COFFRE_ORGS.length, nOk=COFFRE_ORGS.filter(function(o){return filled(cr.orgs[o.k]);}).length;
+    var railOrg=COFFRE_ORGS.map(function(o){
+      var on=(s.type==='org'&&s.key===o.k); var f=filled(cr.orgs[o.k]);
+      return '<button class="cf-rc'+(on?' on':'')+'" data-name="'+esc(o.nom)+'" onclick="cfSel(\'org\',\''+o.k+'\')"><span class="cf-dot'+(f?' f':'')+'"></span><span class="cf-rn">'+esc(o.nom)+'</span></button>';
+    }).join('');
+    var railBank=(cr.banques||[]).map(function(b,i){
+      var on=(s.type==='bank'&&s.key===i); var f=filled(b); var nm=b.nom||('Banque '+(i+1));
+      return '<button class="cf-rc'+(on?' on':'')+'" data-name="'+esc(nm)+'" onclick="cfSel(\'bank\','+i+')"><span class="cf-dot'+(f?' f':'')+'"></span><span class="cf-rn">'+esc(nm)+'</span></button>';
+    }).join('');
+    var detail=(s.type==='bank')?detailBank(cr,s.key):detailOrg(cr,s.key);
+    return '<div id="yada-cf"><div class="cf-wrap">'
+      +'<div class="cf-head"><span class="cf-hic">'+LOCK+'</span><div class="cf-title">Coffre-fort des identifiants</div>'
+        +'<span class="cf-count">'+nOk+' / '+nOrg+' renseignés</span>'
+        +'<button class="cf-close" onclick="cfFermer()" title="Revenir à la Consultation" aria-label="Fermer">✕</button></div>'
+      +'<div class="cf-body">'
+        +'<div class="cf-rail">'
+          +'<input class="cf-search" placeholder="Rechercher…" oninput="cfFilter(this.value)">'
+          +'<div class="cf-sec">Organismes & administrations</div>'+railOrg
+          +'<div class="cf-sec">Banques du client</div>'+railBank
+          +'<button class="cf-add" onclick="cfAddBank()">＋ Ajouter une banque</button>'
+        +'</div>'
+        +'<div class="cf-panel">'+detail
+          +'<div class="cf-note">Informations sensibles — conservées localement dans le dossier, jamais transmises.</div>'
+        +'</div>'
+      +'</div></div></div>';
+  };
+  window.cfSel=function(t,k){ window.__cfSel={type:t,key:k}; if(typeof render==='function') render(); };
+  window.cfFermer=function(){ try{ current='compta'; }catch(e){} if(typeof render==='function') render(); };
+  window.cfReveal=function(id,btn){ var el=document.getElementById(id); if(!el) return; if(el.type==='password'){ el.type='text'; btn.textContent='Masquer'; } else { el.type='password'; btn.textContent='Afficher'; } };
+  window.cfFilter=function(v){ var q=(v||'').toLowerCase().trim(); document.querySelectorAll('#yada-cf .cf-rc').forEach(function(r){ var n=(r.getAttribute('data-name')||'').toLowerCase(); r.style.display=(!q||n.indexOf(q)>=0)?'':'none'; }); document.querySelectorAll('#yada-cf .cf-sec').forEach(function(h){ var n=h.nextElementSibling,any=false; while(n&&n.classList&&n.classList.contains('cf-rc')){ if(n.style.display!=='none'){any=true;break;} n=n.nextElementSibling; } h.style.display=any?'':'none'; }); };
+  window.cfAddBank=function(){ var cr=coffreInit(); cr.banques.push({nom:'',id:'',pwd:'',url:''}); try{save();}catch(e){} window.__cfSel={type:'bank',key:cr.banques.length-1}; if(typeof render==='function') render(); };
+  window.cfDelBank=function(i){ var go=function(){ var cr=coffreInit(); cr.banques.splice(i,1); try{save();}catch(e){} window.__cfSel={type:'org',key:(COFFRE_ORGS[0]&&COFFRE_ORGS[0].k)||'urssaf'}; if(typeof render==='function') render(); if(window.toast)toast('Banque supprimée'); };
+    if(window.yadaConfirm) yadaConfirm('Supprimer cette banque du coffre-fort ?', go, {danger:true}); else if(confirm('Supprimer ?')) go(); };
+  try{ var st=document.createElement('style'); st.id='yada-cf-mod'; st.textContent=
+     '.mod-wrap:has(#yada-cf){padding:0!important;max-width:none!important}'
+    +'#yada-cf{font-family:Tahoma,"Segoe UI",Geneva,Verdana,sans-serif;color:#fff;background:#000;min-height:100dvh;display:flex;flex-direction:column}'
+    +'#yada-cf .cf-wrap{flex:1;display:flex;flex-direction:column;min-height:0;width:100%;max-width:1060px;margin:0 auto;padding:0 18px}'
+    +'#yada-cf .cf-head{display:flex;align-items:center;gap:12px;padding:14px 4px 12px;border-bottom:1px solid #1b1b1b}'
+    +'#yada-cf .cf-hic{width:30px;height:30px;border:1px solid #fff;border-radius:8px;display:flex;align-items:center;justify-content:center}'
+    +'#yada-cf .cf-hic svg,#yada-cf .cf-dic svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}'
+    +'#yada-cf .cf-title{font-size:17px;font-weight:700}'
+    +'#yada-cf .cf-count{margin-left:auto;color:#bbb;font-size:12px}'
+    +'#yada-cf .cf-close{width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:#000;color:#fff;border:1.5px solid #fff;border-radius:9px;cursor:pointer;font:inherit;font-size:15px}'
+    +'#yada-cf .cf-close:hover{background:#fff;color:#000}'
+    +'#yada-cf .cf-body{flex:1;min-height:0;display:grid;grid-template-columns:270px 1fr;gap:0}'
+    +'#yada-cf .cf-rail{border-right:1px solid #1b1b1b;padding:14px 12px 18px;display:flex;flex-direction:column;gap:4px;overflow:auto}'
+    +'#yada-cf .cf-search{background:#000;color:#fff;border:1px solid #444;border-radius:8px;padding:8px 11px;font:inherit;font-size:12.5px;outline:none;margin-bottom:8px}'
+    +'#yada-cf .cf-search:focus{border-color:#fff}#yada-cf .cf-search::placeholder{color:#888}'
+    +'#yada-cf .cf-sec{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:#8a8a8a;padding:10px 6px 5px}'
+    +'#yada-cf .cf-rc{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:8px;border:1px solid #171717;background:#000;color:#c8c8c8;cursor:pointer;font:inherit;font-size:12.5px;text-align:left}'
+    +'#yada-cf .cf-rc:hover{border-color:#3a3a3a;color:#fff}'
+    +'#yada-cf .cf-rc.on{background:#fff;color:#000;font-weight:700;border-color:#fff}'
+    +'#yada-cf .cf-dot{width:9px;height:9px;min-width:9px;border:1px solid #888;border-radius:50%}'
+    +'#yada-cf .cf-dot.f{background:#fff;border-color:#fff}'
+    +'#yada-cf .cf-rc.on .cf-dot{border-color:#000}#yada-cf .cf-rc.on .cf-dot.f{background:#000;border-color:#000}'
+    +'#yada-cf .cf-rn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
+    +'#yada-cf .cf-add{margin-top:8px;background:#000;color:#fff;border:1px dashed #555;border-radius:8px;padding:9px 11px;cursor:pointer;font:inherit;font-size:12px;text-align:center}'
+    +'#yada-cf .cf-add:hover{border-color:#fff}'
+    +'#yada-cf .cf-panel{padding:18px 22px;overflow:auto;display:flex;flex-direction:column}'
+    +'#yada-cf .cf-dh{display:flex;align-items:center;gap:11px;margin-bottom:16px}'
+    +'#yada-cf .cf-dic{width:30px;height:30px;border:1px solid #fff;border-radius:8px;display:flex;align-items:center;justify-content:center;flex:0 0 auto}'
+    +'#yada-cf .cf-dt{font-size:15px;font-weight:700}'
+    +'#yada-cf .cf-conn{margin-left:auto;border:1px solid #fff;border-radius:8px;padding:7px 12px;color:#fff;text-decoration:none;font-size:12px}'
+    +'#yada-cf .cf-conn:hover{background:#fff;color:#000}'
+    +'#yada-cf .cf-del{margin-left:auto;border:1px solid #fff;border-radius:8px;padding:6px 11px;color:#fff;background:#000;cursor:pointer;font:inherit;font-size:12px}'
+    +'#yada-cf .cf-del:hover{background:#fff;color:#000}'
+    +'#yada-cf .cf-f{margin-bottom:14px}'
+    +'#yada-cf .cf-f label{display:block;font-size:11px;color:#bbb;margin-bottom:5px}'
+    +'#yada-cf .cf-row{display:flex;gap:8px;align-items:center}'
+    +'#yada-cf .cf-inpwrap{flex:1;min-width:0}'
+    +'#yada-cf .cf-row input{width:100%;box-sizing:border-box;background:#000!important;color:#fff!important;border:1px solid #444!important;border-radius:8px;padding:9px 11px;font:inherit;font-size:12.5px;outline:none}'
+    +'#yada-cf .cf-row input:focus{border-color:#fff!important}'
+    +'#yada-cf .cf-tool{white-space:nowrap;background:#000;color:#fff;border:1px solid #fff;border-radius:8px;padding:8px 11px;cursor:pointer;font:inherit;font-size:11.5px;text-decoration:none;display:inline-flex;align-items:center}'
+    +'#yada-cf .cf-tool:hover{background:#fff;color:#000}'
+    +'#yada-cf .cf-actions{margin-top:6px}'
+    +'#yada-cf .cf-save{background:#fff;color:#000;border:1px solid #fff;border-radius:8px;padding:9px 18px;cursor:pointer;font:inherit;font-size:13px;font-weight:700}'
+    +'#yada-cf .cf-save:hover{background:#ddd}'
+    +'#yada-cf .cf-note{margin-top:auto;padding-top:18px;color:#777;font-size:11px;line-height:1.5}'
+    /* garde-fou strictement NOIR & BLANC (bat les règles globales de liens/boutons en couleur) */
+    +'#yada-cf a{color:#fff!important;text-decoration:none!important}'
+    +'#yada-cf .cf-conn,#yada-cf .cf-tool,#yada-cf .cf-open{color:#fff!important}'
+    +'#yada-cf .cf-conn:hover,#yada-cf .cf-open:hover,#yada-cf .cf-tool:hover{background:#fff!important;color:#000!important}'
+    +'#yada-cf .cf-rc,#yada-cf .cf-rc .cf-rn{color:#c8c8c8!important}'
+    +'#yada-cf .cf-rc.on,#yada-cf .cf-rc.on .cf-rn{color:#000!important}'
+    +'#yada-cf .cf-save{color:#000!important}'
+    +'#yada-cf label{color:#bbb!important}'
+    +'@media(max-width:760px){#yada-cf .cf-body{grid-template-columns:1fr}#yada-cf .cf-rail{border-right:0;border-bottom:1px solid #1b1b1b}}';
     document.head.appendChild(st);
   }catch(e){}
 })();
