@@ -11094,7 +11094,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v576';
+    b.textContent='YADA · v577';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -27761,8 +27761,8 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
    service worker → on atterrit directement sur la nouvelle version (Accueil).
    Drapeau localStorage 'yada-fresh-549' → exécuté une seule fois. 100% additif. */
 (function(){
-  var CUR='yada-v171';           /* = CACHE courant du sw.js */
-  var FLAG='yada-fresh-576';
+  var CUR='yada-v172';           /* = CACHE courant du sw.js */
+  var FLAG='yada-fresh-577';
   try{ if(localStorage.getItem(FLAG)) return; }catch(e){}
   try{ localStorage.setItem(FLAG,'1'); }catch(e){}
   try{
@@ -28848,7 +28848,8 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
 (function(){
   window.YADA_OK=(window.YADA_OK||[]);
   if(window.YADA_OK.indexOf('plancomptable')<0) window.YADA_OK.push('plancomptable');
-  var MODLBL={plancomptable:'Plan comptable'};
+  var MODLBL=(window.YADA_LBL=window.YADA_LBL||{plancomptable:'Plan comptable'});
+  if(!MODLBL.plancomptable) MODLBL.plancomptable='Plan comptable';
   function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
   var CLASSES={'1':'Comptes de capitaux','2':"Comptes d'immobilisations",'3':'Comptes de stocks','4':'Comptes de tiers','5':'Comptes financiers','6':'Comptes de charges','7':'Comptes de produits','8':'Comptes spéciaux'};
   function comptes(){
@@ -28938,12 +28939,13 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       if(typeof current==='undefined'||current!=='compta') return;
       var menu=document.querySelector('.sg-app .sg-menu'); if(!menu) return;
       var old=menu.querySelector('#sg-mi-modules'); if(old&&old.parentNode) old.parentNode.removeChild(old);
-      if(menu.querySelector('#yada-mods-mi')) return;
-      var mi=document.createElement('span'); mi.className='mi'; mi.id='yada-mods-mi';
+      var ok=(window.YADA_OK||[]);
+      var ddHTML=ok.map(function(id){ return '<button onclick="event.stopPropagation();closeMenus();current=\''+id+'\';render()">'+(MODLBL[id]||id)+'</button>'; }).join('');
+      var mi=menu.querySelector('#yada-mods-mi');
+      if(mi){ var dd=mi.querySelector('#yada-mods'); if(dd && dd.getAttribute('data-n')!==String(ok.length)){ dd.innerHTML=ddHTML; dd.setAttribute('data-n',String(ok.length)); } return; }
+      mi=document.createElement('span'); mi.className='mi'; mi.id='yada-mods-mi';
       mi.setAttribute('onclick',"event.stopPropagation();toggleMenu('yada-mods')");
-      var h='<div class="sg-dd" id="yada-mods">';
-      (window.YADA_OK||[]).forEach(function(id){ h+='<button onclick="event.stopPropagation();closeMenus();current=\''+id+'\';render()">'+(MODLBL[id]||id)+'</button>'; });
-      h+='</div>'; mi.innerHTML='Modules'+h;
+      mi.innerHTML='Modules<div class="sg-dd" id="yada-mods" data-n="'+ok.length+'">'+ddHTML+'</div>';
       var aide=menu.lastElementChild; if(aide) menu.insertBefore(mi,aide); else menu.appendChild(mi);
     }catch(e){}
   }
@@ -28985,6 +28987,113 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     +'#yada-pc .pc-del{background:transparent;border:0;color:#888;cursor:pointer;font-size:13px;border-radius:6px;width:26px;height:26px}'
     +'#yada-pc .pc-del:hover{background:#222;color:#fff}'
     +'#yada-pc .pc-empty{padding:26px 20px;color:#bbb;font-size:13px;text-align:center}';
+    document.head.appendChild(st);
+  }catch(e){}
+})();
+</script>
+<script id="yada-addon-mod-infosociete">
+/* ═══ RECONSTRUCTION — MODULE 2 : INFORMATIONS SOCIÉTÉ (style ACCUEIL, blanc sur noir) ═══
+   Reconstruit pageInfoSociete au design accueil (noir total, Tahoma, blanc sur noir).
+   Réutilise les mêmes id de champs (is-*) et le saver global enregistrerInfoSociete(),
+   donc l'enregistrement écrit bien dans db.societe. Ajouté au menu « Modules » (YADA_OK).
+   Croix ✕ = enregistre puis revient à la Consultation. 100% additif. */
+(function(){
+  window.YADA_OK=(window.YADA_OK||[]);
+  if(window.YADA_OK.indexOf('infosociete')<0) window.YADA_OK.push('infosociete');
+  window.YADA_LBL=window.YADA_LBL||{}; window.YADA_LBL.infosociete='Informations société';
+  function esc(x){ return (x==null?'':(''+x)).replace(/"/g,'&quot;'); }
+  function ta(x){ return (x==null?'':(''+x)).replace(/</g,'&lt;'); }
+  window.pageInfoSociete=function(){
+    var s=db.societe||(db.societe={}); var v=function(k){return esc(s[k]);};
+    var formes=['SAS','SARL','SA','SASU','EURL','EI','SCI','SNC','SCA','Association'];
+    function f(id,lbl,val,ph,type){ return '<div class="is-f"><label>'+lbl+'</label><input id="'+id+'"'+(type?(' type="'+type+'"'):'')+' value="'+esc(val)+'"'+(ph?(' placeholder="'+esc(ph)+'"'):'')+'></div>'; }
+    var formeOpts=formes.map(function(x){return '<option'+(x===s.formeJur?' selected':'')+'>'+x+'</option>';}).join('');
+    var reglOpts='<option value="non"'+(!s.reglementee?' selected':'')+'>Non</option><option value="oui"'+(s.reglementee?' selected':'')+'>Oui — réglementée</option>';
+    return '<div id="yada-is"><div class="is-wrap">'
+      +'<div class="is-head"><div class="is-title">Informations société</div>'
+        +'<div class="is-sub">'+esc(s.raison||'Fiche d\'identité du dossier')+'</div>'
+        +'<button class="is-close" onclick="isFermer()" title="Enregistrer et revenir à la Consultation" aria-label="Fermer">✕</button>'
+      +'</div>'
+      +'<div class="is-body">'
+      +'<div class="is-card"><div class="is-ch">Identité</div><div class="is-grid g3">'
+        +f('is-denom','Dénomination',s.raison)
+        +'<div class="is-f"><label>Forme juridique</label><select id="is-forme">'+formeOpts+'</select></div>'
+        +f('is-capital','Capital social',s.capitalSocial,'ex : 10 000 €')
+        +f('is-siren','SIREN',s.siren,'9 chiffres')
+        +f('is-siret','SIRET',s.siret,'14 chiffres')
+        +f('is-tvaintra','N° TVA intracom.',s.tvaIntra,'FR…')
+        +f('is-ape','Code APE / NAF',s.codeAPE,'ex : 4690Z')
+        +'<div class="is-f"><label>Activité réglementée ?</label><select id="is-regl">'+reglOpts+'</select></div>'
+        +f('is-datecrea','Date de création',s.dateCreation,'','date')
+      +'</div>'
+        +'<div class="is-grid g1">'+f('is-activite','Activité complète',s.activite)+f('is-conv','Convention collective',s.conventionCollective,'Intitulé + IDCC')+'</div>'
+      +'</div>'
+      +'<div class="is-card"><div class="is-ch">Adresse & contacts</div><div class="is-grid g3">'
+        +f('is-pays','Pays',s.pays||'France')+f('is-ville','Ville',s.ville)+f('is-cp','Code postal',s.cp)
+      +'</div><div class="is-grid g1">'+f('is-adresse','Adresse',s.adresse)+'</div>'
+      +'<div class="is-grid g2">'+f('is-tel','Téléphone société',s.telSociete)+f('is-mail','E-mail société',s.mailSociete)
+        +f('is-numcontact','Numéro de contact',s.numContact)+f('is-numsecret','Numéro de secrétaire',s.numSecretaire)+'</div>'
+      +'</div>'
+      +'<div class="is-card"><div class="is-ch">Dirigeant & associés</div>'
+        +'<div class="is-grid g1">'+f('is-dirigeant','Dirigeant',s.dirigeant,'Nom Prénom — qualité')+'</div>'
+        +'<div class="is-grid g2">'+f('is-mailprodir','E-mail professionnel du dirigeant',s.mailProDir)+f('is-mailpersodir','E-mail personnel du dirigeant',s.mailPersoDir)+'</div>'
+        +'<div class="is-grid g1">'
+          +'<div class="is-f"><label>Associés (un par ligne : Nom — % de parts)</label><textarea id="is-associes" rows="3">'+ta(s.associes)+'</textarea></div>'
+          +'<div class="is-f"><label>Sociétés où le dirigeant détient des parts (une par ligne)</label><textarea id="is-socliees" rows="2">'+ta(s.societesLiees)+'</textarea></div>'
+          +'<div class="is-f"><label>Entreprises liées (une par ligne)</label><textarea id="is-entliees" rows="2">'+ta(s.entreprisesLiees)+'</textarea></div>'
+        +'</div>'
+      +'</div>'
+      +'<div class="is-card"><div class="is-ch">Documents & mentions</div><div class="is-grid g2">'
+        +'<div class="is-f"><label>Logo de la société</label>'
+          +'<button class="is-btn" onclick="document.getElementById(\'is-logo-file\').click()">'+(s.logo?'Remplacer le logo':'Fournir un logo')+'</button>'
+          +'<input type="file" id="is-logo-file" hidden accept="image/*" onchange="infoLogo(event)">'
+          +(s.logo?'<div style="margin-top:8px"><img class="is-logo" src="'+s.logo+'"></div>':'')+'</div>'
+        +'<div class="is-f"><label>Extrait RNE — PDF</label>'
+          +'<button class="is-btn" onclick="document.getElementById(\'is-rne-file\').click()">'+(s.rnePdf?'Remplacer le PDF':'Joindre le PDF')+'</button>'
+          +'<input type="file" id="is-rne-file" hidden accept=".pdf" onchange="infoRNE(event)">'
+          +(s.rnePdf?'<button class="is-btn" style="margin-top:8px" onclick="infoOuvrirRNE()">Ouvrir l\'extrait RNE</button>':'<div class="is-hint">Aucun extrait joint.</div>')+'</div>'
+      +'</div><div class="is-grid g1"><div class="is-f"><label>Mentions légales de la société</label><textarea id="is-mentions" rows="3">'+ta(s.mentionsLegales)+'</textarea></div></div></div>'
+      +'<div class="is-card"><div class="is-ch">Coordonnées bancaires (facture)</div><div class="is-grid g3">'
+        +f('is-banqbenef','Nom du bénéficiaire',s.banqueBenef||s.raison)+f('is-iban','IBAN',s.iban,'FR…')+f('is-bic','BIC',s.bic,'XXXXFRPPXXX')
+      +'</div></div>'
+      +'<div class="is-actions"><button class="is-save" onclick="enregistrerInfoSociete()">Enregistrer les informations</button></div>'
+      +'</div></div></div>';
+  };
+  window.isFermer=function(){ try{ if(typeof enregistrerInfoSociete==='function') enregistrerInfoSociete(); }catch(e){} try{ current='compta'; }catch(e){} if(typeof render==='function') render(); };
+  /* Styles — blanc sur noir, style accueil, scopé #yada-is */
+  try{ var st=document.createElement('style'); st.id='yada-is-mod'; st.textContent=
+     '.mod-wrap:has(#yada-is){padding:0!important;max-width:none!important}'
+    +'#yada-is{font-family:Tahoma,"Segoe UI",Geneva,Verdana,sans-serif;color:#fff;background:#000;min-height:100dvh;display:flex;flex-direction:column}'
+    +'#yada-is .is-wrap{flex:1;display:flex;flex-direction:column;min-height:0;width:100%;max-width:880px;margin:0 auto;padding:0 18px}'
+    +'#yada-is .is-head{display:flex;align-items:center;gap:14px;padding:14px 4px 12px;border-bottom:1px solid #1b1b1b;position:relative}'
+    +'#yada-is .is-title{font-size:17px;font-weight:700;color:#fff}'
+    +'#yada-is .is-sub{color:#bbb;font-size:12.5px;margin-left:2px}'
+    +'#yada-is .is-close{margin-left:auto;width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:#000;color:#fff;border:1.5px solid #fff;border-radius:9px;cursor:pointer;font:inherit;font-size:15px;line-height:1;transition:background .16s,color .16s}'
+    +'#yada-is .is-close:hover{background:#fff;color:#000}'
+    +'#yada-is .is-body{flex:1;overflow:auto;padding:14px 0 26px;display:flex;flex-direction:column;gap:14px}'
+    +'#yada-is .is-card{border:1px solid #333;border-radius:10px;background:#000;padding:14px 16px}'
+    +'#yada-is .is-ch{font-size:13px;font-weight:700;color:#fff;margin:0 0 12px;padding-bottom:8px;border-bottom:1px solid #1c1c1c}'
+    +'#yada-is .is-grid{display:grid;gap:12px}'
+    +'#yada-is .is-grid.g3{grid-template-columns:repeat(3,1fr)}'
+    +'#yada-is .is-grid.g2{grid-template-columns:repeat(2,1fr)}'
+    +'#yada-is .is-grid.g1{grid-template-columns:1fr}'
+    +'#yada-is .is-grid+.is-grid{margin-top:12px}'
+    +'#yada-is .is-f{display:flex;flex-direction:column;gap:5px;min-width:0}'
+    +'#yada-is .is-f label{font-size:11px;color:#bbb}'
+    +'#yada-is input,#yada-is select,#yada-is textarea{background:#000!important;color:#fff!important;border:1px solid #444!important;border-radius:8px;padding:8px 10px;font:inherit;font-size:12.5px;outline:none;width:100%;box-sizing:border-box}'
+    +'#yada-is textarea{resize:vertical;line-height:1.4}'
+    +'#yada-is input:focus,#yada-is select:focus,#yada-is textarea:focus{border-color:#fff!important}'
+    +'#yada-is input::placeholder,#yada-is textarea::placeholder{color:#888}'
+    +'#yada-is select{cursor:pointer}'
+    +'#yada-is input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}'
+    +'#yada-is .is-btn{background:#000;color:#fff;border:1px solid #fff;border-radius:8px;padding:8px 13px;cursor:pointer;font:inherit;font-size:12.5px;align-self:flex-start}'
+    +'#yada-is .is-btn:hover{background:#fff;color:#000}'
+    +'#yada-is .is-logo{max-width:150px;max-height:70px;border:1px solid #333;border-radius:6px;background:#fff;padding:4px}'
+    +'#yada-is .is-hint{color:#888;font-size:11.5px}'
+    +'#yada-is .is-actions{display:flex;justify-content:flex-end;padding:2px 0 24px}'
+    +'#yada-is .is-save{background:#000;color:#fff;border:1px solid #fff;border-radius:8px;padding:9px 18px;cursor:pointer;font:inherit;font-size:13px;font-weight:700}'
+    +'#yada-is .is-save:hover{background:#fff;color:#000}'
+    +'@media(max-width:760px){#yada-is .is-grid.g3,#yada-is .is-grid.g2{grid-template-columns:1fr}}';
     document.head.appendChild(st);
   }catch(e){}
 })();
