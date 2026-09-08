@@ -11095,7 +11095,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v585';
+    b.textContent='YADA · v586';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -27762,8 +27762,8 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
    service worker → on atterrit directement sur la nouvelle version (Accueil).
    Drapeau localStorage 'yada-fresh-549' → exécuté une seule fois. 100% additif. */
 (function(){
-  var CUR='yada-v180';           /* = CACHE courant du sw.js */
-  var FLAG='yada-fresh-585';
+  var CUR='yada-v181';           /* = CACHE courant du sw.js */
+  var FLAG='yada-fresh-586';
   try{ if(localStorage.getItem(FLAG)) return; }catch(e){}
   try{ localStorage.setItem(FLAG,'1'); }catch(e){}
   try{
@@ -30193,6 +30193,167 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     +'#yada-cp .cp-odt thead tr,#yada-cp .cp-odt th{background:#000!important;background-image:none!important;border-bottom-color:#1b1b1b!important}'
     +'#yada-cp .cp-saltbl thead tr,#yada-cp .cp-saltbl th{background:#000!important;background-image:none!important;border-bottom-color:#222!important}'
     +'@media(max-width:820px){#yada-cp .cp-two{grid-template-columns:1fr}}';
+    document.head.appendChild(st);
+  }catch(e){}
+})();
+</script>
+<script id="yada-addon-mod-banque">
+/* ═══ RECONSTRUCTION — MODULE 11 : BANQUE (maquette A : deux volets, noir & blanc) ═══
+   Volet gauche : compte(s) bancaire(s) 512 + liste des mois (compteur). Volet droit : relevé
+   du mois (Date · Compte · Libellé · N° · Débit · Crédit · Lettrage) + « ＋ Saisir une écriture »
+   (formulaire réutilisant validerBanque / majBq — 2 lignes tiers/charge + 512). Réutilise
+   comptesBanque / posterBanque / validerBanque / majBq / bankAlloue / bankDispo / BANK_* / COMPTES.
+   Croix ✕ = Consultation. 100% additif, B&W. */
+(function(){
+  window.YADA_OK=(window.YADA_OK||[]);
+  if(window.YADA_OK.indexOf('banque')<0) window.YADA_OK.push('banque');
+  window.YADA_LBL=window.YADA_LBL||{}; window.YADA_LBL.banque='Banque';
+  function e2(x){ return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+  function E(x){ return (typeof eur==='function')?eur(x):((+x||0).toFixed(2)+' €'); }
+  function CO(){ return (typeof COMPTES==='object')?COMPTES:{}; }
+  function comptes512(){ return (typeof comptesBanque==='function')?comptesBanque():[]; }
+  function bq512de(rec){ var e=(db.ecritures||[]).find(function(x){return x.id===rec.ecritureId;}); if(!e) return '512000000';
+    var l=(e.lignes||[]).find(function(l){return c9(l.compte).slice(0,3)==='512';}); return l?c9(l.compte):'512000000'; }
+  function curCompte(){ var l=comptes512(); var sel=window.bqCompteSel;
+    if(!sel){ sel=(l[0]&&l[0].code)||'512000000'; window.bqCompteSel=sel; window.bqCompte512=sel; window.bqFiltre512=sel; }
+    return sel; }
+  function recsCompte(){ var sel=curCompte(); return (db.banque||[]).filter(function(b){ return c9(bq512de(b))===c9(sel); }); }
+  function moisDispo(){ var out={}; recsCompte().forEach(function(b){ var m=ym(b.date); out[m]=(out[m]||0)+1; });
+    return Object.keys(out).sort().reverse().map(function(m){ return {m:m,n:out[m]}; }); }
+  function curMois(){ var md=moisDispo(); var sel=window.bqMoisSel;
+    if(!sel||!md.some(function(x){return x.m===sel;})){ sel=md[0]?md[0].m:''; window.bqMoisSel=sel; } return sel; }
+  function letTag(b){
+    if(!b.tiersId) return '—';
+    var al=(typeof bankAlloue==='function')?bankAlloue(b):0;
+    if(al<=0.005) return '<span class="bq-tg">à lettrer</span>';
+    if((typeof bankDispo==='function'?bankDispo(b):0)>0.005) return '<span class="bq-tg">partiel</span>';
+    return '<span class="bq-tg">lettré ✓</span>';
+  }
+  function releveRows(m){
+    var recs=recsCompte().filter(function(b){return ym(b.date)===m;}).sort(function(a,b){return a.date<b.date?1:-1;});
+    if(!recs.length) return '<tr><td colspan="7" class="bq-empty">Aucune écriture bancaire pour ce mois.</td></tr>';
+    return recs.map(function(b){ var t=b.tiersId?(db.tiers||[]).find(function(x){return x.id===b.tiersId;}):null;
+      return '<tr><td class="num">'+e2(b.date)+'</td>'
+        +'<td class="num">'+e2(b.compte)+(t&&t.compteAux?(' · '+e2(t.compteAux)):'')+'</td>'
+        +'<td>'+(t?e2(t.nom)+' — ':'')+e2(b.libelle)+'</td>'
+        +'<td class="num">'+e2(b.suivi||'')+'</td>'
+        +'<td class="r num">'+(b.sens==='D'?E(b.montant):'—')+'</td>'
+        +'<td class="r num">'+(b.sens==='C'?E(b.montant):'—')+'</td>'
+        +'<td>'+letTag(b)+'</td></tr>';
+    }).join('');
+  }
+  function saisieForm(m){
+    var jours=Array.from({length:31},function(_,i){return i+1;}).map(function(d){return '<option'+(d===new Date().getDate()?' selected':'')+'>'+d+'</option>';}).join('');
+    var C=CO();
+    var grp=function(lbl,arr){ return '<optgroup label="'+lbl+'">'+arr.map(function(c){return '<option value="'+c+'">'+c+' — '+e2(C[c]||'')+'</option>';}).join('')+'</optgroup>'; };
+    return '<div class="bq-saisie"><div class="bq-sh">Saisir une écriture bancaire</div>'
+      +'<div class="bq-frow">'
+        +'<div class="bq-f"><label>Mois</label><input type="month" id="bq-mois" class="bq-in" value="'+e2(m||ym(todayStr()))+'"></div>'
+        +'<div class="bq-f" style="width:90px"><label>Jour</label><select id="bq-jour" class="bq-in">'+jours+'</select></div>'
+        +'<div class="bq-f" style="width:120px"><label>Sens</label><select id="bq-sens" class="bq-in" onchange="majBq()"><option value="D">Débit</option><option value="C">Crédit</option></select></div>'
+        +'<div class="bq-f" style="width:130px"><label>Montant TTC</label><input type="number" id="bq-montant" class="bq-in r num" value="0" oninput="majBq()" style="text-align:right"></div>'
+      +'</div>'
+      +'<div class="bq-frow">'
+        +'<div class="bq-f" style="flex:1;min-width:200px"><label>Compte (1ʳᵉ ligne)</label><select id="bq-compte" class="bq-in" onchange="majBq()">'
+          +grp('Comptes de tiers',(window.BANK_TIERS||['401','411','421']))
+          +grp('Organismes sociaux',(window.BANK_ORG||['431','4373','4375']))
+          +grp('Charges (sans facture)',(window.BANK_CHARGE||['6160','627','6251','6257']))+'</select></div>'
+        +'<div class="bq-f" id="bq-tiers-wrap" style="flex:1;min-width:180px"><label>Tiers reconnu (taux TVA)</label><select id="bq-tiers" class="bq-in" onchange="majBq()"></select></div>'
+        +'<div class="bq-f" style="width:150px"><label>N° de suivi</label><input id="bq-suivi" class="bq-in" placeholder="(auto BQ-…)"></div>'
+      +'</div>'
+      +'<div class="bq-frow"><div class="bq-f" style="flex:1"><label>Libellé du relevé</label><input id="bq-lib" class="bq-in" placeholder="Ex : VIR EDF / PRLV URSSAF / FRAIS BANCAIRES"></div></div>'
+      +'<div id="bq-apercu" class="bq-apercu"></div>'
+      +'<div class="bq-sact"><button class="bq-btn" onclick="bqSaisieToggle()">Annuler</button><button class="bq-btn bq-pri" onclick="validerBanque()">Enregistrer l\'écriture</button></div>'
+      +'</div>';
+  }
+  window.pageBanque=function(){
+    var l512=comptes512(); var sel=curCompte(); var m=curMois(); var md=moisDispo();
+    var exo=(typeof exoYear==='function')?exoYear():'';
+    var accHTML=(l512.length?l512:[{code:'512000000',lib:'512000000 - Banque'}]).map(function(c){
+      var on=c9(c.code)===c9(sel);
+      return '<button class="bq-acc'+(on?' on':'')+'" onclick="bqSelCompte(\''+e2(c.code)+'\')">'+e2(c9(c.code))+'<span class="bq-al">'+e2(c.lib||'')+'</span></button>';
+    }).join('');
+    var moisHTML=md.length?md.map(function(x){ var on=x.m===m;
+      return '<button class="bq-mi'+(on?' on':'')+'" onclick="bqSelMois(\''+x.m+'\')"><span class="bq-mn">'+e2((typeof moisLabel==='function'?moisLabel(x.m):x.m))+'</span><span class="bq-c">'+x.n+'</span></button>';
+    }).join(''):'<div class="bq-empty" style="padding:10px 4px">Aucune écriture bancaire.</div>';
+    var open=!!window.__bqSaisie;
+    var right;
+    if(open){ right=saisieForm(m); }
+    else {
+      right='<div class="bq-pbar"><span class="bq-pt">Relevé — '+e2(m?(typeof moisLabel==='function'?moisLabel(m):m):'—')+'</span><span class="bq-sp"></span>'
+        +'<button class="bq-btn bq-pri" onclick="bqSaisieToggle()">＋ Saisir une écriture</button></div>'
+        +(m?('<div class="bq-tblwrap"><table class="bq-tbl"><thead><tr><th>Date</th><th>Compte</th><th>Libellé</th><th>N°</th><th class="r">Débit</th><th class="r">Crédit</th><th>Lettrage</th></tr></thead><tbody>'+releveRows(m)+'</tbody></table></div>')
+             :'<div class="bq-empty" style="padding:26px;text-align:center">👆 Sélectionnez un mois pour afficher le relevé.</div>');
+    }
+    return '<div id="yada-bq"><div class="bq-wrap">'
+      +'<div class="bq-head"><div class="bq-title">Banque</div>'
+        +'<span class="bq-exo">Exercice '+e2(exo)+'</span>'
+        +'<button class="bq-close" onclick="bqFermer()" title="Revenir à la Consultation" aria-label="Fermer">✕</button></div>'
+      +'<div class="bq-body">'
+        +'<div class="bq-rail"><div class="bq-gh">Compte bancaire</div>'+accHTML
+          +'<div class="bq-gh">Mois'+(exo?(' ('+e2(exo)+')'):'')+'</div>'+moisHTML+'</div>'
+        +'<div class="bq-panel">'+right+'</div>'
+      +'</div></div></div>';
+  };
+  window.bqSelCompte=function(code){ window.bqCompteSel=code; window.bqCompte512=code; window.bqFiltre512=code; window.bqMoisSel=null; window.__bqSaisie=false; if(typeof render==='function')render(); };
+  window.bqSelMois=function(m){ window.bqMoisSel=m; window.__bqSaisie=false; if(typeof render==='function')render(); };
+  window.bqSaisieToggle=function(){ window.__bqSaisie=!window.__bqSaisie; if(typeof render==='function')render(); };
+  window.bqFermer=function(){ window.__bqSaisie=false; try{current='compta';}catch(e){} if(typeof render==='function')render(); };
+  try{ var st=document.createElement('style'); st.id='yada-bq-mod'; st.textContent=
+     '.mod-wrap:has(#yada-bq),.fullbleed:has(#yada-bq){padding:0!important;max-width:none!important}'
+    +'#yada-bq{font-family:Tahoma,"Segoe UI",Geneva,Verdana,sans-serif;color:#fff;background:#000;min-height:100dvh;display:flex;flex-direction:column}'
+    +'#yada-bq .bq-wrap{flex:1;display:flex;flex-direction:column;min-height:0;width:100%;max-width:1200px;margin:0 auto;padding:0 18px}'
+    +'#yada-bq .bq-head{display:flex;align-items:center;gap:12px;padding:14px 4px 12px;border-bottom:1px solid #1b1b1b}'
+    +'#yada-bq .bq-title{font-size:17px;font-weight:700}'
+    +'#yada-bq .bq-exo{margin-left:auto;color:#8a8a8a!important;font-size:12px}'
+    +'#yada-bq .bq-close{width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:#000;color:#fff!important;border:1.5px solid #fff;border-radius:9px;cursor:pointer;font:inherit;font-size:15px}'
+    +'#yada-bq .bq-close:hover{background:#fff;color:#000!important}'
+    +'#yada-bq .bq-body{flex:1;min-height:0;display:grid;grid-template-columns:250px 1fr}'
+    +'#yada-bq .bq-rail{border-right:1px solid #1b1b1b;padding:12px;display:flex;flex-direction:column;gap:6px;overflow:auto}'
+    +'#yada-bq .bq-gh{color:#8a8a8a!important;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;margin:8px 4px 3px}'
+    +'#yada-bq .bq-acc{text-align:left;padding:9px 11px;border:1px solid #171717;border-radius:8px;background:#000;color:#c8c8c8!important;cursor:pointer;font:inherit;font-size:12px}'
+    +'#yada-bq .bq-acc:hover{border-color:#3a3a3a;color:#fff!important}'
+    +'#yada-bq .bq-acc.on{background:#fff;color:#000!important;font-weight:700;border-color:#fff}'
+    +'#yada-bq .bq-al{display:block;font-size:10px;color:#8a8a8a;margin-top:1px}#yada-bq .bq-acc.on .bq-al{color:#333}'
+    +'#yada-bq .bq-mi{display:flex;align-items:center;gap:8px;padding:9px 11px;border:1px solid #171717;border-radius:8px;background:#000;color:#c8c8c8!important;cursor:pointer;font:inherit;font-size:12px;text-align:left}'
+    +'#yada-bq .bq-mi:hover{border-color:#3a3a3a;color:#fff!important}'
+    +'#yada-bq .bq-mi.on{background:#fff;color:#000!important;font-weight:700;border-color:#fff}'
+    +'#yada-bq .bq-mn{flex:1}#yada-bq .bq-c{font-size:10.5px;color:#8a8a8a}#yada-bq .bq-mi.on .bq-c{color:#333}'
+    +'#yada-bq .bq-panel{padding:14px 18px;overflow:auto;min-width:0}'
+    +'#yada-bq .bq-pbar{display:flex;align-items:center;gap:10px;margin-bottom:14px}'
+    +'#yada-bq .bq-pt{font-size:15px;font-weight:700}#yada-bq .bq-sp{flex:1}'
+    +'#yada-bq .bq-btn{background:#000;color:#fff!important;border:1px solid #fff;border-radius:8px;padding:8px 13px;cursor:pointer;font:inherit;font-size:12.5px;white-space:nowrap}'
+    +'#yada-bq .bq-btn:hover{background:#fff;color:#000!important}'
+    +'#yada-bq .bq-btn.bq-pri{background:#fff;color:#000!important;font-weight:700}#yada-bq .bq-btn.bq-pri:hover{background:#ddd}'
+    +'#yada-bq .bq-tblwrap{overflow-x:auto}'
+    +'#yada-bq .bq-tbl{width:100%;border-collapse:collapse;font-size:12px}'
+    +'#yada-bq .bq-tbl th{text-align:left;color:#8a8a8a!important;background:#000!important;font-weight:400;padding:8px 10px;border-bottom:1px solid #222;white-space:nowrap}'
+    +'#yada-bq .bq-tbl td{padding:8px 10px;border-bottom:1px solid #131313}'
+    +'#yada-bq .bq-tbl tbody tr:hover td{background:#0b0b0b}'
+    +'#yada-bq .bq-tg{border:1px solid #555;border-radius:999px;padding:1px 8px;font-size:10px;color:#c8c8c8!important;white-space:nowrap}'
+    +'#yada-bq .bq-empty{color:#8a8a8a}'
+    +'#yada-bq .bq-saisie{border:1px solid #222;border-radius:11px;padding:14px}'
+    +'#yada-bq .bq-sh{font-size:14px;font-weight:700;margin-bottom:12px}'
+    +'#yada-bq .bq-frow{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}'
+    +'#yada-bq .bq-f{display:flex;flex-direction:column;gap:4px}#yada-bq .bq-f label{font-size:10.5px;color:#bbb!important}'
+    +'#yada-bq .bq-in{background:#000!important;color:#fff!important;border:1px solid #444!important;border-radius:7px;padding:7px 9px;font:inherit;font-size:12px;outline:none;width:100%;box-sizing:border-box}'
+    +'#yada-bq .bq-in:focus{border-color:#fff!important}#yada-bq .bq-in::placeholder{color:#888}'
+    +'#yada-bq .bq-apercu{margin:8px 0}'
+    +'#yada-bq .bq-apercu .ecr{border:1px solid #222;border-radius:9px;padding:10px;font-size:12px}'
+    +'#yada-bq .bq-apercu .ecr-h{display:flex;justify-content:space-between;margin-bottom:6px;color:#c8c8c8}'
+    +'#yada-bq .bq-apercu table{width:100%;border-collapse:collapse;font-size:11.5px}'
+    +'#yada-bq .bq-apercu td,#yada-bq .bq-apercu th{padding:5px 8px;border-bottom:1px solid #161616;text-align:left}'
+    +'#yada-bq .bq-apercu .r{text-align:right}#yada-bq .bq-apercu .balance-ok{color:#c8c8c8!important}'
+    +'#yada-bq .bq-apercu .hint{color:#8a8a8a!important;margin-top:6px;font-size:11px}'
+    +'#yada-bq .bq-sact{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}'
+    +'#yada-bq .r{text-align:right}#yada-bq .num{font-variant-numeric:tabular-nums}'
+    +'#yada-bq a{color:#fff!important}'
+    /* garde-fous noir & blanc : neutralise les couleurs héritées dans l\'aperçu (deb/cre) */
+    +'#yada-bq .bq-apercu .deb,#yada-bq .bq-apercu .cre{color:#fff!important;-webkit-text-fill-color:#fff!important}'
+    /* garde-fou noir & blanc : item selectionne (compte/mois) en noir sur blanc */
+    +'#yada-bq .bq-mi.on .bq-mn{color:#000!important}#yada-bq .bq-mi.on .bq-c{color:#333!important}'
+    +'#yada-bq .bq-acc.on,#yada-bq .bq-acc.on .bq-al{color:#000!important}#yada-bq .bq-acc.on .bq-al{color:#333!important}'
+    +'@media(max-width:760px){#yada-bq .bq-body{grid-template-columns:1fr}#yada-bq .bq-rail{border-right:0;border-bottom:1px solid #1b1b1b}}';
     document.head.appendChild(st);
   }catch(e){}
 })();
