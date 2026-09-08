@@ -10598,6 +10598,7 @@ ${lignes}
       <div class="hint">Total actif ${eur(B.ta)} · total passif ${eur(B.totP)} — ${eq?'équilibré ✓':'écart à vérifier'}.</div>
     </div>`;
   };
+  try{ window.bilanDocHTML=bilanDocHTML; window.crDocHTML=crDocHTML; }catch(e){}
   const _p=pageEditions; pageEditions=function(){ return _p()+t4Card(); };
 })();
 </script>
@@ -11094,7 +11095,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v582';
+    b.textContent='YADA · v583';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -27761,8 +27762,8 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
    service worker → on atterrit directement sur la nouvelle version (Accueil).
    Drapeau localStorage 'yada-fresh-549' → exécuté une seule fois. 100% additif. */
 (function(){
-  var CUR='yada-v177';           /* = CACHE courant du sw.js */
-  var FLAG='yada-fresh-582';
+  var CUR='yada-v178';           /* = CACHE courant du sw.js */
+  var FLAG='yada-fresh-583';
   try{ if(localStorage.getItem(FLAG)) return; }catch(e){}
   try{ localStorage.setItem(FLAG,'1'); }catch(e){}
   try{
@@ -29785,6 +29786,102 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     +'#yada-jr .jr-empty{color:#8a8a8a;text-align:center;padding:22px}'
     +'#yada-jr a{color:#fff!important}'
     +'@media(max-width:760px){#yada-jr .jr-body{grid-template-columns:1fr}#yada-jr .jr-rail{border-right:0;border-bottom:1px solid #1b1b1b}}';
+    document.head.appendChild(st);
+  }catch(e){}
+})();
+</script>
+<script id="yada-addon-mod-editions">
+/* ═══ RECONSTRUCTION — MODULE 8 : ÉDITIONS COMPTABLES (maquette B : deux volets, noir & blanc) ═══
+   Volet gauche : liste des éditions par famille (Balances / Grands livres / États de synthèse /
+   Journaux). Volet droit : aperçu A4 du document sélectionné (feuille blanche, encre noire) +
+   barre « 🖨 Imprimer / PDF ». Réutilise balanceDoc / grandLivreDoc / journauxDoc /
+   centralisateurDoc / bilanDocHTML / crDocHTML. Croix ✕ = Consultation. 100% additif, B&W. */
+(function(){
+  window.YADA_OK=(window.YADA_OK||[]);
+  if(window.YADA_OK.indexOf('editions')<0) window.YADA_OK.push('editions');
+  window.YADA_LBL=window.YADA_LBL||{}; window.YADA_LBL.editions='Éditions comptables';
+  function e2(x){ return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+  var GRP=[
+    ['Balances',[['generale','Balance générale'],['fournisseurs','Balance fournisseurs'],['clients','Balance clients']]],
+    ['Grands livres',[['gl-general','Grand livre général'],['gl-fournisseur','Grand livre fournisseurs'],['gl-client','Grand livre clients']]],
+    ['États de synthèse',[['bilan','Bilan'],['cr','Compte de résultat']]],
+    ['Journaux',[['journaux','Journaux'],['central','Journal centralisateur']]]
+  ];
+  function labelOf(id){ for(var i=0;i<GRP.length;i++){ var f=GRP[i][1].find(function(x){return x[0]===id;}); if(f) return f[1]; } return id; }
+  function docFor(id){
+    try{
+      if(id==='generale'||id==='fournisseurs'||id==='clients') return (typeof balanceDoc==='function')?balanceDoc(id):'';
+      if(id==='gl-general') return (typeof grandLivreDoc==='function')?grandLivreDoc('general'):'';
+      if(id==='gl-fournisseur') return (typeof grandLivreDoc==='function')?grandLivreDoc('fournisseur'):'';
+      if(id==='gl-client') return (typeof grandLivreDoc==='function')?grandLivreDoc('client'):'';
+      if(id==='bilan') return (typeof window.bilanDocHTML==='function')?window.bilanDocHTML():'';
+      if(id==='cr') return (typeof window.crDocHTML==='function')?window.crDocHTML():'';
+      if(id==='journaux') return (typeof journauxDoc==='function')?journauxDoc():'';
+      if(id==='central') return (typeof centralisateurDoc==='function')?centralisateurDoc():'';
+    }catch(e){ return '<div class="doc"><div class="doc-page" style="padding:30px">Erreur de génération : '+e2(e.message||e)+'</div></div>'; }
+    return '';
+  }
+  function curSel(){ var s=window.__edSel; var ok=GRP.some(function(g){return g[1].some(function(x){return x[0]===s;});}); if(!ok){ s='generale'; window.__edSel=s; } return s; }
+  window.pageEditions=function(){
+    var sel=curSel();
+    var rail=GRP.map(function(g){
+      return '<div class="ed-gh">'+e2(g[0])+'</div>'+g[1].map(function(x){
+        return '<button class="ed-li'+(x[0]===sel?' on':'')+'" onclick="edSel(\''+x[0]+'\')">'+e2(x[1])+'</button>';
+      }).join('');
+    }).join('');
+    var doc='';
+    try{ doc=docFor(sel); }catch(e){ doc=''; }
+    if(!doc) doc='<div class="doc"><div class="doc-page" style="padding:30px;text-align:center">Aucune donnée à éditer pour ce document.</div></div>';
+    else doc='<div class="doc">'+doc+'</div>';
+    var exo=(typeof exoYear==='function')?exoYear():'';
+    return '<div id="yada-ed"><div class="ed-wrap">'
+      +'<div class="ed-head"><div class="ed-title">Éditions comptables</div>'
+        +'<span class="ed-exo">Exercice '+e2(exo)+'</span>'
+        +'<button class="ed-close" onclick="edFermer()" title="Revenir à la Consultation" aria-label="Fermer">✕</button></div>'
+      +'<div class="ed-body">'
+        +'<div class="ed-rail">'+rail+'</div>'
+        +'<div class="ed-panel">'
+          +'<div class="ed-pbar"><span class="ed-pt">'+e2(labelOf(sel))+'</span><span class="ed-sp"></span>'
+            +'<button class="ed-print" onclick="edImprimer()">🖨 Imprimer / PDF</button></div>'
+          +'<div class="ed-preview" id="ed-preview">'+doc+'</div>'
+        +'</div>'
+      +'</div></div></div>';
+  };
+  window.edSel=function(id){ window.__edSel=id; if(typeof render==='function')render(); };
+  window.edImprimer=function(){
+    var sel=curSel(); var html=''; try{ html=docFor(sel); }catch(e){}
+    if(!html){ if(typeof toast==='function') toast('Aucune donnée à éditer'); return; }
+    var pa=document.getElementById('print-area'); if(!pa) return;
+    pa.innerHTML='<div class="doc">'+html+'</div>';
+    if(typeof toast==='function') toast('Fenêtre d\'impression → « Enregistrer en PDF »');
+    setTimeout(function(){ try{window.print();}catch(e){} },150);
+  };
+  window.edFermer=function(){ try{current='compta';}catch(e){} if(typeof render==='function')render(); };
+  try{ var st=document.createElement('style'); st.id='yada-ed-mod'; st.textContent=
+     '.mod-wrap:has(#yada-ed){padding:0!important;max-width:none!important}'
+    +'#yada-ed{font-family:Tahoma,"Segoe UI",Geneva,Verdana,sans-serif;color:#fff;background:#000;min-height:100dvh;display:flex;flex-direction:column}'
+    +'#yada-ed .ed-wrap{flex:1;display:flex;flex-direction:column;min-height:0;width:100%;max-width:1200px;margin:0 auto;padding:0 18px}'
+    +'#yada-ed .ed-head{display:flex;align-items:center;gap:12px;padding:14px 4px 12px;border-bottom:1px solid #1b1b1b}'
+    +'#yada-ed .ed-title{font-size:17px;font-weight:700}'
+    +'#yada-ed .ed-exo{margin-left:auto;color:#8a8a8a!important;font-size:12px}'
+    +'#yada-ed .ed-close{width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:#000;color:#fff!important;border:1.5px solid #fff;border-radius:9px;cursor:pointer;font:inherit;font-size:15px}'
+    +'#yada-ed .ed-close:hover{background:#fff;color:#000!important}'
+    +'#yada-ed .ed-body{flex:1;min-height:0;display:grid;grid-template-columns:270px 1fr}'
+    +'#yada-ed .ed-rail{border-right:1px solid #1b1b1b;padding:12px;display:flex;flex-direction:column;gap:5px;overflow:auto}'
+    +'#yada-ed .ed-gh{color:#8a8a8a!important;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;margin:10px 4px 3px}'
+    +'#yada-ed .ed-gh:first-child{margin-top:2px}'
+    +'#yada-ed .ed-li{display:block;width:100%;text-align:left;padding:9px 11px;border-radius:8px;border:1px solid #171717;background:#000;color:#c8c8c8!important;cursor:pointer;font:inherit;font-size:12.5px}'
+    +'#yada-ed .ed-li:hover{border-color:#3a3a3a;color:#fff!important}'
+    +'#yada-ed .ed-li.on{background:#fff;color:#000!important;font-weight:700;border-color:#fff}'
+    +'#yada-ed .ed-panel{padding:14px 18px;overflow:auto;min-width:0;display:flex;flex-direction:column;gap:12px}'
+    +'#yada-ed .ed-pbar{display:flex;align-items:center;gap:10px}'
+    +'#yada-ed .ed-pt{font-size:14px;font-weight:700}#yada-ed .ed-sp{flex:1}'
+    +'#yada-ed .ed-print{background:#fff;color:#000!important;border:1px solid #fff;border-radius:8px;padding:8px 14px;cursor:pointer;font:inherit;font-size:12.5px;font-weight:700;white-space:nowrap}'
+    +'#yada-ed .ed-print:hover{background:#ddd}'
+    +'#yada-ed .ed-preview{overflow:auto}'
+    +'#yada-ed .ed-preview .doc-page{width:794px!important;min-height:1123px!important;max-width:none!important;margin:0 auto;box-sizing:border-box}'
+    +'#yada-ed a{color:#fff!important}'
+    +'@media(max-width:760px){#yada-ed .ed-body{grid-template-columns:1fr}#yada-ed .ed-rail{border-right:0;border-bottom:1px solid #1b1b1b}}';
     document.head.appendChild(st);
   }catch(e){}
 })();
