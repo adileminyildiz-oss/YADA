@@ -11094,7 +11094,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v577';
+    b.textContent='YADA · v578';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -27690,8 +27690,8 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
    service worker → on atterrit directement sur la nouvelle version (Accueil).
    Drapeau localStorage 'yada-fresh-549' → exécuté une seule fois. 100% additif. */
 (function(){
-  var CUR='yada-v172';           /* = CACHE courant du sw.js */
-  var FLAG='yada-fresh-577';
+  var CUR='yada-v173';           /* = CACHE courant du sw.js */
+  var FLAG='yada-fresh-578';
   try{ if(localStorage.getItem(FLAG)) return; }catch(e){}
   try{ localStorage.setItem(FLAG,'1'); }catch(e){}
   try{
@@ -29021,6 +29021,144 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     +'#yada-is .is-save{background:#000;color:#fff;border:1px solid #fff;border-radius:8px;padding:9px 18px;cursor:pointer;font:inherit;font-size:13px;font-weight:700}'
     +'#yada-is .is-save:hover{background:#fff;color:#000}'
     +'@media(max-width:760px){#yada-is .is-grid.g3,#yada-is .is-grid.g2{grid-template-columns:1fr}}';
+    document.head.appendChild(st);
+  }catch(e){}
+})();
+</script>
+<script id="yada-addon-mod-parametrage">
+/* ═══ RECONSTRUCTION — MODULE 3 : PARAMÉTRAGE (maquette C : grille de tuiles, noir & blanc) ═══
+   Grille de tuiles ; chaque tuile ouvre son panneau de réglages (retour à la grille par ←).
+   100% noir & blanc. Réutilise les fonctions réelles : exportJSON / importJSON /
+   secSetDelay / yadaDownloadFile / tfaEnroll / tfaDisable / factParamCard+factParamSave /
+   constructeurs de dossiers démo. Croix ✕ = revient à la Consultation. 100% additif. */
+(function(){
+  window.YADA_OK=(window.YADA_OK||[]);
+  if(window.YADA_OK.indexOf('parametrage')<0) window.YADA_OK.push('parametrage');
+  window.YADA_LBL=window.YADA_LBL||{}; window.YADA_LBL.parametrage='Paramétrage';
+  window.__setView=window.__setView||null;
+  var IC={
+    secu:'<path d="M12 3l7 3v5c0 4-3 7-7 8-4-1-7-4-7-8V6z"/>',
+    save:'<path d="M4 5h16v14H4z"/><path d="M4 9h16"/>',
+    lock:'<path d="M12 6v6l4 2"/><circle cx="12" cy="12" r="9"/>',
+    pc:'<path d="M12 3v12"/><path d="M8 11l4 4 4-4"/><path d="M5 21h14"/>',
+    fac:'<path d="M3 12h18"/><path d="M12 3v18"/>',
+    reset:'<path d="M4 4l16 16"/><path d="M20 4L4 20"/>'
+  };
+  var TILES=[
+    ['secu','Sécurité & 2FA','Code à deux facteurs (QR)'],
+    ['save','Sauvegarde & transfert','Télécharger / importer la base'],
+    ['lock','Verrouillage auto',"Délai d'inactivité"],
+    ['pc','Télécharger sur PC','Fichier autonome hors-ligne'],
+    ['fac','Facturation','Mentions, RIB, conditions'],
+    ['reset','Réinitialiser','Données de démonstration']
+  ];
+  var TITRES={secu:'Sécurité & 2FA',save:'Sauvegarde & transfert',lock:'Verrouillage automatique',pc:'Télécharger YADA sur ce PC',fac:'Paramètres de facturation',reset:'Réinitialiser'};
+  function panel(k){
+    if(k==='secu'){
+      return '<div class="set-block"><div class="set-sub">Ajoutez une étape de sécurité après le mot de passe : un code à 6 chiffres d\'une application d\'authentification (Google Authenticator / Authy), configuré via un QR code. Optionnel, par compte, 100% hors-ligne.</div>'
+        +'<div class="set-line"><div><div class="set-l">Authentification à deux facteurs</div><div class="set-d">Activer via QR code, ou désactiver.</div></div>'
+        +'<div class="set-ctl"><button class="set-btn" onclick="if(window.tfaEnroll)tfaEnroll()">Activer</button><button class="set-btn" onclick="if(window.tfaDisable)tfaDisable()">Désactiver</button></div></div></div>';
+    }
+    if(k==='save'){
+      return '<div class="set-block">'
+        +'<div class="set-line"><div><div class="set-l">Télécharger la base (JSON)</div><div class="set-d">Copie locale de tous les dossiers.</div></div><div class="set-ctl"><button class="set-btn" onclick="if(window.exportJSON)exportJSON()">Télécharger</button></div></div>'
+        +'<div class="set-line"><div><div class="set-l">Importer une base</div><div class="set-d">Restaurer depuis un fichier .json.</div></div><div class="set-ctl"><button class="set-btn" onclick="document.getElementById(\'set-imp\').click()">Importer</button><input type="file" id="set-imp" accept=".json,application/json" hidden onchange="if(window.importJSON)importJSON(event)"></div></div>'
+        +'</div>';
+    }
+    if(k==='lock'){
+      var cur=(typeof window.secDelay==='function')?window.secDelay():10;
+      var opts=[['5','5 min'],['10','10 min'],['15','15 min'],['30','30 min'],['0','Désactivé']].map(function(o){return '<option value="'+o[0]+'"'+(String(cur)===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('');
+      return '<div class="set-block"><div class="set-sub">Verrouille automatiquement l\'application après une période d\'inactivité (s\'applique à tous les espaces).</div>'
+        +'<div class="set-line"><div><div class="set-l">Délai d\'inactivité</div></div><div class="set-ctl"><select class="set-sel" onchange="if(window.secSetDelay)secSetDelay(this.value)">'+opts+'</select></div></div></div>';
+    }
+    if(k==='pc'){
+      return '<div class="set-block"><div class="set-sub">Enregistrez YADA sur cet ordinateur : un fichier autonome (YADA.html) qui s\'ouvre d\'un double-clic et fonctionne sans connexion.</div>'
+        +'<div class="set-line"><div><div class="set-l">Télécharger le fichier YADA</div><div class="set-d">Application hors-ligne.</div></div><div class="set-ctl"><button class="set-btn solid" onclick="if(window.yadaDownloadFile)yadaDownloadFile()">Télécharger</button></div></div></div>';
+    }
+    if(k==='fac'){
+      var inner=''; try{ if(typeof factParamCard==='function') inner=factParamCard(); }catch(e){}
+      if(!inner) inner='<div class="set-sub">Paramètres de facturation indisponibles.</div>';
+      return '<div class="set-block set-embed">'+inner+'</div>';
+    }
+    if(k==='reset'){
+      return '<div class="set-block"><div class="set-sub">Réinitialise les données locales de cet appareil et recharge les dossiers de démonstration (ALR CONSEIL · MBC · BY HOLDING).</div>'
+        +'<div class="set-line"><div><div class="set-l">Réinitialiser l\'application</div><div class="set-d">Action irréversible sur cet appareil.</div></div><div class="set-ctl"><button class="set-btn danger" onclick="setReset()">Réinitialiser</button></div></div></div>';
+    }
+    return '';
+  }
+  window.setOpen=function(k){ window.__setView=k||null; if(typeof render==='function') render(); };
+  window.setReset=function(){
+    var go=function(){
+      try{
+        db.dossiersData=db.dossiersData||{};
+        if(typeof construireAMA==='function') db.dossiersData['d-ama']=construireAMA();
+        if(typeof construireMBC==='function') db.dossiersData['d-mbc']=construireMBC();
+        if(typeof construireSCI42==='function') db.dossiersData['d-sci42']=construireSCI42();
+        db.cabinet=db.cabinet||{};
+        db.cabinet.dossiers=[{id:'d-ama',nom:'ALR CONSEIL',forme:'SAS',favori:true},{id:'d-mbc',nom:'MBC',forme:'SAS'},{id:'d-sci42',nom:'BY HOLDING',forme:'SAS'}];
+        db.cabinet.total=3;
+        if(typeof chargerDossier==='function') chargerDossier('d-ama');
+        if(typeof save==='function') save();
+      }catch(e){}
+      window.__setView=null; if(typeof toast==='function') toast('Application réinitialisée (dossiers de démonstration).'); if(typeof render==='function') render();
+    };
+    if(typeof yadaConfirm==='function') yadaConfirm('Réinitialiser l\'application et recharger les dossiers de démonstration ?', go, {danger:true});
+    else if(confirm('Réinitialiser ?')) go();
+  };
+  window.setFermer=function(){ window.__setView=null; try{ current='compta'; }catch(e){} if(typeof render==='function') render(); };
+  window.pageParametrage=function(){
+    var k=window.__setView;
+    var head='<div id="yada-set"><div class="set-wrap"><div class="set-head">'
+      +(k?'<button class="set-back" onclick="setOpen(null)" title="Retour aux réglages" aria-label="Retour">←</button>':'')
+      +'<div class="set-title">'+(k?TITRES[k]:'Paramétrage')+'</div>'
+      +'<button class="set-close" onclick="setFermer()" title="Revenir à la Consultation" aria-label="Fermer">✕</button>'
+      +'</div>';
+    if(!k){
+      var grid='<div class="set-grid">'+TILES.map(function(t){
+        return '<button class="set-tile" onclick="setOpen(\''+t[0]+'\')"><span class="set-ic"><svg viewBox="0 0 24 24">'+IC[t[0]]+'</svg></span><span class="set-tt">'+t[1]+'</span><span class="set-ts">'+t[2]+'</span></button>';
+      }).join('')+'</div>';
+      return head+grid+'</div></div>';
+    }
+    return head+'<div class="set-body">'+panel(k)+'</div></div></div>';
+  };
+  try{ var st=document.createElement('style'); st.id='yada-set-mod'; st.textContent=
+     '.mod-wrap:has(#yada-set){padding:0!important;max-width:none!important}'
+    +'#yada-set{font-family:Tahoma,"Segoe UI",Geneva,Verdana,sans-serif;color:#fff;background:#000;min-height:100dvh;display:flex;flex-direction:column}'
+    +'#yada-set .set-wrap{flex:1;display:flex;flex-direction:column;min-height:0;width:100%;max-width:1000px;margin:0 auto;padding:0 18px}'
+    +'#yada-set .set-head{display:flex;align-items:center;gap:12px;padding:14px 4px 12px;border-bottom:1px solid #1b1b1b}'
+    +'#yada-set .set-title{font-size:17px;font-weight:700;color:#fff}'
+    +'#yada-set .set-back{width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:#000;color:#fff;border:1.5px solid #fff;border-radius:9px;cursor:pointer;font:inherit;font-size:16px}'
+    +'#yada-set .set-back:hover{background:#fff;color:#000}'
+    +'#yada-set .set-close{margin-left:auto;width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:#000;color:#fff;border:1.5px solid #fff;border-radius:9px;cursor:pointer;font:inherit;font-size:15px;line-height:1}'
+    +'#yada-set .set-close:hover{background:#fff;color:#000}'
+    +'#yada-set .set-grid{padding:22px 0 26px;display:grid;grid-template-columns:repeat(3,1fr);gap:14px}'
+    +'#yada-set .set-tile{text-align:left;border:1px solid #2a2a2a;border-radius:12px;background:#000;color:#fff;padding:18px 16px;display:flex;flex-direction:column;gap:9px;min-height:118px;cursor:pointer;font:inherit;transition:border-color .16s,transform .13s}'
+    +'#yada-set .set-tile:hover{border-color:#fff;transform:translateY(-2px)}'
+    +'#yada-set .set-ic{width:34px;height:34px;border:1px solid #fff;border-radius:9px;display:flex;align-items:center;justify-content:center}'
+    +'#yada-set .set-ic svg{width:18px;height:18px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}'
+    +'#yada-set .set-tt{font-size:13.5px;font-weight:700}'
+    +'#yada-set .set-ts{font-size:11.5px;color:#8a8a8a;line-height:1.4}'
+    +'#yada-set .set-body{flex:1;overflow:auto;padding:18px 0 26px}'
+    +'#yada-set .set-block{border:1px solid #333;border-radius:10px;background:#000;padding:6px 16px 10px}'
+    +'#yada-set .set-sub{color:#bbb;font-size:12.5px;padding:12px 0 6px;line-height:1.5}'
+    +'#yada-set .set-line{display:flex;align-items:center;gap:14px;padding:14px 0;border-top:1px solid #161616}'
+    +'#yada-set .set-line:first-child{border-top:0}'
+    +'#yada-set .set-l{font-size:13px}#yada-set .set-d{font-size:11.5px;color:#8a8a8a;margin-top:2px}'
+    +'#yada-set .set-ctl{margin-left:auto;display:flex;gap:8px;align-items:center}'
+    +'#yada-set .set-btn{background:#000;color:#fff;border:1px solid #fff;border-radius:8px;padding:8px 14px;cursor:pointer;font:inherit;font-size:12.5px}'
+    +'#yada-set .set-btn:hover{background:#fff;color:#000}'
+    +'#yada-set .set-btn.solid{background:#fff;color:#000;font-weight:700}'
+    +'#yada-set .set-btn.solid:hover{background:#ddd}'
+    +'#yada-set .set-btn.danger{border-color:#fff}'
+    +'#yada-set .set-sel{background:#000!important;color:#fff!important;border:1px solid #fff!important;border-radius:8px;padding:8px 12px;font:inherit;font-size:12.5px;cursor:pointer}'
+    /* neutralisation B&W du contenu embarqué (facturation) */
+    +'#yada-set .set-embed .card{background:#000!important;border:1px solid #333!important;box-shadow:none!important;color:#fff!important}'
+    +'#yada-set .set-embed h2,#yada-set .set-embed h3,#yada-set .set-embed label,#yada-set .set-embed .sub,#yada-set .set-embed .hint{color:#fff!important}'
+    +'#yada-set .set-embed .sub,#yada-set .set-embed .hint{color:#bbb!important}'
+    +'#yada-set .set-embed input,#yada-set .set-embed select,#yada-set .set-embed textarea{background:#000!important;color:#fff!important;border:1px solid #444!important}'
+    +'#yada-set .set-embed .btn,#yada-set .set-embed .btn-pri,#yada-set .set-embed .btn-gold,#yada-set .set-embed .btn-ghost{background:#000!important;color:#fff!important;border:1px solid #fff!important;filter:none!important;background-image:none!important}'
+    +'#yada-set .set-embed .btn:hover,#yada-set .set-embed .btn-pri:hover,#yada-set .set-embed .btn-gold:hover{background:#fff!important;color:#000!important}'
+    +'@media(max-width:760px){#yada-set .set-grid{grid-template-columns:1fr}}';
     document.head.appendChild(st);
   }catch(e){}
 })();
