@@ -11095,7 +11095,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v586';
+    b.textContent='YADA · v587';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -27762,8 +27762,8 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
    service worker → on atterrit directement sur la nouvelle version (Accueil).
    Drapeau localStorage 'yada-fresh-549' → exécuté une seule fois. 100% additif. */
 (function(){
-  var CUR='yada-v181';           /* = CACHE courant du sw.js */
-  var FLAG='yada-fresh-586';
+  var CUR='yada-v182';           /* = CACHE courant du sw.js */
+  var FLAG='yada-fresh-587';
   try{ if(localStorage.getItem(FLAG)) return; }catch(e){}
   try{ localStorage.setItem(FLAG,'1'); }catch(e){}
   try{
@@ -30354,6 +30354,187 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     +'#yada-bq .bq-mi.on .bq-mn{color:#000!important}#yada-bq .bq-mi.on .bq-c{color:#333!important}'
     +'#yada-bq .bq-acc.on,#yada-bq .bq-acc.on .bq-al{color:#000!important}#yada-bq .bq-acc.on .bq-al{color:#333!important}'
     +'@media(max-width:760px){#yada-bq .bq-body{grid-template-columns:1fr}#yada-bq .bq-rail{border-right:0;border-bottom:1px solid #1b1b1b}}';
+    document.head.appendChild(st);
+  }catch(e){}
+})();
+</script>
+<script id="yada-addon-mod-rappro">
+/* ═══ RECONSTRUCTION — MODULE 12 : RAPPROCHEMENT BANCAIRE (maquette C : cockpit 3 colonnes, noir & blanc) ═══
+   Haut : Périodes | Comptes & relevés | panneau à onglets (Relevé / Justificatif / Totaux).
+   Bas : grille des écritures du mois à rapprocher (cocher). Réutilise comptesBanque / moisExoListe /
+   releveDe / rapStats / rapCreerReleve / rapSetMois / rapSetCompte / rapSetOnglet / rapToggle /
+   rapToutRapprocher / rapToutDerapprocher / rapMajSolde / rapMajComment / rapAddJustif / rapDelJustif /
+   rapVerrouiller / rapSupprimerReleve / rapImprimer. Croix ✕ = Consultation. 100% additif, B&W. */
+(function(){
+  window.YADA_OK=(window.YADA_OK||[]);
+  if(window.YADA_OK.indexOf('rappro')<0) window.YADA_OK.push('rappro');
+  window.YADA_LBL=window.YADA_LBL||{}; window.YADA_LBL.rappro='Rapprochement bancaire';
+  function e2(x){ return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+  function E(x){ return (typeof eur==='function')?eur(x):((+x||0).toFixed(2)+' €'); }
+  function FD(x){ return (typeof frDate==='function')?frDate(x):x; }
+  function comptes512(){ return (typeof comptesBanque==='function')?comptesBanque():[]; }
+  function moisL(){ return (typeof moisExoListe==='function')?moisExoListe():[]; }
+  function moisLbl(m){ return (typeof moisLabel==='function')?moisLabel(m):m; }
+  function ensureSel(){
+    var mois=moisL(), comptes=comptes512();
+    if(typeof rapMois==='undefined'||!rapMois){ try{rapMois=mois[mois.length-1]||ym(todayStr());}catch(e){} }
+    if((typeof rapCompte==='undefined'||!rapCompte)&&comptes.length){ try{rapCompte=comptes[0].code;}catch(e){} }
+    if(typeof rapOnglet==='undefined'||!rapOnglet){ try{rapOnglet='releve';}catch(e){} }
+  }
+  function etatMois(m){
+    var rel=(typeof releveDe==='function')?releveDe(rapCompte,m):null; if(!rel) return '';
+    if(rel.verrouille) return '🔒';
+    var st=(typeof rapStats==='function')?rapStats(rel):null;
+    return (st && Math.abs(st.ecartAJustifier)<0.005)?'✓':'○';
+  }
+  function chk(on,eid,lock){ return '<span class="rp-chk'+(on?' on':'')+'"'+(lock?'':(' onclick="rapToggle(\''+e2(eid)+'\')"'))+'></span>'; }
+  function panneau(rel,st){
+    if(!rel){
+      var dj=(typeof dernierJourMois==='function')?dernierJourMois(rapMois):28;
+      var sp=(typeof soldeComptable512==='function')?soldeComptable512(rapCompte,rapMois):0;
+      return '<div class="rp-create"><div class="rp-ct">Créer le relevé de rapprochement</div>'
+        +'<div class="rp-cf"><label>Jour de fin du relevé</label><input type="date" id="rb-datefin" class="rp-in" value="'+e2(rapMois+'-'+String(dj).padStart(2,'0'))+'"></div>'
+        +'<div class="rp-cf"><label>Solde du relevé bancaire (− si débiteur)</label><input id="rb-solde" class="rp-in r num" value="'+sp.toFixed(2)+'" style="text-align:right"></div>'
+        +'<button class="rp-btn rp-pri" onclick="rapCreerReleve()">Créer le relevé</button></div>';
+    }
+    var lock=rel.verrouille;
+    if(rapOnglet==='justif'){
+      var jr=(rel.justifs||[]).map(function(j,i){ return '<tr><td class="num">'+FD(j.date)+'</td><td>'+e2(j.lib)+'</td><td class="r num">'+(j.debit?E(j.debit):'—')+'</td><td class="r num">'+(j.credit?E(j.credit):'—')+'</td><td class="r"><button class="rp-del" onclick="rapDelJustif('+i+')">×</button></td></tr>'; }).join('')||'<tr><td colspan="5" class="rp-empty">Aucun écart justifié</td></tr>';
+      return '<div class="rp-kv"><div class="k">Total des écarts justifiés</div><div class="v num">'+E(st.justifs)+'</div>'
+        +'<div class="k">Écart non justifié</div><div class="v num">'+E(st.ecartAJustifier)+'</div></div>'
+        +(lock?'':'<div class="rp-jadd"><div class="rp-cf"><label>Date</label><input type="date" id="rb-jdate" class="rp-in" value="'+e2(rel.dateFin)+'"></div>'
+          +'<div class="rp-cf" style="flex:1"><label>Libellé</label><input id="rb-jlib" class="rp-in" placeholder="Motif de l\'écart"></div>'
+          +'<div class="rp-cf" style="width:100px"><label>Débit</label><input id="rb-jdeb" class="rp-in r num" value="0" style="text-align:right"></div>'
+          +'<div class="rp-cf" style="width:100px"><label>Crédit</label><input id="rb-jcre" class="rp-in r num" value="0" style="text-align:right"></div>'
+          +'<button class="rp-btn" onclick="rapAddJustif()">+ Justifier</button></div>')
+        +'<table class="rp-t rp-jt"><thead><tr><th>Date</th><th>Libellé</th><th class="r">Débit</th><th class="r">Crédit</th><th></th></tr></thead><tbody>'+jr+'</tbody></table>';
+    }
+    if(rapOnglet==='totaux'){
+      return '<div class="rp-kv">'
+        +'<div class="k">Solde comptable (512)</div><div class="v num">'+E(st.soldeCompta)+'</div>'
+        +'<div class="k">Solde du relevé bancaire</div><div class="v num">'+E(st.soldeBancaire)+'</div>'
+        +'<div class="k">Écart de rapprochement</div><div class="v num">'+E(st.ecart)+'</div>'
+        +'<div class="k">Total des lignes non rapprochées</div><div class="v num">'+E(st.nonRappro)+'</div>'
+        +'<div class="k">Écart à justifier</div><div class="v num">'+E(st.ecartAJustifier)+'</div></div>';
+    }
+    /* Relevé */
+    return '<div class="rp-kv">'
+      +'<div class="k">Solde comptable (512)</div><div class="v num">'+E(st.soldeCompta)+'</div>'
+      +'<div class="k">Solde du relevé bancaire</div><div class="v"><input id="rb-solde-edit" class="rp-in r num" value="'+rel.solde.toFixed(2)+'" onchange="rapMajSolde(this.value)"'+(lock?' disabled':'')+' style="text-align:right;max-width:160px"></div>'
+      +'<div class="k">Écart de rapprochement</div><div class="v num">'+E(st.ecart)+'</div>'
+      +'<div class="k">Écart à justifier</div><div class="v num">'+E(st.ecartAJustifier)+'</div>'
+      +'<div class="k">Commentaire</div><div class="v"><textarea id="rb-comment" class="rp-in" rows="2" onchange="rapMajComment(this.value)"'+(lock?' disabled':'')+'>'+e2(rel.commentaire||'')+'</textarea></div></div>'
+      +'<div class="rp-relact"><button class="rp-btn" onclick="rapImprimer()">🖨 Justificatif</button>'
+      +(lock?'<span class="rp-ok">🔒 Verrouillé</span>':'<button class="rp-btn" onclick="rapVerrouiller()">Verrouiller</button>')
+      +'<button class="rp-btn" onclick="rapSupprimerReleve()">Supprimer le relevé</button></div>';
+  }
+  window.pageRappro=function(){
+    ensureSel();
+    var comptes=comptes512(); var mois=moisL();
+    var exo=(typeof exoYear==='function')?exoYear():'';
+    var rel=(typeof releveDe==='function')?releveDe(rapCompte,rapMois):null;
+    var st=rel&&(typeof rapStats==='function')?rapStats(rel):null;
+    var perCol=mois.map(function(m){ var et=etatMois(m);
+      return '<button class="rp-it'+(m===rapMois?' on':'')+'" onclick="rapSetMois(\''+m+'\')"><span class="rp-mn">'+e2(m.slice(5)+'/'+m.slice(2,4))+'</span>'+(et?'<span class="rp-et">'+et+'</span>':'')+'</button>';
+    }).join('');
+    var jrCol=comptes.length?comptes.map(function(c){ var r=(typeof releveDe==='function')?releveDe(c.code,rapMois):null; var sel=c9(c.code)===c9(rapCompte);
+      return '<button class="rp-cpt'+(sel?' on':'')+'" onclick="rapSetCompte(\''+e2(c.code)+'\')">▸ '+e2(c9(c.code))+' · '+e2(c.lib)+'</button>'
+        +(r?'<button class="rp-rel'+(sel?' on':'')+'" onclick="rapSetCompte(\''+e2(c.code)+'\')">Relevé BQ au '+FD(r.dateFin)+(r.verrouille?' 🔒':((typeof rapStats==='function'&&Math.abs((rapStats(r)||{ecartAJustifier:1}).ecartAJustifier)<0.005)?' ✓':''))+'</button>':'');
+    }).join(''):'<div class="rp-empty" style="padding:8px">Aucun compte 512 — créez un journal de banque.</div>';
+    var tabs=['releve','justif','totaux'], tabLbl={releve:'Relevé',justif:'Justificatif',totaux:'Totaux'};
+    var tabsHTML=rel?('<div class="rp-tabs">'+tabs.map(function(t){return '<button class="rp-tab'+(rapOnglet===t?' on':'')+'" onclick="rapSetOnglet(\''+t+'\')">'+tabLbl[t]+'</button>';}).join('')+'</div>'):'';
+    /* grille bas */
+    var grille='';
+    if(rel && st){
+      var rapSet={}; (rel.rap||[]).forEach(function(id){rapSet[id]=1;});
+      var nbRap=st.lignes.filter(function(l){return rapSet[l.ecritureId];}).length;
+      var rows=st.lignes.map(function(l){ var on=!!rapSet[l.ecritureId];
+        return '<tr class="'+(on?'rp-rapp':'')+'"><td class="num">'+FD(l.date)+'</td><td class="num">'+e2(c9(l.compte))+'</td><td class="num">'+e2(l.piece)+'</td><td>'+e2(l.lib)+'</td>'
+          +'<td class="r num">'+(l.debit?E(l.debit):'—')+'</td><td class="r num">'+(l.credit?E(l.credit):'—')+'</td>'
+          +'<td>'+chk(on,l.ecritureId,rel.verrouille)+'</td></tr>';
+      }).join('')||'<tr><td colspan="7" class="rp-empty">Aucune écriture bancaire sur ce mois.</td></tr>';
+      var soldeOk=Math.abs(st.ecartAJustifier)<0.005;
+      grille='<div class="rp-gbar"><span class="rp-gc">✓ '+nbRap+' rapprochée(s) · '+(st.lignes.length-nbRap)+' à rapprocher</span>'
+        +'<span class="rp-sp"></span>'
+        +(rel.verrouille?'':'<button class="rp-btn" onclick="rapToutRapprocher()">Tout rapprocher</button><button class="rp-btn" onclick="rapToutDerapprocher()">Tout dérapprocher</button>')
+        +'<span class="rp-ecart">'+(soldeOk?'✓ Rapproché — soldé':('● Écart restant : '+E(st.ecartAJustifier)))+'</span></div>'
+        +'<div class="rp-gwrap"><table class="rp-t"><thead><tr><th>Date</th><th>Cpte</th><th>Pièce</th><th>Libellé</th><th class="r">Débit</th><th class="r">Crédit</th><th>Rap.</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+    } else {
+      grille='<div class="rp-empty" style="padding:30px;text-align:center">Créez le relevé de rapprochement pour afficher les écritures du mois.</div>';
+    }
+    return '<div id="yada-rp"><div class="rp-wrap">'
+      +'<div class="rp-head"><div class="rp-title">Rapprochement bancaire</div>'
+        +'<span class="rp-exo">Exercice '+e2(exo)+'</span>'
+        +'<button class="rp-close" onclick="rpFermer()" title="Revenir à la Consultation" aria-label="Fermer">✕</button></div>'
+      +'<div class="rp-top">'
+        +'<div class="rp-per"><div class="rp-colh">Périodes</div>'+perCol+'</div>'
+        +'<div class="rp-jr"><div class="rp-colh">Comptes & relevés</div>'+jrCol+'</div>'
+        +'<div class="rp-panel">'+tabsHTML+panneau(rel,st)+'</div>'
+      +'</div>'
+      +'<div class="rp-grid">'+grille+'</div>'
+      +'</div></div>';
+  };
+  window.rpFermer=function(){ try{current='compta';}catch(e){} if(typeof render==='function')render(); };
+  try{ var st=document.createElement('style'); st.id='yada-rp-mod'; st.textContent=
+     '.mod-wrap:has(#yada-rp),.fullbleed:has(#yada-rp){padding:0!important;max-width:none!important}'
+    +'#yada-rp{font-family:Tahoma,"Segoe UI",Geneva,Verdana,sans-serif;color:#fff;background:#000;min-height:100dvh;display:flex;flex-direction:column}'
+    +'#yada-rp .rp-wrap{flex:1;display:flex;flex-direction:column;min-height:0;width:100%;max-width:1240px;margin:0 auto;padding:0 18px 18px}'
+    +'#yada-rp .rp-head{display:flex;align-items:center;gap:12px;padding:14px 4px 12px;border-bottom:1px solid #1b1b1b}'
+    +'#yada-rp .rp-title{font-size:17px;font-weight:700}'
+    +'#yada-rp .rp-exo{margin-left:auto;color:#8a8a8a!important;font-size:12px}'
+    +'#yada-rp .rp-close{width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:#000;color:#fff!important;border:1.5px solid #fff;border-radius:9px;cursor:pointer;font:inherit;font-size:15px}'
+    +'#yada-rp .rp-close:hover{background:#fff;color:#000!important}'
+    +'#yada-rp .rp-top{display:grid;grid-template-columns:130px 250px 1fr;border-bottom:1px solid #1b1b1b;min-height:200px}'
+    +'#yada-rp .rp-per,#yada-rp .rp-jr{border-right:1px solid #1b1b1b;padding:10px 8px;display:flex;flex-direction:column;gap:4px;overflow:auto}'
+    +'#yada-rp .rp-colh{color:#8a8a8a!important;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;padding:2px 4px;margin-bottom:2px}'
+    +'#yada-rp .rp-it{display:flex;align-items:center;gap:6px;padding:7px 9px;border:1px solid #171717;border-radius:7px;background:#000;color:#c8c8c8!important;cursor:pointer;font:inherit;font-size:11.5px;text-align:left}'
+    +'#yada-rp .rp-it:hover{border-color:#3a3a3a;color:#fff!important}'
+    +'#yada-rp .rp-it.on{background:#fff;color:#000!important;font-weight:700;border-color:#fff}'
+    +'#yada-rp .rp-mn{flex:1}#yada-rp .rp-et{font-size:11px;color:#8a8a8a}#yada-rp .rp-it.on .rp-et{color:#333}'
+    +'#yada-rp .rp-cpt{text-align:left;padding:7px 9px;border:1px solid #171717;border-radius:7px;background:#000;color:#c8c8c8!important;cursor:pointer;font:inherit;font-size:11.5px;font-weight:700}'
+    +'#yada-rp .rp-cpt:hover{border-color:#3a3a3a;color:#fff!important}#yada-rp .rp-cpt.on{background:#fff;color:#000!important;border-color:#fff}'
+    +'#yada-rp .rp-rel{text-align:left;padding:6px 9px 6px 18px;border:1px solid #141414;border-radius:7px;background:#000;color:#a8a8a8!important;cursor:pointer;font:inherit;font-size:11px}'
+    +'#yada-rp .rp-rel:hover{border-color:#3a3a3a;color:#fff!important}#yada-rp .rp-rel.on{background:#f0f0f0;color:#000!important;border-color:#fff}'
+    +'#yada-rp .rp-panel{padding:12px 16px;overflow:auto;min-width:0}'
+    +'#yada-rp .rp-tabs{display:flex;gap:4px;margin-bottom:12px}'
+    +'#yada-rp .rp-tab{padding:7px 13px;border:1px solid #2a2a2a;border-radius:8px;background:#000;color:#bbb!important;cursor:pointer;font:inherit;font-size:11.5px}'
+    +'#yada-rp .rp-tab:hover{border-color:#3a3a3a;color:#fff!important}'
+    +'#yada-rp .rp-tab.on{background:#fff;color:#000!important;font-weight:700;border-color:#fff}'
+    +'#yada-rp .rp-kv{display:grid;grid-template-columns:220px 1fr;gap:8px 16px;font-size:12.5px;align-items:center}'
+    +'#yada-rp .rp-kv .k{color:#8a8a8a!important}#yada-rp .rp-kv .v{color:#fff}'
+    +'#yada-rp .rp-in{background:#000!important;color:#fff!important;border:1px solid #444!important;border-radius:7px;padding:6px 9px;font:inherit;font-size:12px;outline:none;width:100%;box-sizing:border-box}'
+    +'#yada-rp .rp-in:focus{border-color:#fff!important}#yada-rp .rp-in::placeholder{color:#888}'
+    +'#yada-rp .rp-relact{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}'
+    +'#yada-rp .rp-jadd{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin:12px 0}'
+    +'#yada-rp .rp-cf{display:flex;flex-direction:column;gap:4px}#yada-rp .rp-cf label{font-size:10.5px;color:#bbb!important}'
+    +'#yada-rp .rp-create{display:flex;flex-direction:column;gap:12px;max-width:520px}'
+    +'#yada-rp .rp-ct{font-size:14px;font-weight:700}'
+    +'#yada-rp .rp-btn{background:#000;color:#fff!important;border:1px solid #fff;border-radius:8px;padding:8px 13px;cursor:pointer;font:inherit;font-size:12px;white-space:nowrap}'
+    +'#yada-rp .rp-btn:hover{background:#fff;color:#000!important}'
+    +'#yada-rp .rp-btn.rp-pri{background:#fff;color:#000!important;font-weight:700}#yada-rp .rp-btn.rp-pri:hover{background:#ddd}'
+    +'#yada-rp .rp-del{background:#000;color:#fff!important;border:1px solid #555;border-radius:6px;width:24px;height:24px;cursor:pointer}'
+    +'#yada-rp .rp-del:hover{background:#fff;color:#000!important}'
+    +'#yada-rp .rp-ok{font-size:11.5px;color:#c8c8c8!important;align-self:center}'
+    +'#yada-rp .rp-grid{flex:1;min-height:0;padding:10px 4px 0;display:flex;flex-direction:column}'
+    +'#yada-rp .rp-gbar{display:flex;align-items:center;gap:8px;padding:6px 6px 10px;flex-wrap:wrap}'
+    +'#yada-rp .rp-gc{font-size:11.5px;color:#c8c8c8!important}#yada-rp .rp-sp{flex:1}'
+    +'#yada-rp .rp-ecart{font-size:11.5px;color:#c8c8c8!important;border:1px solid #555;border-radius:999px;padding:2px 10px}'
+    +'#yada-rp .rp-gwrap{overflow:auto;flex:1;min-height:0}'
+    +'#yada-rp .rp-t{width:100%;border-collapse:collapse;font-size:12px}'
+    +'#yada-rp .rp-t th{text-align:left;color:#8a8a8a!important;background:#000!important;font-weight:400;padding:8px 10px;border-bottom:1px solid #222!important;white-space:nowrap;position:sticky;top:0}'
+    +'#yada-rp .rp-t td{padding:8px 10px;border-bottom:1px solid #131313}'
+    +'#yada-rp .rp-t tr.rp-rapp td{color:#7a7a7a}'
+    +'#yada-rp .rp-jt th{position:static}'
+    +'#yada-rp .rp-chk{display:inline-block;width:16px;height:16px;border:1.5px solid #888;border-radius:4px;cursor:pointer;vertical-align:middle;position:relative}'
+    +'#yada-rp .rp-chk:hover{border-color:#fff}'
+    +'#yada-rp .rp-chk.on{background:#fff;border-color:#fff}'
+    +'#yada-rp .rp-chk.on::after{content:"✓";color:#000;font-size:12px;position:absolute;left:2px;top:-2px}'
+    +'#yada-rp .rp-empty{color:#8a8a8a!important;text-align:center}'
+    +'#yada-rp .r{text-align:right}#yada-rp .num{font-variant-numeric:tabular-nums}'
+    +'#yada-rp a{color:#fff!important}'
+    /* garde-fou noir & blanc : items sélectionnés en noir sur blanc */
+    +'#yada-rp .rp-it.on .rp-mn,#yada-rp .rp-it.on .rp-et{color:#000!important}'
+    +'@media(max-width:820px){#yada-rp .rp-top{grid-template-columns:1fr}#yada-rp .rp-per,#yada-rp .rp-jr{border-right:0;border-bottom:1px solid #1b1b1b}}';
     document.head.appendChild(st);
   }catch(e){}
 })();
