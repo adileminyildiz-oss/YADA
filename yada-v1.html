@@ -11095,7 +11095,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v583';
+    b.textContent='YADA · v584';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -27691,8 +27691,8 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
    service worker → on atterrit directement sur la nouvelle version (Accueil).
    Drapeau localStorage 'yada-fresh-549' → exécuté une seule fois. 100% additif. */
 (function(){
-  var CUR='yada-v178';           /* = CACHE courant du sw.js */
-  var FLAG='yada-fresh-583';
+  var CUR='yada-v179';           /* = CACHE courant du sw.js */
+  var FLAG='yada-fresh-584';
   try{ if(localStorage.getItem(FLAG)) return; }catch(e){}
   try{ localStorage.setItem(FLAG,'1'); }catch(e){}
   try{
@@ -29809,6 +29809,164 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     +'#yada-ed .ed-preview .doc-page{width:794px!important;min-height:1123px!important;max-width:none!important;margin:0 auto;box-sizing:border-box}'
     +'#yada-ed a{color:#fff!important}'
     +'@media(max-width:760px){#yada-ed .ed-body{grid-template-columns:1fr}#yada-ed .ed-rail{border-right:0;border-bottom:1px solid #1b1b1b}}';
+    document.head.appendChild(st);
+  }catch(e){}
+})();
+</script>
+<script id="yada-addon-mod-tva">
+/* ═══ RECONSTRUCTION — MODULE 9 : MODULE TVA (maquette A : deux volets, noir & blanc) ═══
+   Volet gauche : régime (CA3/CA12/Franchise) + liste des mois (état : à déclarer / déclaré ✓ /
+   Néant). Volet droit : tableau CA3 du mois — chaque libellé porte le COMPTE COMPTABLE assimilé
+   (collectée 4457x, déductible 4456x, à décaisser 44551, crédit 44567) + Générer l'OD TVA /
+   Déclarer / Imprimer + « Détail par compte de TVA mouvementé ». Réutilise tvaDetailMois /
+   tvaDuMois / tvaGenererOD / tvaSupprimerOD / tvaDeclarer / tvaValiderNeant / tvaCompteVente /
+   tvaCompteAchat. Croix ✕ = Consultation. 100% additif, B&W. */
+(function(){
+  window.YADA_OK=(window.YADA_OK||[]);
+  if(window.YADA_OK.indexOf('tva')<0) window.YADA_OK.push('tva');
+  window.YADA_LBL=window.YADA_LBL||{}; window.YADA_LBL.tva='Module TVA';
+  function e2(x){ return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+  function E(x){ return (typeof eur==='function')?eur(x):((+x||0).toFixed(2)+' €'); }
+  function moisList(){ return (typeof moisExoListe==='function')?moisExoListe():[]; }
+  function accV(t){ try{ var c=tvaCompteVente(t); return c?c9(c):''; }catch(e){ return ''; } }
+  function accA(t){ try{ var c=tvaCompteAchat(t); return c?c9(c):''; }catch(e){ return ''; } }
+  function libC(code){ var CO=(typeof COMPTES==='object')?COMPTES:{}; return CO[code]||CO[String(code).replace(/0+$/,'')]||''; }
+  function accTag(code,lib){ if(!code) return ''; return '<span class="tv-acc"><span class="num">'+e2(code)+'</span>'+(lib?(' · '+e2(lib)):'')+'</span>'; }
+  function comptesMois(m){ /* comptes 445x mouvementés du mois (hors banque) */
+    var acc={}; (db.ecritures||[]).forEach(function(e){ if((typeof ym==='function'?ym(e.date):String(e.date).slice(0,7))!==m||e.journal==='BQ') return;
+      (e.lignes||[]).forEach(function(l){ var c=c9(l.compte); if(c.indexOf('445')===0){ var a=acc[c]||(acc[c]={d:0,cr:0}); a.d+=(+l.debit||0); a.cr+=(+l.credit||0); } }); });
+    return Object.keys(acc).sort().map(function(c){ return {code:c, lib:libC(c), d:acc[c].d, cr:acc[c].cr}; });
+  }
+  function curMois(){ var mois=moisList(); var m=window.tvaMoisSel; if(!m||mois.indexOf(m)<0){ m=mois.find(function(x){return !tvaEstNeant(x);})||mois[0]; window.tvaMoisSel=m; } return m; }
+  function railMois(m){
+    return moisList().map(function(x){
+      var est=(typeof tvaEstNeant==='function')&&tvaEstNeant(x);
+      var neantVal=db.societe.tvaNeant&&db.societe.tvaNeant[x];
+      var decl=db.societe.tvaDeclaree&&db.societe.tvaDeclaree[x];
+      var od=(typeof odTvaDejaPostee==='function')&&odTvaDejaPostee(x);
+      var st= decl?'déclaré ✓':(neantVal?'Néant ✓':(est?'Néant':(od?'OD générée':'à déclarer')));
+      return '<button class="tv-mi'+(x===m?' on':'')+'" onclick="tvSetMois(\''+x+'\')"><span class="tv-mn">'+e2(moisLabel(x))+'</span><span class="tv-st">'+st+'</span></button>';
+    }).join('');
+  }
+  function ca3Table(m,d){
+    var rows='';
+    rows+='<tr class="sec"><td colspan="3">TVA brute collectée</td></tr>';
+    var anyC=false;
+    [20,10,5.5].forEach(function(t){ var b=d.collectee[t]; if(!b||b.base<=0) return; anyC=true;
+      rows+='<tr><td>Ventes '+t+' % '+accTag(accV(t),libC(accV(t)))+'</td><td class="r num">'+E(b.base)+'</td><td class="r num">'+E(b.tva)+'</td></tr>'; });
+    if(d.autreCol) { anyC=true; rows+='<tr><td>Autres ventes taxables (FEC / écritures) '+accTag('4457x','collectée')+'</td><td class="r num">—</td><td class="r num">'+E(d.autreCol)+'</td></tr>'; }
+    if(!anyC) rows+='<tr><td class="tv-empty" colspan="3">Aucune vente taxable</td></tr>';
+    rows+='<tr class="tot"><td>Total TVA collectée (ligne 16) '+accTag('4457x','')+'</td><td class="r num">'+E(d.baseCol)+'</td><td class="r num">'+E(d.col)+'</td></tr>';
+    rows+='<tr class="sec"><td colspan="3">TVA déductible</td></tr>';
+    var anyD=false;
+    [20,10,5.5].forEach(function(t){ var b=d.deductible[t]; if(!b||b.base<=0) return; anyD=true;
+      rows+='<tr><td>Achats '+t+' % '+accTag(accA(t),libC(accA(t)))+'</td><td class="r num">'+E(b.base)+'</td><td class="r num">'+E(b.tva)+'</td></tr>'; });
+    if(d.autreDed){ anyD=true; rows+='<tr><td>Autres achats déductibles (FEC / écritures) '+accTag('4456x','déductible')+'</td><td class="r num">—</td><td class="r num">'+E(d.autreDed)+'</td></tr>'; }
+    if(d.reportCredit>0) rows+='<tr><td>Ligne 22 — Report du crédit du mois précédent '+accTag('445670000','Crédit de TVA à reporter')+'</td><td class="r num">—</td><td class="r num">'+E(d.reportCredit)+'</td></tr>';
+    if(!anyD && !(d.reportCredit>0)) rows+='<tr><td class="tv-empty" colspan="3">Aucun achat déductible</td></tr>';
+    rows+='<tr class="tot"><td>Total TVA déductible (ligne 23) '+accTag('4456x','')+'</td><td class="r num">'+E(d.baseDed)+'</td><td class="r num">'+E(r2(d.ded+d.reportCredit))+'</td></tr>';
+    var netLbl=d.aDecaisser?('Ligne 28 — TVA nette à payer '+accTag('445510000','TVA à décaisser')):('Ligne 27 — Crédit de TVA à reporter '+accTag('445670000','Crédit de TVA à reporter'));
+    rows+='<tr class="net"><td colspan="2">'+netLbl+'</td><td class="r num">'+E(d.aDecaisser||d.credit)+'</td></tr>';
+    return '<table class="tv-ca3"><tbody>'+rows+'</tbody></table>';
+  }
+  function detailComptes(m){
+    var L=comptesMois(m); if(!L.length) return '';
+    var rows=L.map(function(c){ return '<tr><td class="num">'+e2(c.code)+'</td><td>'+e2(c.lib)+'</td><td class="r num">'+(c.d?E(c.d):'—')+'</td><td class="r num">'+(c.cr?E(c.cr):'—')+'</td></tr>'; }).join('');
+    return '<div class="tv-dh">Détail par compte de TVA mouvementé</div>'
+      +'<table class="tv-det"><thead><tr><th>Compte</th><th>Libellé</th><th class="r">Débit</th><th class="r">Crédit</th></tr></thead><tbody>'+rows+'</tbody></table>';
+  }
+  window.pageTVA=function(){
+    if(!db.societe.tvaRegime) db.societe.tvaRegime='CA3';
+    var regime=db.societe.tvaRegime;
+    var seg='<div class="tv-seg">'
+      +'<button class="'+(regime==='CA3'?'on':'')+'" onclick="tvaSetRegime(\'CA3\')">CA3</button>'
+      +'<button class="'+(regime==='CA12'?'on':'')+'" onclick="tvaSetRegime(\'CA12\')">CA12</button>'
+      +'<button class="'+(regime==='franchise'?'on':'')+'" onclick="tvaSetRegime(\'franchise\')">Franchise</button></div>';
+    var exo=(typeof exoYear==='function')?exoYear():'';
+    var right, railInner;
+    if(regime==='franchise'){
+      railInner='<div class="tv-note">Franchise en base — aucune déclaration périodique.</div>';
+      right='<div class="tv-pbar"><span class="tv-pt">Franchise en base de TVA</span></div>'
+        +'<div class="tv-fr">La société est en franchise en base (art. 293 B du CGI) : aucune TVA collectée ni déductible, aucune déclaration à produire. Les factures portent la mention « TVA non applicable, article 293 B du CGI ».</div>';
+    } else {
+      var m=curMois(); var d=tvaDetailMois(m);
+      var neant=tvaEstNeant(m); var neantVal=db.societe.tvaNeant&&db.societe.tvaNeant[m];
+      var od=(typeof odTvaDejaPostee==='function')&&odTvaDejaPostee(m);
+      var decl=db.societe.tvaDeclaree&&db.societe.tvaDeclaree[m];
+      railInner='<div class="tv-gh">Mois de déclaration '+e2(exo)+(regime==='CA12'?' (CA12 annuelle)':'')+'</div>'+railMois(m);
+      var actions='';
+      if(neant){ actions = neantVal
+          ? '<span class="tv-ok">✓ Validé « Néant »</span><button class="tv-btn" onclick="tvaAnnulerNeant(\''+m+'\')">Annuler</button>'
+          : '<button class="tv-btn tv-pri" onclick="tvaValiderNeant(\''+m+'\')">Valider en « Néant »</button>'; }
+      else {
+        if(!od) actions='<button class="tv-btn tv-pri" onclick="tvaGenererOD(\''+m+'\')">⚙ Générer l\'OD TVA</button>';
+        else {
+          actions='<span class="tv-ok">✓ OD '+e2(pieceMois(m))+'</span><button class="tv-btn" onclick="tvaSupprimerOD(\''+m+'\')">Supprimer l\'OD</button>';
+          if(decl) actions+='<span class="tv-ok">✓ Déclarée</span><button class="tv-btn" onclick="tvaImprimerDeclaration(\''+m+'\')">🖨 Imprimer</button>';
+          else actions+='<button class="tv-btn tv-pri" onclick="tvaDeclarer(\''+m+'\')">Déclarer la CA3</button>';
+        }
+      }
+      right='<div class="tv-pbar"><span class="tv-pt">CA3 — '+e2(moisLabel(m))+'</span><span class="tv-sp"></span>'+actions+'</div>'
+        + (neant
+            ? '<div class="tv-fr">Aucune TVA collectée ni déductible sur ce mois — la déclaration CA3 est déposée à <b>Néant</b> (zéro). '+(neantVal?'Ce mois a été validé en Néant.':'Cliquez « Valider en Néant » pour confirmer.')+'</div>'
+            : ca3Table(m,d) + detailComptes(m));
+    }
+    return '<div id="yada-tv"><div class="tv-wrap">'
+      +'<div class="tv-head"><div class="tv-title">Module TVA</div>'
+        +'<span class="tv-exo">Exercice '+e2(exo)+'</span>'
+        +'<button class="tv-close" onclick="tvFermer()" title="Revenir à la Consultation" aria-label="Fermer">✕</button></div>'
+      +'<div class="tv-body">'
+        +'<div class="tv-rail">'+seg+railInner+'</div>'
+        +'<div class="tv-panel">'+right+'</div>'
+      +'</div></div></div>';
+  };
+  window.tvSetMois=function(m){ window.tvaMoisSel=m; if(typeof render==='function')render(); };
+  window.tvFermer=function(){ try{current='compta';}catch(e){} if(typeof render==='function')render(); };
+  try{ var st=document.createElement('style'); st.id='yada-tv-mod'; st.textContent=
+     '.mod-wrap:has(#yada-tv){padding:0!important;max-width:none!important}'
+    +'#yada-tv{font-family:Tahoma,"Segoe UI",Geneva,Verdana,sans-serif;color:#fff;background:#000;min-height:100dvh;display:flex;flex-direction:column}'
+    +'#yada-tv .tv-wrap{flex:1;display:flex;flex-direction:column;min-height:0;width:100%;max-width:1200px;margin:0 auto;padding:0 18px}'
+    +'#yada-tv .tv-head{display:flex;align-items:center;gap:12px;padding:14px 4px 12px;border-bottom:1px solid #1b1b1b}'
+    +'#yada-tv .tv-title{font-size:17px;font-weight:700}'
+    +'#yada-tv .tv-exo{margin-left:auto;color:#8a8a8a!important;font-size:12px}'
+    +'#yada-tv .tv-close{width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:#000;color:#fff!important;border:1.5px solid #fff;border-radius:9px;cursor:pointer;font:inherit;font-size:15px}'
+    +'#yada-tv .tv-close:hover{background:#fff;color:#000!important}'
+    +'#yada-tv .tv-body{flex:1;min-height:0;display:grid;grid-template-columns:264px 1fr}'
+    +'#yada-tv .tv-rail{border-right:1px solid #1b1b1b;padding:12px;display:flex;flex-direction:column;gap:6px;overflow:auto}'
+    +'#yada-tv .tv-seg{display:flex;border:1px solid #333;border-radius:9px;overflow:hidden;margin-bottom:6px}'
+    +'#yada-tv .tv-seg button{flex:1;background:#000;color:#bbb!important;border:0;border-right:1px solid #222;padding:8px 4px;font:inherit;font-size:11.5px;cursor:pointer}'
+    +'#yada-tv .tv-seg button:last-child{border-right:0}'
+    +'#yada-tv .tv-seg button.on{background:#fff;color:#000!important;font-weight:700}'
+    +'#yada-tv .tv-gh{color:#8a8a8a!important;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;margin:6px 4px 3px}'
+    +'#yada-tv .tv-mi{display:flex;align-items:center;gap:8px;padding:9px 11px;border-radius:8px;border:1px solid #171717;background:#000;color:#c8c8c8!important;cursor:pointer;font:inherit;font-size:12.5px;text-align:left}'
+    +'#yada-tv .tv-mi:hover{border-color:#3a3a3a;color:#fff!important}'
+    +'#yada-tv .tv-mi.on{background:#fff;color:#000!important;font-weight:700;border-color:#fff}'
+    +'#yada-tv .tv-mn{flex:1}#yada-tv .tv-st{font-size:10.5px;color:#8a8a8a}#yada-tv .tv-mi.on .tv-st{color:#333}'
+    /* garde-fou noir & blanc : mois sélectionné en noir sur blanc (bat les règles globales sur les span enfants) */
+    +'#yada-tv .tv-mi.on .tv-mn{color:#000!important}#yada-tv .tv-mi.on .tv-st{color:#333!important}'
+    +'#yada-tv .tv-note{color:#8a8a8a;font-size:12px;padding:8px 4px}'
+    +'#yada-tv .tv-panel{padding:14px 18px;overflow:auto;min-width:0}'
+    +'#yada-tv .tv-pbar{display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap}'
+    +'#yada-tv .tv-pt{font-size:15px;font-weight:700}#yada-tv .tv-sp{flex:1}'
+    +'#yada-tv .tv-btn{background:#000;color:#fff!important;border:1px solid #fff;border-radius:8px;padding:8px 13px;cursor:pointer;font:inherit;font-size:12px;white-space:nowrap}'
+    +'#yada-tv .tv-btn:hover{background:#fff;color:#000!important}'
+    +'#yada-tv .tv-btn.tv-pri{background:#fff;color:#000!important;font-weight:700}#yada-tv .tv-btn.tv-pri:hover{background:#ddd}'
+    +'#yada-tv .tv-ok{font-size:11.5px;color:#c8c8c8!important;white-space:nowrap}'
+    +'#yada-tv .tv-fr{color:#c8c8c8;font-size:12.5px;line-height:1.5;border:1px solid #222;border-radius:10px;padding:14px}'
+    +'#yada-tv .tv-ca3{width:100%;border-collapse:collapse;font-size:12.5px}'
+    +'#yada-tv .tv-ca3 td{padding:9px 12px;border-bottom:1px solid #131313;vertical-align:top}'
+    +'#yada-tv .tv-ca3 tr.sec td{background:#0c0c0c;font-weight:700;color:#fff!important}'
+    +'#yada-tv .tv-ca3 tr.tot td{border-top:1px solid #333;font-weight:700;color:#fff!important}'
+    +'#yada-tv .tv-ca3 tr.net td{border-top:2px solid #fff;font-weight:700;font-size:14px;color:#fff!important}'
+    +'#yada-tv .tv-empty{color:#8a8a8a;text-align:center}'
+    +'#yada-tv .tv-acc{display:block;margin-top:2px;color:#8a8a8a!important;font-size:10.5px}'
+    +'#yada-tv .tv-dh{font-size:13px;font-weight:700;margin:18px 0 8px}'
+    +'#yada-tv .tv-det{width:100%;border-collapse:collapse;font-size:12px}'
+    +'#yada-tv .tv-det th{text-align:left;color:#8a8a8a!important;background:#000!important;font-weight:400;padding:7px 10px;border-bottom:1px solid #222}'
+    +'#yada-tv .tv-det td{padding:7px 10px;border-bottom:1px solid #131313}'
+    +'#yada-tv .r{text-align:right}#yada-tv .num{font-variant-numeric:tabular-nums}'
+    +'#yada-tv a{color:#fff!important}'
+    +'@media(max-width:760px){#yada-tv .tv-body{grid-template-columns:1fr}#yada-tv .tv-rail{border-right:0;border-bottom:1px solid #1b1b1b}}';
     document.head.appendChild(st);
   }catch(e){}
 })();
