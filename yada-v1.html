@@ -11095,7 +11095,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v584';
+    b.textContent='YADA · v585';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -27691,8 +27691,8 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
    service worker → on atterrit directement sur la nouvelle version (Accueil).
    Drapeau localStorage 'yada-fresh-549' → exécuté une seule fois. 100% additif. */
 (function(){
-  var CUR='yada-v179';           /* = CACHE courant du sw.js */
-  var FLAG='yada-fresh-584';
+  var CUR='yada-v180';           /* = CACHE courant du sw.js */
+  var FLAG='yada-fresh-585';
   try{ if(localStorage.getItem(FLAG)) return; }catch(e){}
   try{ localStorage.setItem(FLAG,'1'); }catch(e){}
   try{
@@ -29967,6 +29967,159 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     +'#yada-tv .r{text-align:right}#yada-tv .num{font-variant-numeric:tabular-nums}'
     +'#yada-tv a{color:#fff!important}'
     +'@media(max-width:760px){#yada-tv .tv-body{grid-template-columns:1fr}#yada-tv .tv-rail{border-right:0;border-bottom:1px solid #1b1b1b}}';
+    document.head.appendChild(st);
+  }catch(e){}
+})();
+</script>
+<script id="yada-addon-mod-chargespaie">
+/* ═══ RECONSTRUCTION — MODULE 10 : CHARGES & PAIE (maquette C : écritures plein cadre, noir & blanc) ═══
+   Ruban des mois ; saisie des salariés (nom/poste/brut) ; les deux écritures OD PAIE et OD CHARGES
+   présentées en grand — CHAQUE LIBELLÉ porte son COMPTE COMPTABLE assimilé — équilibrées, avec
+   totaux ; barre Déployer / Supprimer. Montants calculés depuis calcPaie (données réelles du
+   dossier). Réutilise calcPaie / paieDejaPostee / posterPaieMois / cpAddSal / cpMajSal / cpDelSal /
+   moisExoListe / COMPTES. Croix ✕ = Consultation. 100% additif, B&W. */
+(function(){
+  window.YADA_OK=(window.YADA_OK||[]);
+  if(window.YADA_OK.indexOf('chargespaie')<0) window.YADA_OK.push('chargespaie');
+  window.YADA_LBL=window.YADA_LBL||{}; window.YADA_LBL.chargespaie='Charges & Paie';
+  function e2(x){ return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+  function E(x){ return (typeof eur==='function')?eur(x):((+x||0).toFixed(2)+' €'); }
+  function moisList(){ return (typeof moisExoListe==='function')?moisExoListe():[]; }
+  function libC(code){ var CO=(typeof COMPTES==='object')?COMPTES:{}; return CO[code]||CO[String(code).replace(/0+$/,'')]||''; }
+  function curMois(){ var mois=moisList(); var m=(typeof cpMois!=='undefined'&&cpMois)?cpMois:null; if(!m||mois.indexOf(m)<0){ m=mois[mois.length-1]; try{cpMois=m;}catch(e){} } return m; }
+  /* lignes des deux OD (mêmes comptes/sens que posterPaieMois) */
+  function odPaieLignes(c){
+    var L=[['641000000','Salaire brut',c.brut,0],
+           ['645100000','Cotisations salariales URSSAF',0,c.salUrssaf],
+           ['645300000','Retraite (part salariale)',0,c.salRetraite]];
+    (c.parSalarie||[]).forEach(function(s){ L.push([c9(s.aux),'Net à payer — '+(s.nom||''),0,s.net]); });
+    return L;
+  }
+  function odChargesLignes(c){
+    return [['645100000','Cotisations patronales URSSAF',c.patUrssaf,0],
+            ['645300000','Retraite patronale',c.patRetraite,0],
+            ['645400000','Chômage / AGS',c.patChomage,0],
+            ['645500000','Autres cotisations patronales',c.patAutres,0],
+            ['648000000','Autres charges de personnel',c.patDivers,0],
+            ['631200000','Taxe d\'apprentissage',c.appr,0],
+            ['631300000','Formation professionnelle',c.form,0],
+            ['431000000','URSSAF à payer',0,c.org431],
+            ['437300000','Caisses de retraite à payer',0,c.org437300],
+            ['437500000','Autres organismes à payer',0,c.org437500]];
+  }
+  function odCard(titre,piece,L){
+    var td=0,tc=0; var body=L.filter(function(r){return (+r[2]||0)||(+r[3]||0);}).map(function(r){
+      td+=(+r[2]||0); tc+=(+r[3]||0);
+      return '<tr><td>'+e2(r[1])+'<span class="cp-acc">'+e2(r[0])+(libC(r[0])?(' · '+e2(libC(r[0]))):'')+'</span></td>'
+        +'<td class="r num">'+(r[2]?E(r[2]):'—')+'</td><td class="r num">'+(r[3]?E(r[3]):'—')+'</td></tr>';
+    }).join('');
+    td=r2(td); tc=r2(tc); var ok=Math.abs(td-tc)<0.005;
+    if(!body) body='<tr><td class="cp-empty" colspan="3">Aucun montant — saisissez un salaire brut.</td></tr>';
+    return '<div class="cp-od"><div class="cp-od-h"><span class="t">'+e2(titre)+' '+e2(piece)+'</span>'
+      +'<span class="b">'+(ok?'Équilibrée ✓':'Déséquilibre !')+'</span></div>'
+      +'<table class="cp-odt"><thead><tr><th>Libellé</th><th class="r">Débit</th><th class="r">Crédit</th></tr></thead><tbody>'
+      +body+'<tr class="tot"><td>Totaux · pièce '+e2(piece)+'</td><td class="r num">'+E(td)+'</td><td class="r num">'+E(tc)+'</td></tr>'
+      +'</tbody></table></div>';
+  }
+  window.pageChargesPaie=function(){
+    if(typeof cpEnsureMois==='function') cpEnsureMois();
+    var m=curMois(); var c=(typeof calcPaie==='function')?calcPaie(m):{brut:0,parSalarie:[]};
+    var piece=(typeof pieceMois==='function')?pieceMois(m):m;
+    var poste=(typeof paieDejaPostee==='function') && paieDejaPostee(m,'PAIE') && paieDejaPostee(m,'CHARGES');
+    var exo=(typeof exoYear==='function')?exoYear():'';
+    var P=db.paie||{salaries:[]};
+    var ruban=moisList().map(function(x){ var ok=(typeof paieDejaPostee==='function')&&paieDejaPostee(x,'PAIE')&&paieDejaPostee(x,'CHARGES');
+      return '<button class="cp-rb'+(x===m?' on':'')+'" onclick="cpSetMois(\''+x+'\')">'+e2(moisLabel(x))+(ok?' ✓':'')+'</button>'; }).join('');
+    var salRows=(P.salaries||[]).map(function(s){
+      return '<tr><td class="num">'+e2(c9(salAux(s)))+'</td>'
+        +'<td><input class="cp-in" value="'+e2(s.nom)+'" onchange="cpMajSal(\''+s.id+'\',\'nom\',this.value)"></td>'
+        +'<td><input class="cp-in" value="'+e2(s.poste)+'" onchange="cpMajSal(\''+s.id+'\',\'poste\',this.value)"></td>'
+        +'<td class="r"><input class="cp-in r num" value="'+(+s.brut||0).toFixed(2)+'" onchange="cpMajSal(\''+s.id+'\',\'brut\',this.value)" style="text-align:right"></td>'
+        +'<td class="r"><button class="cp-del" onclick="cpDelSal(\''+s.id+'\')" title="Supprimer">×</button></td></tr>';
+    }).join('')||'<tr><td colspan="5" class="cp-empty">Aucun salarié — ajoutez-en ci-dessous.</td></tr>';
+    var actions = poste
+      ? '<span class="cp-ok">✓ Écritures déployées pour ce mois</span><button class="cp-btn" onclick="cpSupprMois(\''+m+'\')">Supprimer la saisie</button>'
+      : '<button class="cp-btn cp-pri" onclick="cpDeployer(\''+m+'\')">Déployer (OD PAIE + OD CHARGES)</button>';
+    return '<div id="yada-cp"><div class="cp-wrap">'
+      +'<div class="cp-head"><div class="cp-title">Charges & Paie</div>'
+        +'<span class="cp-exo">Exercice '+e2(exo)+'</span>'
+        +'<button class="cp-close" onclick="cpFermer()" title="Revenir à la Consultation" aria-label="Fermer">✕</button></div>'
+      +'<div class="cp-ruban">'+ruban+'</div>'
+      +'<div class="cp-bar"><span class="cp-info">'+((P.salaries||[]).length)+' salarié(s) · Brut '+E(c.brut)+' · Coût employeur '+E(c.coutTotal||0)+'</span><span class="cp-sp"></span>'+actions+'</div>'
+      +'<div class="cp-two">'+odCard('OD PAIE',piece,odPaieLignes(c))+odCard('OD CHARGES',piece,odChargesLignes(c))+'</div>'
+      +'<div class="cp-sal"><div class="cp-sh">Salariés & rémunérations brutes</div>'
+        +'<table class="cp-saltbl"><thead><tr><th>Compte tiers</th><th>Nom</th><th>Poste</th><th class="r">Brut mensuel</th><th></th></tr></thead>'
+        +'<tbody>'+salRows+'</tbody></table>'
+        +'<div class="cp-add">'
+          +'<div class="cp-f"><label>Nom</label><input id="cp-nom" class="cp-in" placeholder="NOM Prénom"></div>'
+          +'<div class="cp-f"><label>Poste</label><input id="cp-poste" class="cp-in" placeholder="Poste"></div>'
+          +'<div class="cp-f"><label>Brut mensuel</label><input id="cp-brut" class="cp-in r num" value="2000" style="text-align:right"></div>'
+          +'<button class="cp-btn cp-pri" onclick="cpAddSal()">+ Ajouter</button>'
+        +'</div></div>'
+      +'</div></div>';
+  };
+  window.cpDeployer=function(m){
+    var c=(typeof calcPaie==='function')?calcPaie(m):{brut:0};
+    if(!(c.brut>0)){ if(typeof toast==='function') toast('Saisissez au moins un salaire brut'); return; }
+    var msg='ALERTE DE VÉRIFICATION — '+moisLabel(m)+'\n\n'
+      +'OD PAIE '+pieceMois(m)+'\n  Brut : '+E(c.brut)+'  →  Net à payer : '+E(c.net)+'\n\n'
+      +'OD CHARGES '+pieceMois(m)+'\n  URSSAF (431) : '+E(c.org431)+'\n  Retraite (437300) : '+E(c.org437300)
+      +'\n  Autres organismes (437500) : '+E(c.org437500)+'\n  Total charges patronales : '+E(c.totalPat)
+      +'\n\nÉcritures au '+((typeof frDate==='function')?frDate(dernierJourMoisISO(m)):m)+'. Déployer la saisie ?';
+    var go=function(){ if(typeof posterPaieMois==='function') posterPaieMois(m); if(typeof save==='function') save(); if(typeof render==='function') render(); if(typeof toast==='function') toast('OD PAIE et OD CHARGES '+pieceMois(m)+' déployées'); };
+    if(typeof yadaConfirm==='function') yadaConfirm(msg, go); else go();
+  };
+  window.cpSupprMois=function(m){ try{cpMois=m;}catch(e){} if(typeof cpSupprimerMois==='function') cpSupprimerMois(); };
+  window.cpFermer=function(){ try{current='compta';}catch(e){} if(typeof render==='function')render(); };
+  try{ var st=document.createElement('style'); st.id='yada-cp-mod'; st.textContent=
+     '.mod-wrap:has(#yada-cp),.fullbleed:has(#yada-cp){padding:0!important;max-width:none!important}'
+    +'#yada-cp{font-family:Tahoma,"Segoe UI",Geneva,Verdana,sans-serif;color:#fff;background:#000;min-height:100dvh}'
+    +'#yada-cp .cp-wrap{width:100%;max-width:1200px;margin:0 auto;padding:0 18px 24px}'
+    +'#yada-cp .cp-head{display:flex;align-items:center;gap:12px;padding:14px 4px 12px;border-bottom:1px solid #1b1b1b}'
+    +'#yada-cp .cp-title{font-size:17px;font-weight:700}'
+    +'#yada-cp .cp-exo{margin-left:auto;color:#8a8a8a!important;font-size:12px}'
+    +'#yada-cp .cp-close{width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:#000;color:#fff!important;border:1.5px solid #fff;border-radius:9px;cursor:pointer;font:inherit;font-size:15px}'
+    +'#yada-cp .cp-close:hover{background:#fff;color:#000!important}'
+    +'#yada-cp .cp-ruban{display:flex;flex-wrap:wrap;gap:5px;padding:12px 0 4px}'
+    +'#yada-cp .cp-rb{background:#000;color:#bbb!important;border:1px solid #2a2a2a;border-radius:999px;padding:6px 12px;font:inherit;font-size:11.5px;cursor:pointer}'
+    +'#yada-cp .cp-rb:hover{border-color:#3a3a3a;color:#fff!important}'
+    +'#yada-cp .cp-rb.on{background:#fff;color:#000!important;font-weight:700;border-color:#fff}'
+    +'#yada-cp .cp-bar{display:flex;align-items:center;gap:10px;margin:10px 0 12px;flex-wrap:wrap}'
+    +'#yada-cp .cp-info{color:#c8c8c8!important;font-size:12px}#yada-cp .cp-sp{flex:1}'
+    +'#yada-cp .cp-btn{background:#000;color:#fff!important;border:1px solid #fff;border-radius:8px;padding:8px 14px;cursor:pointer;font:inherit;font-size:12.5px;white-space:nowrap}'
+    +'#yada-cp .cp-btn:hover{background:#fff;color:#000!important}'
+    +'#yada-cp .cp-btn.cp-pri{background:#fff;color:#000!important;font-weight:700}#yada-cp .cp-btn.cp-pri:hover{background:#ddd}'
+    +'#yada-cp .cp-ok{color:#c8c8c8!important;font-size:11.5px;white-space:nowrap}'
+    +'#yada-cp .cp-two{display:grid;grid-template-columns:1fr 1fr;gap:14px}'
+    +'#yada-cp .cp-od{border:1px solid #222;border-radius:11px;overflow:hidden}'
+    +'#yada-cp .cp-od-h{display:flex;align-items:center;gap:10px;padding:10px 13px;background:#0c0c0c;border-bottom:1px solid #1b1b1b}'
+    +'#yada-cp .cp-od-h .t{font-size:13px;font-weight:700}#yada-cp .cp-od-h .b{margin-left:auto;font-size:11px;color:#8a8a8a!important}'
+    +'#yada-cp .cp-odt{width:100%;border-collapse:collapse;font-size:12px}'
+    +'#yada-cp .cp-odt th{text-align:left;color:#8a8a8a!important;background:#000!important;font-weight:400;padding:7px 12px;border-bottom:1px solid #1b1b1b}'
+    +'#yada-cp .cp-odt td{padding:8px 12px;border-bottom:1px solid #111;vertical-align:top}'
+    +'#yada-cp .cp-odt tr.tot td{border-top:1px solid #333;font-weight:700;color:#fff!important}'
+    +'#yada-cp .cp-acc{display:block;margin-top:2px;color:#8a8a8a!important;font-size:10.5px}'
+    +'#yada-cp .cp-empty{color:#8a8a8a;text-align:center}'
+    +'#yada-cp .cp-sal{margin-top:16px;border:1px solid #222;border-radius:11px;padding:14px}'
+    +'#yada-cp .cp-sh{font-size:13px;font-weight:700;margin-bottom:10px}'
+    +'#yada-cp .cp-saltbl{width:100%;border-collapse:collapse;font-size:12px}'
+    +'#yada-cp .cp-saltbl th{text-align:left;color:#8a8a8a!important;font-weight:400;padding:6px 8px;border-bottom:1px solid #222}'
+    +'#yada-cp .cp-saltbl td{padding:6px 8px;border-bottom:1px solid #131313}'
+    +'#yada-cp .cp-in{background:#000!important;color:#fff!important;border:1px solid #444!important;border-radius:7px;padding:6px 8px;font:inherit;font-size:12px;outline:none;width:100%;box-sizing:border-box}'
+    +'#yada-cp .cp-in:focus{border-color:#fff!important}#yada-cp .cp-in::placeholder{color:#888}'
+    +'#yada-cp .cp-del{background:#000;color:#fff!important;border:1px solid #555;border-radius:6px;width:26px;height:26px;cursor:pointer;font:inherit}'
+    +'#yada-cp .cp-del:hover{background:#fff;color:#000!important}'
+    +'#yada-cp .cp-add{display:flex;gap:10px;align-items:flex-end;margin-top:12px;flex-wrap:wrap}'
+    +'#yada-cp .cp-f{display:flex;flex-direction:column;gap:4px}#yada-cp .cp-f label{font-size:10.5px;color:#bbb!important}'
+    +'#yada-cp .cp-f:nth-child(1){flex:2;min-width:160px}#yada-cp .cp-f:nth-child(2){flex:1;min-width:120px}#yada-cp .cp-f:nth-child(3){width:140px}'
+    +'#yada-cp .r{text-align:right}#yada-cp .num{font-variant-numeric:tabular-nums}'
+    +'#yada-cp a{color:#fff!important}'
+    /* garde-fou noir & blanc : neutralise les fonds/dégradés bleus des en-têtes hérités du thème */
+    +'#yada-cp .cp-od,#yada-cp .cp-sal{background:#000!important;background-image:none!important}'
+    +'#yada-cp .cp-od-h{background:#0c0c0c!important;background-image:none!important}'
+    +'#yada-cp .cp-odt thead tr,#yada-cp .cp-odt th{background:#000!important;background-image:none!important;border-bottom-color:#1b1b1b!important}'
+    +'#yada-cp .cp-saltbl thead tr,#yada-cp .cp-saltbl th{background:#000!important;background-image:none!important;border-bottom-color:#222!important}'
+    +'@media(max-width:820px){#yada-cp .cp-two{grid-template-columns:1fr}}';
     document.head.appendChild(st);
   }catch(e){}
 })();
