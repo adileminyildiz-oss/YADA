@@ -11094,7 +11094,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v575';
+    b.textContent='YADA · v576';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -27761,8 +27761,8 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
    service worker → on atterrit directement sur la nouvelle version (Accueil).
    Drapeau localStorage 'yada-fresh-549' → exécuté une seule fois. 100% additif. */
 (function(){
-  var CUR='yada-v170';           /* = CACHE courant du sw.js */
-  var FLAG='yada-fresh-575';
+  var CUR='yada-v171';           /* = CACHE courant du sw.js */
+  var FLAG='yada-fresh-576';
   try{ if(localStorage.getItem(FLAG)) return; }catch(e){}
   try{ localStorage.setItem(FLAG,'1'); }catch(e){}
   try{
@@ -28952,39 +28952,39 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
   /* Styles — design ACCUEIL « Génération Experts » (noir total, Tahoma), scopé #yada-pc */
   try{ var st=document.createElement('style'); st.id='yada-pc-mod'; st.textContent=
      '.mod-wrap:has(#yada-pc){padding:0!important;max-width:none!important}'
-    +'#yada-pc{font-family:Tahoma,"Segoe UI",Geneva,Verdana,sans-serif;color:#e8e8e8;background:#000;min-height:100dvh;display:flex;flex-direction:column}'
+    +'#yada-pc{font-family:Tahoma,"Segoe UI",Geneva,Verdana,sans-serif;color:#fff;background:#000;min-height:100dvh;display:flex;flex-direction:column}'
     +'#yada-pc .pc-wrap{flex:1;display:flex;flex-direction:column;min-height:0;width:100%;max-width:720px;margin:0 auto;padding:0 14px}'
     +'#yada-pc .pc-head{display:flex;align-items:center;gap:14px;padding:14px 20px 12px;border-bottom:1px solid #1b1b1b}'
-    +'#yada-pc .pc-close{margin-left:14px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:#0a0a0a;color:#d0d0d0;border:1.5px solid #3a3a3a;border-radius:9px;cursor:pointer;font:inherit;font-size:15px;line-height:1;transition:border-color .16s ease,background .16s ease,color .16s ease}'
-    +'#yada-pc .pc-close:hover{background:#1a1414;border-color:#c0453b;color:#ff8a80}'
+    +'#yada-pc .pc-close{margin-left:14px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:#000;color:#fff;border:1.5px solid #fff;border-radius:9px;cursor:pointer;font:inherit;font-size:15px;line-height:1;transition:border-color .16s ease,background .16s ease,color .16s ease}'
+    +'#yada-pc .pc-close:hover{background:#fff;border-color:#fff;color:#000}'
     +'#yada-pc .pc-title{font-size:17px;font-weight:700;color:#fff}'
-    +'#yada-pc .pc-count{margin-left:auto;color:#8a8a8a;font-size:12.5px}'
+    +'#yada-pc .pc-count{margin-left:auto;color:#bbb;font-size:12.5px}'
     +'#yada-pc .pc-srow,#yada-pc .pc-arow{display:flex;gap:9px;padding:11px 20px;flex-wrap:wrap;align-items:center}'
     +'#yada-pc .pc-srow{border-bottom:1px solid #141414}'
     +'#yada-pc .pc-arow{border-bottom:1px solid #141414}'
-    +'#yada-pc .pc-inp,#yada-pc .pc-sel{background:#0d0d0d;border:1px solid #1c1c1c;border-radius:8px;color:#eee;padding:8px 11px;font:inherit;font-size:12.5px;outline:none}'
+    +'#yada-pc .pc-inp,#yada-pc .pc-sel{background:#000!important;border:1px solid #444!important;border-radius:8px;color:#fff!important;padding:8px 11px;font:inherit;font-size:12.5px;outline:none}'
     +'#yada-pc #pc-search{flex:1;min-width:200px}'
     +'#yada-pc #pc-new-lib{flex:1;min-width:200px}'
     +'#yada-pc .pc-inp-code{width:170px}'
     +'#yada-pc .pc-sel{cursor:pointer}'
-    +'#yada-pc .pc-inp:focus,#yada-pc .pc-sel:focus{border-color:#3a3a3a}'
-    +'#yada-pc .pc-inp::placeholder{color:#6a6a6a}'
-    +'#yada-pc .pc-flt{background:#111;color:#fff;border:1px solid #2a2a2a;border-radius:8px;padding:8px 13px;cursor:pointer;font:inherit;font-size:12.5px}'
-    +'#yada-pc .pc-flt:hover{background:#1a1a1a;border-color:#3a3a3a}'
-    +'#yada-pc .pc-clr{background:transparent;color:#9a9a9a;border:1px solid #1c1c1c;border-radius:8px;padding:8px 12px;cursor:pointer;font:inherit;font-size:12.5px}'
-    +'#yada-pc .pc-clr:hover{background:#111;color:#e8e8e8}'
-    +'#yada-pc .pc-add{background:#1f7a44;color:#fff;border:1px solid #1f7a44;border-radius:8px;padding:8px 15px;cursor:pointer;font:inherit;font-size:12.5px;font-weight:700}'
-    +'#yada-pc .pc-add:hover{filter:brightness(1.12)}'
+    +'#yada-pc .pc-inp:focus,#yada-pc .pc-sel:focus{border-color:#fff!important}'
+    +'#yada-pc .pc-inp::placeholder{color:#888}'
+    +'#yada-pc .pc-flt{background:#000;color:#fff;border:1px solid #fff;border-radius:8px;padding:8px 13px;cursor:pointer;font:inherit;font-size:12.5px}'
+    +'#yada-pc .pc-flt:hover{background:#222;border-color:#fff}'
+    +'#yada-pc .pc-clr{background:transparent;color:#fff;border:1px solid #555;border-radius:8px;padding:8px 12px;cursor:pointer;font:inherit;font-size:12.5px}'
+    +'#yada-pc .pc-clr:hover{background:#222;color:#fff}'
+    +'#yada-pc .pc-add{background:#000;color:#fff;border:1px solid #fff;border-radius:8px;padding:8px 15px;cursor:pointer;font:inherit;font-size:12.5px;font-weight:700}'
+    +'#yada-pc .pc-add:hover{background:#fff;color:#000}'
     +'#yada-pc .pc-list{flex:1;overflow:auto;padding:4px 0 20px}'
     +'#yada-pc .pc-cls{display:flex;justify-content:space-between;align-items:center;padding:12px 20px 6px;color:#fff;font-size:13px;font-weight:700;position:sticky;top:0;background:#000;border-bottom:1px solid #141414}'
-    +'#yada-pc .pc-cls-n{color:#8a8a8a;font-weight:400;font-size:11.5px}'
+    +'#yada-pc .pc-cls-n{color:#bbb;font-weight:400;font-size:11.5px}'
     +'#yada-pc .pc-row{display:grid;grid-template-columns:104px 1fr 26px;align-items:center;gap:10px;padding:7px 12px;border-bottom:1px solid #111}'
     +'#yada-pc .pc-row:hover{background:#0d0d0d}'
-    +'#yada-pc .pc-code{color:#cfcfcf;font-variant-numeric:tabular-nums;font-size:12.5px}'
-    +'#yada-pc .pc-lib{color:#e8e8e8;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
-    +'#yada-pc .pc-del{background:transparent;border:0;color:#7a7a7a;cursor:pointer;font-size:13px;border-radius:6px;width:26px;height:26px}'
-    +'#yada-pc .pc-del:hover{background:#2a1414;color:#ff8a80}'
-    +'#yada-pc .pc-empty{padding:26px 20px;color:#8a8a8a;font-size:13px;text-align:center}';
+    +'#yada-pc .pc-code{color:#eaeaea;font-variant-numeric:tabular-nums;font-size:12.5px}'
+    +'#yada-pc .pc-lib{color:#fff;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
+    +'#yada-pc .pc-del{background:transparent;border:0;color:#888;cursor:pointer;font-size:13px;border-radius:6px;width:26px;height:26px}'
+    +'#yada-pc .pc-del:hover{background:#222;color:#fff}'
+    +'#yada-pc .pc-empty{padding:26px 20px;color:#bbb;font-size:13px;text-align:center}';
     document.head.appendChild(st);
   }catch(e){}
 })();
