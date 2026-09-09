@@ -11095,7 +11095,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v589';
+    b.textContent='YADA · v590';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -27762,8 +27762,8 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
    service worker → on atterrit directement sur la nouvelle version (Accueil).
    Drapeau localStorage 'yada-fresh-549' → exécuté une seule fois. 100% additif. */
 (function(){
-  var CUR='yada-v184';           /* = CACHE courant du sw.js */
-  var FLAG='yada-fresh-589';
+  var CUR='yada-v185';           /* = CACHE courant du sw.js */
+  var FLAG='yada-fresh-590';
   try{ if(localStorage.getItem(FLAG)) return; }catch(e){}
   try{ localStorage.setItem(FLAG,'1'); }catch(e){}
   try{
@@ -30831,6 +30831,200 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     +'#yada-an .dim{color:#8a8a8a!important}#yada-an .r{text-align:right}#yada-an .num{font-variant-numeric:tabular-nums}'
     +'#yada-an a{color:#fff!important}'
     +'@media(max-width:820px){#yada-an .an-g2{grid-template-columns:1fr}}';
+    document.head.appendChild(st);
+  }catch(e){}
+})();
+</script>
+<script id="yada-addon-mod-immos">
+/* ═══ RECONSTRUCTION — MODULE 15 : IMMOBILISATIONS & FINANCEMENTS (maquette F : fiche document pleine page, noir & blanc) ═══
+   Une immobilisation à la fois, en grand : Identité | Amortissement, puis plan d'amortissement, navigation ‹ / ›.
+   Réutilise le moteur : immoPlan / immoRowAnnee / compteAmortDe / IMMO_COMPTES / imSave / imEdit /
+   imGenererAcquisition / imGenererDotation / imAcqFaite / imDotFaite / imCeder / imDel / imComptabiliserDotations.
+   Croix ✕ = Consultation. Override complet de pageImmos. 100% additif, B&W. */
+(function(){
+  window.YADA_OK=(window.YADA_OK||[]);
+  if(window.YADA_OK.indexOf('immos')<0) window.YADA_OK.push('immos');
+  window.YADA_LBL=window.YADA_LBL||{}; window.YADA_LBL.immos='Immobilisations & Financements';
+  function e2(x){ return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+  function E(x){ try{ return eur(x); }catch(e){ return (Number(x||0).toFixed(2))+' €'; } }
+  function C9(x){ try{ return c9(x); }catch(e){ return String(x||''); } }
+  function FD(x){ try{ return frDate(x); }catch(e){ return x||''; } }
+  function IMS(){ return (typeof db!=='undefined'&&db.immos)?db.immos:[]; }
+  function anCur(){ try{ if(typeof imAnnee!=='undefined'&&imAnnee) return imAnnee; }catch(e){} return (typeof imYear==='function')?imYear():(new Date()).getFullYear(); }
+  function imOpts(val){ return (typeof IMMO_COMPTES!=='undefined'?IMMO_COMPTES:[]).map(function(c){ return '<option value="'+e2(c[0])+'"'+(C9(String(val))===C9(c[0])?' selected':'')+'>'+e2(C9(c[0])+' — '+c[1])+'</option>'; }).join(''); }
+  window.imFermer=function(){ try{current='compta';}catch(e){} if(typeof render==='function')render(); };
+  window.imNav=function(d){ var n=IMS().length; if(!n)return; if(typeof window.__imIdx!=='number')window.__imIdx=0;
+    window.__imIdx=(window.__imIdx+d+n)%n; try{ imSelId=IMS()[window.__imIdx].id; }catch(e){} if(typeof render==='function')render(); };
+  window.imModifier=function(){ window.__imEdit=!window.__imEdit; if(typeof render==='function')render(); };
+  window.imNouveau=function(){ window.__imCreating=true; window.__imEdit=false; if(typeof render==='function')render(); };
+  window.imAnnulerCreer=function(){ window.__imCreating=false; if(typeof render==='function')render(); };
+  window.imCreerValider=function(){ window.__imCreating=false; try{ imSave(); }catch(e){ window.__imCreating=true; if(typeof render==='function')render(); } };
+
+  function createForm(){
+    var cpt0=(typeof IMMO_COMPTES!=='undefined'&&IMMO_COMPTES[0])?IMMO_COMPTES[0][0]:'218300000';
+    return '<div class="im-doc"><div class="im-formttl">Nouvelle immobilisation</div>'
+      +'<div class="im-fg2">'
+      +'<div class="im-f"><label>Numéro / désignation</label><input id="im-num" class="im-in" placeholder="Ex : IPHONE 17 PRO"></div>'
+      +'<div class="im-f"><label>Nature <span class="im-req">*</span> <span class="im-mini">(détermine le compte)</span></label><input id="im-nat" class="im-in" placeholder="véhicule, téléphone, mobilier…"></div>'
+      +'</div>'
+      +'<div class="im-f"><label>Compte d’immobilisation</label><select id="im-cpt" class="im-in">'+imOpts(cpt0)+'</select></div>'
+      +'<div class="im-fg3">'
+      +'<div class="im-f"><label>Montant H.T.</label><input type="number" step="0.01" id="im-ht" class="im-in r" value="0"></div>'
+      +'<div class="im-f"><label>Taux TVA</label><select id="im-tva" class="im-in"><option>20</option><option>10</option><option>5.5</option><option>0</option></select></div>'
+      +'<div class="im-f"><label>Valeur résiduelle</label><input type="number" step="0.01" id="im-vr" class="im-in r" value="0"></div>'
+      +'</div>'
+      +'<div class="im-fg3">'
+      +'<div class="im-f"><label>Fournisseur</label><input id="im-four" class="im-in" placeholder="APPLE"></div>'
+      +'<div class="im-f"><label>Date de facture</label><input type="date" id="im-df" class="im-in" value="'+e2((typeof imYear==="function"?imYear():2026)+"-01-01")+'"></div>'
+      +'<div class="im-f"><label>Mise en service</label><input type="date" id="im-ms" class="im-in" value="'+e2((typeof imYear==="function"?imYear():2026)+"-01-01")+'"></div>'
+      +'</div>'
+      +'<div class="im-fg3">'
+      +'<div class="im-f"><label>Durée (mois)</label><input type="number" id="im-duree" class="im-in r" value="36"></div>'
+      +'<div class="im-f"><label>Mode d’amortissement</label><select id="im-mode" class="im-in"><option value="lineaire">Linéaire</option><option value="degressif">Dégressif</option></select></div>'
+      +'<div class="im-f"></div>'
+      +'</div>'
+      +'<div class="im-actbar"><button class="im-btn" onclick="imAnnulerCreer()">Annuler</button><button class="im-btn im-pri" onclick="imCreerValider()">Enregistrer l’immobilisation</button></div>'
+      +'</div>';
+  }
+
+  function kvLine(k,v){ return '<div class="k">'+k+'</div><div class="v">'+v+'</div>'; }
+  function edLineT(id,label,field,val,type,step){ return '<div class="k">'+label+'</div><div class="v"><input class="im-ev" type="'+(type||'text')+'"'+(step?(' step="'+step+'"'):'')+' value="'+e2(val==null?'':val)+'" onchange="imEdit(\''+id+'\',\''+field+'\',this.value)"></div>'; }
+  function edLineS(id,label,field,val,opts){ return '<div class="k">'+label+'</div><div class="v"><select class="im-ev" onchange="imEdit(\''+id+'\',\''+field+'\',this.value)">'+opts.map(function(o){return '<option value="'+e2(o[0])+'"'+(String(val)===String(o[0])||C9(String(val))===C9(String(o[0]))?' selected':'')+'>'+e2(o[1])+'</option>';}).join('')+'</select></div>'; }
+
+  window.pageImmos=function(){
+    try{ if(typeof imAnnee!=='undefined' && imAnnee===null) imAnnee=(typeof imYear==='function')?imYear():2026; }catch(e){}
+    var s=(typeof db!=='undefined'&&db.societe)?db.societe:{};
+    var an=anCur();
+    var ims=IMS();
+    /* sync index sur imSelId (après création) */
+    if(typeof imSelId!=='undefined'&&imSelId){ var si=ims.findIndex(function(x){return x.id===imSelId;}); if(si>=0) window.__imIdx=si; }
+    if(typeof window.__imIdx!=='number'||window.__imIdx>=ims.length) window.__imIdx=0;
+    var head='<div class="im-head"><div class="im-title">Immobilisations &amp; Financements</div>'
+      +'<span class="im-exo">Exercice '+FD(s.exoDebut)+' → '+FD(s.exoFin)+'</span>'
+      +'<button class="im-close" onclick="imFermer()" title="Revenir à la Consultation" aria-label="Fermer">✕</button></div>'
+      +'<div class="im-sub">Fiche par immobilisation · plan d’amortissement · '+e2(s.raison||'')+'</div>'
+      +'<div class="im-topbar"><button class="im-btn im-pri" onclick="imNouveau()">＋ Immobilisation</button>'
+      +'<span class="im-sp"></span>'
+      +(ims.length?'<button class="im-btn" onclick="imComptabiliserDotations()">Comptabiliser dotations '+an+'</button>':'')
+      +'</div>';
+    var content;
+    if(window.__imCreating){ content=createForm(); }
+    else if(!ims.length){
+      content='<div class="im-doc im-empty2">Aucune immobilisation pour le moment.<br><button class="im-btn im-pri" style="margin-top:14px" onclick="imNouveau()">＋ Créer la première immobilisation</button></div>';
+    } else {
+      var im=ims[window.__imIdx]; var p=immoPlan(im); var row=immoRowAnnee(im, an);
+      var ed=!!window.__imEdit;
+      /* Identité */
+      var ident = ed
+        ? edLineT(im.id,'Numéro','numero',im.numero,'text')
+          +edLineT(im.id,'Nature','nature',im.nature,'text')
+          +edLineS(im.id,'Compte immo.','compte',C9(im.compte), (typeof IMMO_COMPTES!=='undefined'?IMMO_COMPTES:[]).map(function(c){return [c[0], C9(c[0])+' — '+c[1]];}))
+          +kvLine('Compte amort.', C9(im.compteAmort||compteAmortDe(im.compte))+' <span class="im-mini">(auto)</span>')
+          +edLineT(im.id,'Fournisseur','fournisseur',im.fournisseur,'text')
+          +edLineT(im.id,'Date facture','dateFacture',im.dateFacture,'date')
+          +edLineT(im.id,'Mise en service','miseEnService',im.miseEnService,'date')
+        : kvLine('Nature', e2(im.nature||'—'))
+          +kvLine('Compte immo.', C9(im.compte))
+          +kvLine('Compte amort.', C9(im.compteAmort||compteAmortDe(im.compte)))
+          +kvLine('Fournisseur', e2(im.fournisseur||'—'))
+          +kvLine('Date de facture', FD(im.dateFacture))
+          +kvLine('Mise en service', FD(im.miseEnService));
+      /* Amortissement */
+      var amort = ed
+        ? kvLine('Base amortissable', E(p.base))
+          +edLineT(im.id,'Montant H.T.','montantHT',im.montantHT,'number','0.01')
+          +edLineT(im.id,'Valeur résiduelle','valResiduelle',im.valResiduelle||0,'number','0.01')
+          +edLineS(im.id,'Mode','type',im.type,[['lineaire','Linéaire'],['degressif','Dégressif']])
+          +edLineT(im.id,'Durée (mois)','dureeMois',im.dureeMois,'number')
+          +kvLine('Dotation '+an, E(row.dotation))
+          +kvLine('VNC', E(row.vnc))
+        : kvLine('Base amortissable', E(p.base))
+          +kvLine('Mode · durée', (im.type==='degressif'?'Dégressif':'Linéaire')+' · '+(im.dureeMois||0)+' mois')
+          +kvLine('Début → fin', FD(im.miseEnService)+' → '+FD(p.fin))
+          +kvLine('Dotation '+an, E(row.dotation))
+          +kvLine('Cumul', E(row.cumul))
+          +kvLine('VNC', E(row.vnc));
+      /* Plan */
+      var planRows=p.rows.map(function(r){ var cur=(r.annee===an); return '<tr'+(cur?' class="im-cur"':'')+'><td>'+r.annee+'</td><td class="r num">'+E(r.dotation)+'</td><td class="r num">'+E(r.cumul)+'</td><td class="r num">'+E(r.vnc)+'</td></tr>'; }).join('')
+        ||'<tr><td colspan="4" class="im-empty">Aucun plan</td></tr>';
+      var sortie = im.sortie ? '<div class="im-sortie">Sortie le '+FD(im.sortie.date)+' — prix '+E(im.sortie.prix)+'</div>' : '';
+      var acqDone=(typeof window.imAcqFaite==='function')&&window.imAcqFaite(im);
+      var dotDone=(typeof window.imDotFaite==='function')&&window.imDotFaite(im,an);
+      content='<div class="im-doc">'
+        +'<div class="im-docnav"><button class="im-navb" onclick="imNav(-1)" aria-label="Précédent">‹</button>'
+          +'<div class="im-docttl">'+e2(im.numero)+(im.nature&&im.nature!==im.numero?(' <span class="im-docsub">— '+e2(im.nature)+'</span>'):'')+'</div>'
+          +'<button class="im-navb" onclick="imNav(1)" aria-label="Suivant">›</button>'
+          +'<span class="im-pos">Immobilisation '+(window.__imIdx+1)+' / '+ims.length+'</span></div>'
+        +sortie
+        +'<div class="im-g2">'
+          +'<div class="im-block"><div class="im-bh">Identité</div><div class="im-kv">'+ident+'</div></div>'
+          +'<div class="im-block"><div class="im-bh">Amortissement</div><div class="im-kv">'+amort+'</div></div>'
+        +'</div>'
+        +'<div class="im-block"><div class="im-bh">Plan d’amortissement</div>'
+          +'<div class="im-twrap"><table class="im-t"><thead><tr><th>Année</th><th class="r">Dotation</th><th class="r">Cumul</th><th class="r">VNC</th></tr></thead><tbody>'+planRows+'</tbody></table></div></div>'
+        +'<div class="im-actbar">'
+          +'<button class="im-btn'+(ed?' im-pri':'')+'" onclick="imModifier()">'+(ed?'Terminer':'Modifier')+'</button>'
+          +'<button class="im-btn" onclick="imGenererAcquisition(\''+im.id+'\')">'+(acqDone?'Acquisition ✓':'Générer l’écriture d’acquisition')+'</button>'
+          +'<button class="im-btn" onclick="imGenererDotation(\''+im.id+'\')">'+(dotDone?('Dotation '+an+' ✓'):('Générer la dotation '+an))+'</button>'
+          +'<button class="im-btn" onclick="imCeder(\''+im.id+'\')">Céder / sortir</button>'
+          +'<button class="im-btn" onclick="imDel(\''+im.id+'\')">Supprimer</button>'
+        +'</div>'
+      +'</div>';
+    }
+    return '<div id="yada-im"><div class="im-wrap">'+head+content+'</div></div>';
+  };
+
+  try{ var st=document.createElement('style'); st.id='yada-im-mod'; st.textContent=
+     '.mod-wrap:has(#yada-im),.fullbleed:has(#yada-im){padding:0!important;max-width:none!important}'
+    +'#yada-im{font-family:Tahoma,"Segoe UI",Geneva,Verdana,sans-serif;color:#fff;background:#000;min-height:100dvh}'
+    +'#yada-im .im-wrap{max-width:940px;margin:0 auto;padding:0 18px 26px}'
+    +'#yada-im .im-head{display:flex;align-items:center;gap:12px;padding:14px 4px 6px;border-bottom:1px solid #1b1b1b}'
+    +'#yada-im .im-title{font-size:17px;font-weight:700;background:none!important;background-image:none!important;padding:0!important;border-radius:0!important;letter-spacing:0!important;display:block;color:#fff!important}'
+    +'#yada-im .im-exo{margin-left:auto;color:#8a8a8a!important;font-size:12px}'
+    +'#yada-im .im-close{width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:#000;color:#fff!important;border:1.5px solid #fff;border-radius:9px;cursor:pointer;font:inherit;font-size:15px}'
+    +'#yada-im .im-close:hover{background:#fff;color:#000!important}'
+    +'#yada-im .im-sub{color:#8a8a8a!important;font-size:11.5px;padding:8px 4px 14px}'
+    +'#yada-im .im-topbar{display:flex;align-items:center;gap:8px;margin-bottom:16px}'
+    +'#yada-im .im-sp{flex:1}'
+    +'#yada-im .im-btn{background:#000;color:#fff!important;border:1px solid #fff;border-radius:8px;padding:8px 13px;cursor:pointer;font:inherit;font-size:11.5px;white-space:nowrap}'
+    +'#yada-im .im-btn:hover{background:#fff;color:#000!important}'
+    +'#yada-im .im-btn.im-pri{background:#fff;color:#000!important;font-weight:700}#yada-im .im-btn.im-pri:hover{background:#ddd}'
+    +'#yada-im .im-doc{background:#0a0a0a;border:1px solid #1c1c1c;border-radius:12px;padding:24px 28px}'
+    +'#yada-im .im-empty2{text-align:center;color:#8a8a8a!important;padding:40px 20px}'
+    +'#yada-im .im-docnav{display:flex;align-items:center;gap:14px;margin-bottom:20px}'
+    +'#yada-im .im-navb{width:34px;height:34px;border:1px solid #fff;border-radius:50%;background:#000;color:#fff!important;font-size:16px;cursor:pointer;line-height:1}'
+    +'#yada-im .im-navb:hover{background:#fff;color:#000!important}'
+    +'#yada-im .im-docttl{font-size:18px;font-weight:700}'
+    +'#yada-im .im-docsub{color:#8a8a8a!important;font-weight:400;font-size:13px}'
+    +'#yada-im .im-pos{margin-left:auto;color:#8a8a8a!important;font-size:11px}'
+    +'#yada-im .im-sortie{border:1px solid #444;border-radius:8px;padding:8px 12px;font-size:11.5px;color:#c8c8c8!important;margin-bottom:16px}'
+    +'#yada-im .im-g2{display:grid;grid-template-columns:1fr 1fr;gap:16px 40px;margin-bottom:6px}'
+    +'#yada-im .im-block{margin-bottom:20px}'
+    +'#yada-im .im-bh{font-size:10px;color:#8a8a8a!important;text-transform:uppercase;letter-spacing:.05em;padding-bottom:8px;border-bottom:1px solid #1b1b1b;margin-bottom:12px}'
+    +'#yada-im .im-kv{display:grid;grid-template-columns:auto 1fr;gap:9px 20px;font-size:12px;align-items:center}'
+    +'#yada-im .im-kv .k{color:#8a8a8a!important}#yada-im .im-kv .v{color:#fff;text-align:right}'
+    +'#yada-im .im-mini{color:#8a8a8a!important;font-size:9.5px}'
+    +'#yada-im .im-ev{width:100%;max-width:220px;float:right;background:#000!important;color:#fff!important;border:1px solid #444!important;border-radius:6px;padding:5px 8px;font:inherit;font-size:12px;outline:none;text-align:right}'
+    +'#yada-im .im-ev:focus{border-color:#fff!important}'
+    +'#yada-im select.im-ev option{background:#000;color:#fff}'
+    +'#yada-im .im-twrap{overflow:auto}'
+    +'#yada-im .im-t{width:100%;border-collapse:collapse;font-size:12px}'
+    +'#yada-im .im-t th{text-align:left;color:#8a8a8a!important;background:#000!important;background-image:none!important;font-weight:400;padding:9px 10px;border-bottom:1px solid #222!important;white-space:nowrap}'
+    +'#yada-im .im-t td{padding:9px 10px;border-bottom:1px solid #141414}'
+    +'#yada-im .im-t tr.im-cur td{background:#111;font-weight:700}'
+    +'#yada-im .im-actbar{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}'
+    +'#yada-im .im-formttl{font-size:15px;font-weight:700;margin-bottom:18px}'
+    +'#yada-im .im-fg2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:14px}'
+    +'#yada-im .im-fg3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:14px}'
+    +'#yada-im .im-f{display:flex;flex-direction:column;gap:6px}'
+    +'#yada-im .im-f label{font-size:10px;color:#8a8a8a!important;text-transform:uppercase;letter-spacing:.04em}'
+    +'#yada-im .im-req{color:#fff!important}'
+    +'#yada-im .im-in{background:#000!important;color:#fff!important;border:1px solid #444!important;border-radius:7px;padding:8px 10px;font:inherit;font-size:12px;outline:none;width:100%;box-sizing:border-box}'
+    +'#yada-im .im-in:focus{border-color:#fff!important}#yada-im .im-in.r{text-align:right}'
+    +'#yada-im select.im-in option{background:#000;color:#fff}'
+    +'#yada-im .r{text-align:right}#yada-im .num{font-variant-numeric:tabular-nums}#yada-im .im-empty{color:#8a8a8a!important;text-align:center;padding:14px}'
+    +'#yada-im a{color:#fff!important}'
+    +'@media(max-width:820px){#yada-im .im-g2,#yada-im .im-fg2,#yada-im .im-fg3{grid-template-columns:1fr}}';
     document.head.appendChild(st);
   }catch(e){}
 })();
