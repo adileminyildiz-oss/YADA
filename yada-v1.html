@@ -11095,7 +11095,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v590';
+    b.textContent='YADA · v591';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -27691,8 +27691,8 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
    service worker → on atterrit directement sur la nouvelle version (Accueil).
    Drapeau localStorage 'yada-fresh-549' → exécuté une seule fois. 100% additif. */
 (function(){
-  var CUR='yada-v185';           /* = CACHE courant du sw.js */
-  var FLAG='yada-fresh-590';
+  var CUR='yada-v186';           /* = CACHE courant du sw.js */
+  var FLAG='yada-fresh-591';
   try{ if(localStorage.getItem(FLAG)) return; }catch(e){}
   try{ localStorage.setItem(FLAG,'1'); }catch(e){}
   try{
@@ -30952,6 +30952,152 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     +'#yada-im .r{text-align:right}#yada-im .num{font-variant-numeric:tabular-nums}#yada-im .im-empty{color:#8a8a8a!important;text-align:center;padding:14px}'
     +'#yada-im a{color:#fff!important}'
     +'@media(max-width:820px){#yada-im .im-g2,#yada-im .im-fg2,#yada-im .im-fg3{grid-template-columns:1fr}}';
+    document.head.appendChild(st);
+  }catch(e){}
+})();
+</script>
+<script id="yada-addon-mod-reglements">
+/* ═══ RECONSTRUCTION — MODULE 16 : SUIVI DES RÈGLEMENTS (maquette C : maître-détail + relance, noir & blanc) ═══
+   Onglets Clients / Fournisseurs. À gauche : tiers avec total dû + statut (à jour / en retard / alerte).
+   À droite : détail du tiers (factures non réglées, échéance, retard) + bandeau « Ne plus traiter » + Relancer / Voir.
+   Réutilise regOpenGroups / regKPIDepuisEcritures (écritures, FEC inclus). Override complet de pageReglements.
+   Croix ✕ = Consultation. 100% additif, B&W. */
+(function(){
+  window.YADA_OK=(window.YADA_OK||[]);
+  if(window.YADA_OK.indexOf('reglements')<0) window.YADA_OK.push('reglements');
+  window.YADA_LBL=window.YADA_LBL||{}; window.YADA_LBL.reglements='Suivi des règlements';
+  var SEUIL=3;
+  function e2(x){ return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+  function E(x){ try{ return eur(x); }catch(e){ return (Number(x||0).toFixed(2))+' €'; } }
+  function FD(x){ try{ return frDate(x); }catch(e){ return x||''; } }
+  function today(){ try{ return todayStr(); }catch(e){ return new Date().toISOString().slice(0,10); } }
+  function delai(){ try{ return (db.societe&&db.societe.delaiPaiement!=null)?(parseInt(db.societe.delaiPaiement,10)||0):30; }catch(e){ return 30; } }
+  function frais(){ try{ return (db.societe&&db.societe.fraisRecouvrement!=null)?(+db.societe.fraisRecouvrement||0):40; }catch(e){ return 40; } }
+  function addDays(iso,n){ try{ var d=new Date(iso+'T00:00:00'); d.setDate(d.getDate()+(+n||0)); return d.toISOString().slice(0,10); }catch(e){ return iso; } }
+  function jours(a,b){ try{ return Math.round((new Date(b+'T00:00:00')-new Date(a+'T00:00:00'))/86400000); }catch(e){ return 0; } }
+  function typeCur(){ return (window.regOnglet==='fournisseur')?'fournisseur':'client'; }
+  function groups(){ return (typeof window.regOpenGroups==='function')?window.regOpenGroups(typeCur()):{}; }
+  function ligneMeta(x){ var ech=addDays(x.date, delai()); var rt=jours(ech, today()); return { ech:ech, retard:(rt>0?rt:0), late:(rt>0) }; }
+  function tierStat(g){ var late=0; (g.lignes||[]).forEach(function(x){ if(ligneMeta(x).late) late++; }); return { late:late, alerte:(late>=SEUIL) }; }
+  function sortedKeys(gr){ return Object.keys(gr).sort(function(a,b){
+    if(a==='__nid')return 1; if(b==='__nid')return -1;
+    var sa=tierStat(gr[a]).alerte?1:0, sb=tierStat(gr[b]).alerte?1:0; if(sa!==sb)return sb-sa;
+    return gr[b].total-gr[a].total; }); }
+  function tierObj(key){ try{ return (db.tiers||[]).find(function(t){return t.id===key;})||null; }catch(e){ return null; } }
+
+  window.regTab=function(o){ window.regOnglet=o; window.__regTid=null; if(typeof render==='function')render(); };
+  window.regPick=function(k){ window.__regTid=k; if(typeof render==='function')render(); };
+  window.regRelancer=function(k){
+    var gr=groups(); var g=gr[k]; if(!g) return; var t=tierObj(k);
+    var em=t&&t.email?t.email:''; var soc=(db.societe&&db.societe.raison)||'';
+    var lignes=(g.lignes||[]).map(function(x){ var m=ligneMeta(x); return '- '+(x.piece||'')+' du '+FD(x.date)+' — échéance '+FD(m.ech)+(m.late?(' (retard '+m.retard+' j)'):'')+' : '+E(x.montant); }).join('\n');
+    var sujet='Relance — factures échues ('+E(g.total)+')';
+    var corps='Bonjour,\n\nSauf erreur de notre part, les factures suivantes restent impayées :\n\n'+lignes+'\n\nTotal dû : '+E(g.total)+'\n\nNous vous remercions de bien vouloir procéder au règlement.\n\nCordialement,\n'+soc;
+    if(!em){ if(typeof toast==='function')toast('Aucun e-mail pour ce tiers — renseignez-le dans le module Tiers.'); return; }
+    try{ window.location.href='mailto:'+encodeURIComponent(em)+'?subject='+encodeURIComponent(sujet)+'&body='+encodeURIComponent(corps); }catch(e){}
+  };
+  window.regVoir=function(k){ var t=tierObj(k);
+    if(t&&t.compteAux&&typeof ouvrirCompteLecture==='function'){ try{ ouvrirCompteLecture(c9(t.compteAux)); return; }catch(e){} }
+    if(typeof toast==='function')toast('Grand-livre du tiers indisponible.');
+  };
+  window.regFermer=function(){ try{current='compta';}catch(e){} if(typeof render==='function')render(); };
+
+  window.pageReglements=function(){
+    var type=typeCur(); var estClient=(type==='client');
+    var s=(typeof db!=='undefined'&&db.societe)?db.societe:{};
+    var gr=groups(); var keys=sortedKeys(gr);
+    if(!window.__regTid || !gr[window.__regTid]) window.__regTid=keys[0]||null;
+    var kpi=(typeof window.regKPIDepuisEcritures==='function')?window.regKPIDepuisEcritures(type):{totDu:0,totRetard:0,totFrais:0,nbAlertes:0,nbFactures:0};
+    /* liste gauche */
+    var listHTML=keys.map(function(k){ var g=gr[k]; var st=tierStat(g); var sel=(k===window.__regTid);
+      var statTxt = st.alerte?('Alerte · '+st.late+' en retard') : (st.late>0?(st.late+' en retard') : 'Aucun retard');
+      var statCls = st.alerte?'rg-st-al' : (st.late>0?'rg-st-late':'rg-st-ok');
+      return '<button class="rg-trow'+(sel?' on':'')+(st.alerte?' al':'')+'" onclick="regPick(\''+e2(k)+'\')">'
+        +'<span class="rg-tl"><span class="rg-tn">'+e2(g.nom)+'</span><span class="rg-ts '+statCls+'">'+statTxt+'</span></span>'
+        +'<span class="rg-amt num">'+E(g.total)+'</span></button>';
+    }).join('')||'<div class="rg-empty">Aucune facture non réglée '+(estClient?'à encaisser':'à payer')+'.</div>';
+    /* détail droite */
+    var detail;
+    if(window.__regTid && gr[window.__regTid]){
+      var g=gr[window.__regTid]; var st=tierStat(g);
+      var rows=(g.lignes||[]).slice().sort(function(p,q){return (p.date<q.date?-1:(p.date>q.date?1:0));}).map(function(x){
+        var m=ligneMeta(x);
+        var chip = m.late ? '<span class="rg-late">'+m.retard+' j</span>' : '<span class="rg-due">à échoir</span>';
+        return '<tr><td class="dim num">'+FD(x.date)+'</td><td>'+e2(x.piece||'')+'</td><td class="dim num">'+FD(m.ech)+'</td><td>'+chip+'</td><td class="r num">'+E(x.montant)+'</td></tr>';
+      }).join('')||'<tr><td colspan="5" class="rg-empty">Aucune facture</td></tr>';
+      var alert = st.alerte ? '<div class="rg-alertbar"><span class="rg-tg">Ne plus traiter</span><span>'+st.late+' impayés en retard.</span></div>' : '';
+      detail='<div class="rg-panel">'+alert
+        +'<div class="rg-dh">'+e2(g.nom)+' — <span class="num">'+E(g.total)+'</span> '+(estClient?'à encaisser':'à payer')+'</div>'
+        +'<div class="rg-dsub">'+(g.lignes||[]).length+' facture(s)'+(st.late?(' · dont '+st.late+' en retard'):'')+'</div>'
+        +'<div class="rg-twrap"><table class="rg-t"><thead><tr><th>Date</th><th>Pièce</th><th>Échéance</th><th>Retard</th><th class="r">Montant</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+        +'<div class="rg-acts"><button class="rg-btn rg-pri" onclick="regRelancer(\''+e2(window.__regTid)+'\')">Relancer par e-mail</button>'
+        +'<button class="rg-btn" onclick="regVoir(\''+e2(window.__regTid)+'\')">Voir les factures</button></div>'
+        +'</div>';
+    } else {
+      detail='<div class="rg-panel rg-empty2">Sélectionnez un '+(estClient?'client':'fournisseur')+' à gauche pour afficher ses factures dues.</div>';
+    }
+    return '<div id="yada-rg"><div class="rg-wrap">'
+      +'<div class="rg-head"><div class="rg-title">Suivi des règlements</div>'
+        +'<span class="rg-exo">'+e2(s.raison||'')+'</span>'
+        +'<button class="rg-close" onclick="regFermer()" title="Revenir à la Consultation" aria-label="Fermer">✕</button></div>'
+      +'<div class="rg-sub">Créances clients &amp; dettes fournisseurs — factures non réglées (FEC inclus)</div>'
+      +'<div class="rg-tabs"><button class="rg-tab'+(estClient?' on':'')+'" onclick="regTab(\'client\')">Clients — à encaisser</button>'
+        +'<button class="rg-tab'+(!estClient?' on':'')+'" onclick="regTab(\'fournisseur\')">Fournisseurs — à payer</button></div>'
+      +'<div class="rg-ctx"><span>Total dû <b class="num">'+E(kpi.totDu)+'</b></span><span class="rg-dot">·</span>'
+        +'<span>Dont en retard <b class="num">'+E(kpi.totRetard)+'</b></span><span class="rg-dot">·</span>'
+        +'<span>'+(estClient?'Clients':'Fournisseurs')+' en alerte <b>'+kpi.nbAlertes+'</b></span></div>'
+      +'<div class="rg-md"><div class="rg-list">'+listHTML+'</div>'+detail+'</div>'
+      +'</div></div>';
+  };
+
+  try{ var st=document.createElement('style'); st.id='yada-rg-mod'; st.textContent=
+     '.mod-wrap:has(#yada-rg),.fullbleed:has(#yada-rg){padding:0!important;max-width:none!important}'
+    +'#yada-rg{font-family:Tahoma,"Segoe UI",Geneva,Verdana,sans-serif;color:#f5f5f6;background:#000;min-height:100dvh}'
+    +'#yada-rg .rg-wrap{max-width:1060px;margin:0 auto;padding:0 20px 28px}'
+    +'#yada-rg .rg-head{display:flex;align-items:center;gap:12px;padding:14px 4px 6px;border-bottom:1px solid #242427}'
+    +'#yada-rg .rg-title{font-size:17px;font-weight:700}'
+    +'#yada-rg .rg-exo{margin-left:auto;color:#8b8b90!important;font-size:12px}'
+    +'#yada-rg .rg-close{width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:#000;color:#fff!important;border:1.5px solid #fff;border-radius:9px;cursor:pointer;font:inherit;font-size:15px}'
+    +'#yada-rg .rg-close:hover{background:#fff;color:#000!important}'
+    +'#yada-rg .rg-sub{color:#8b8b90!important;font-size:11.5px;padding:8px 4px 14px}'
+    +'#yada-rg .rg-tabs{display:inline-flex;gap:3px;padding:3px;border:1px solid #242427;border-radius:11px;background:#0b0b0c;margin-bottom:12px}'
+    +'#yada-rg .rg-tab{padding:8px 16px;border:0;border-radius:8px;background:transparent;color:#8b8b90!important;font:inherit;font-size:12px;cursor:pointer}'
+    +'#yada-rg .rg-tab:hover{color:#fff!important}'
+    +'#yada-rg .rg-tab.on{background:#f5f5f6;color:#000!important;font-weight:700}'
+    +'#yada-rg .rg-ctx{display:flex;align-items:center;gap:12px;font-size:11.5px;color:#8b8b90!important;margin-bottom:18px}'
+    +'#yada-rg .rg-ctx b{color:#f5f5f6!important}#yada-rg .rg-dot{color:#3a3a3e}'
+    +'#yada-rg .rg-md{display:grid;grid-template-columns:300px 1fr;gap:22px;align-items:start}'
+    +'#yada-rg .rg-list{display:flex;flex-direction:column;gap:9px}'
+    +'#yada-rg .rg-trow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 15px;border:1px solid #242427;border-radius:12px;background:#0b0b0c;cursor:pointer;text-align:left;font:inherit}'
+    +'#yada-rg .rg-trow:hover{border-color:#35353a}'
+    +'#yada-rg .rg-trow.on{border-color:#fff;box-shadow:inset 3px 0 0 #fff}'
+    +'#yada-rg .rg-tl{display:flex;flex-direction:column;gap:5px;min-width:0}'
+    +'#yada-rg .rg-tn{font-size:12.5px;font-weight:700;color:#f5f5f6;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
+    +'#yada-rg .rg-ts{font-size:9.5px;letter-spacing:.02em}'
+    +'#yada-rg .rg-st-ok{color:#616166!important}#yada-rg .rg-st-late{color:#8b8b90!important}'
+    +'#yada-rg .rg-st-al{color:#fff!important;font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:9px}'
+    +'#yada-rg .rg-amt{font-size:13px;font-weight:700;white-space:nowrap}'
+    +'#yada-rg .rg-panel{border:1px solid #242427;border-radius:14px;background:#0b0b0c;padding:20px 22px;min-width:0}'
+    +'#yada-rg .rg-empty2{color:#8b8b90!important;text-align:center;padding:50px 20px}'
+    +'#yada-rg .rg-alertbar{border:1px solid #fff;border-radius:11px;padding:12px 15px;font-size:11.5px;margin-bottom:18px;display:flex;align-items:center;gap:14px;background:#0e0e10;flex-wrap:wrap}'
+    +'#yada-rg .rg-tg{background:#f5f5f6;color:#000!important;border-radius:7px;padding:4px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}'
+    +'#yada-rg .rg-dh{font-size:14px;font-weight:700;margin:0 0 4px}'
+    +'#yada-rg .rg-dsub{font-size:10.5px;color:#8b8b90!important;margin-bottom:16px}'
+    +'#yada-rg .rg-twrap{overflow:auto}'
+    +'#yada-rg .rg-t{width:100%;border-collapse:collapse;font-size:12px}'
+    +'#yada-rg .rg-t th{text-align:left;color:#616166!important;background:#000!important;background-image:none!important;font-weight:400;padding:9px 12px;border-bottom:1px solid #242427!important;text-transform:uppercase;font-size:9.5px;letter-spacing:.08em;white-space:nowrap}'
+    +'#yada-rg .rg-t td{padding:11px 12px;border-bottom:1px solid #171719}'
+    +'#yada-rg .rg-t tr:last-child td{border-bottom:0}'
+    +'#yada-rg .rg-late{display:inline-block;background:#f5f5f6;color:#000!important;border-radius:999px;padding:2px 9px;font-size:9.5px;font-weight:700}'
+    +'#yada-rg .rg-due{display:inline-block;border:1px solid #35353a;color:#8b8b90!important;border-radius:999px;padding:2px 9px;font-size:9.5px}'
+    +'#yada-rg .rg-acts{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}'
+    +'#yada-rg .rg-btn{background:transparent;color:#f5f5f6!important;border:1px solid #35353a;border-radius:9px;padding:9px 14px;cursor:pointer;font:inherit;font-size:11.5px}'
+    +'#yada-rg .rg-btn:hover{background:#fff;color:#000!important;border-color:#fff}'
+    +'#yada-rg .rg-btn.rg-pri{background:#f5f5f6;color:#000!important;border-color:#f5f5f6;font-weight:700}#yada-rg .rg-btn.rg-pri:hover{background:#ddd}'
+    +'#yada-rg .rg-empty{color:#8b8b90!important;text-align:center;padding:16px;font-size:11.5px}'
+    +'#yada-rg .r{text-align:right}#yada-rg .num{font-variant-numeric:tabular-nums}#yada-rg .dim{color:#8b8b90!important}'
+    +'#yada-rg a{color:#fff!important}'
+    +'@media(max-width:820px){#yada-rg .rg-md{grid-template-columns:1fr}}';
     document.head.appendChild(st);
   }catch(e){}
 })();
