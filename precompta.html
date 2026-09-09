@@ -11095,7 +11095,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v588';
+    b.textContent='YADA · v589';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -27762,8 +27762,8 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
    service worker → on atterrit directement sur la nouvelle version (Accueil).
    Drapeau localStorage 'yada-fresh-549' → exécuté une seule fois. 100% additif. */
 (function(){
-  var CUR='yada-v183';           /* = CACHE courant du sw.js */
-  var FLAG='yada-fresh-588';
+  var CUR='yada-v184';           /* = CACHE courant du sw.js */
+  var FLAG='yada-fresh-589';
   try{ if(localStorage.getItem(FLAG)) return; }catch(e){}
   try{ localStorage.setItem(FLAG,'1'); }catch(e){}
   try{
@@ -30668,6 +30668,169 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     +'#yada-fe .fe-empty{color:#8a8a8a!important;text-align:center;padding:16px}'
     +'#yada-fe .dim{color:#8a8a8a!important}#yada-fe .r{text-align:right}#yada-fe .num{font-variant-numeric:tabular-nums}'
     +'#yada-fe a{color:#fff!important}';
+    document.head.appendChild(st);
+  }catch(e){}
+})();
+</script>
+<script id="yada-addon-mod-analytique">
+/* ═══ RECONSTRUCTION — MODULE 14 : ANALYTIQUE & RENTABILITÉ (maquette B : rapport structuré, noir & blanc) ═══
+   Sections empilées : 1. Synthèse · 2. Détail mensuel · 3. Répartition des charges · 4. Top clients & fournisseurs.
+   Calculé sur TOUTES les écritures (db.ecritures). Export CSV + impression A4 (.doc-page). Croix ✕ = Consultation.
+   Remplace pageAnalytique (l'ancien module coloré est neutralisé par cet override). 100% additif, B&W. */
+(function(){
+  window.YADA_OK=(window.YADA_OK||[]);
+  if(window.YADA_OK.indexOf('analytique')<0) window.YADA_OK.push('analytique');
+  window.YADA_LBL=window.YADA_LBL||{}; window.YADA_LBL.analytique='Analytique & rentabilité';
+  function e2(x){ return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+  function E(x){ try{ return eur(x); }catch(e){ return (Number(x||0).toFixed(2))+' €'; } }
+  function C9(x){ try{ return c9(x); }catch(e){ return String(x||''); } }
+  function R2(x){ try{ return r2(x); }catch(e){ return Math.round((+x||0)*100)/100; } }
+  function FD(x){ try{ return frDate(x); }catch(e){ return x; } }
+  function lib(code){ try{ return COMPTES[code]||COMPTES[String(code).replace(/0+$/,'')]||code; }catch(e){ return code; } }
+  function anYears(){ var s={}; ((typeof db!=='undefined'&&db.ecritures)||[]).forEach(function(e){ var y=(e.date||'').slice(0,4); if(y)s[y]=1; }); return Object.keys(s).sort().reverse(); }
+  function anYear(){ if(!window.__anYear){ window.__anYear=((typeof exoYear==='function')?exoYear():'')||anYears()[0]||String((new Date()).getFullYear()); } return window.__anYear; }
+  window.anSetYear=function(y){ window.__anYear=y; if(typeof render==='function')render(); };
+  function compute(year){
+    var ca=0,ch=0,byMonth={},charges={},produits={},treso={};
+    function mm(m){ return byMonth[m]||(byMonth[m]={ca:0,ch:0}); }
+    ((typeof db!=='undefined'&&db.ecritures)||[]).forEach(function(e){
+      if((e.libelle||'').indexOf('OD RÉSULTAT')>=0) return;
+      var y=(e.date||'').slice(0,4); if(year&&year!=='all'&&y!==year) return;
+      var m=(e.date||'').slice(0,7);
+      (e.lignes||[]).forEach(function(l){ var k=C9(l.compte||''),cl=k.charAt(0),d=+l.debit||0,cr=+l.credit||0;
+        if(cl==='7'){ var vp=cr-d; ca+=vp; mm(m).ca+=vp; produits[k]=(produits[k]||0)+vp; }
+        else if(cl==='6'){ var vc=d-cr; ch+=vc; mm(m).ch+=vc; charges[k]=(charges[k]||0)+vc; }
+        if(k.slice(0,3)==='512') treso[m]=(treso[m]||0)+(d-cr);
+      });
+    });
+    var tv=0; Object.keys(treso).forEach(function(m){ tv+=treso[m]; });
+    return { ca:R2(ca),ch:R2(ch),res:R2(ca-ch),tv:R2(tv),byMonth:byMonth,charges:charges,produits:produits };
+  }
+  function tiersRank(year){
+    var auxMap={}; ((typeof db!=='undefined'&&db.tiers)||[]).forEach(function(t){ if(t.compteAux) auxMap[C9(t.compteAux)]=t; });
+    var acc={};
+    ((typeof db!=='undefined'&&db.ecritures)||[]).forEach(function(e){ var y=(e.date||'').slice(0,4); if(year&&year!=='all'&&y!==year) return;
+      (e.lignes||[]).forEach(function(l){ var t=auxMap[C9(l.compte||'')]; if(!t) return; var a=acc[t.id]||(acc[t.id]={t:t,deb:0,cre:0}); a.deb+=(+l.debit||0); a.cre+=(+l.credit||0); }); });
+    var cl=[],fo=[]; Object.keys(acc).forEach(function(id){ var a=acc[id]; if(a.t.type==='client') cl.push({nom:a.t.nom,val:R2(a.deb)}); else fo.push({nom:a.t.nom,val:R2(a.cre)}); });
+    cl.sort(function(x,y){return y.val-x.val;}); fo.sort(function(x,y){return y.val-x.val;});
+    return {clients:cl,fourn:fo};
+  }
+  function rankParts(obj){ var tot=0; Object.keys(obj).forEach(function(k){ if(obj[k]>0.005) tot+=obj[k]; });
+    return Object.keys(obj).map(function(k){return {code:k,lib:lib(k),val:R2(obj[k])};}).filter(function(x){return x.val>0.005;})
+      .sort(function(a,b){return b.val-a.val;}).map(function(x){ x.pct=tot?Math.round(x.val/tot*100):0; return x; }); }
+  function monthsWith(byMonth){ return Object.keys(byMonth).filter(function(m){ var b=byMonth[m]; return b.ca||b.ch; }).sort(); }
+
+  window.anExportCSV=function(){ var y=anYear(),c=compute(y),ms=monthsWith(c.byMonth);
+    var rows=[['Mois','CA','Charges','Resultat','Marge %']];
+    ms.forEach(function(m){ var b=c.byMonth[m]; var res=R2(b.ca-b.ch); rows.push([m,R2(b.ca),R2(b.ch),res,b.ca?Math.round(res/b.ca*100):0]); });
+    rows.push(['TOTAL '+y,c.ca,c.ch,c.res,c.ca?Math.round(c.res/c.ca*100):0]);
+    var csv='﻿'+rows.map(function(r){return r.join(';');}).join('\n');
+    try{ var bl=new Blob([csv],{type:'text/csv'}); var a=document.createElement('a'); a.href=URL.createObjectURL(bl); a.download='analytique-'+y+'.csv'; a.click(); if(typeof toast==='function')toast('Tableau analytique exporté (CSV)'); }catch(e){}
+  };
+  window.anImprimer=function(){ var y=anYear(),c=compute(y),tr=tiersRank(y),ch=rankParts(c.charges),ms=monthsWith(c.byMonth);
+    var s=(typeof db!=='undefined'&&db.societe)?db.societe:{};
+    var marge=c.ca?Math.round(c.res/c.ca*100):0;
+    var moisRows=ms.map(function(m){ var b=c.byMonth[m]; var res=R2(b.ca-b.ch); return '<tr><td>'+m+'</td><td class="r">'+E(b.ca)+'</td><td class="r">'+E(b.ch)+'</td><td class="r">'+E(res)+'</td><td class="r">'+(b.ca?Math.round(res/b.ca*100):0)+' %</td></tr>'; }).join('')||'<tr><td colspan="5">Aucune écriture</td></tr>';
+    var chRows=ch.map(function(x){ return '<tr><td>'+e2(C9(x.code))+' · '+e2(x.lib)+'</td><td class="r">'+E(x.val)+'</td><td class="r">'+x.pct+' %</td></tr>'; }).join('')||'<tr><td colspan="3">—</td></tr>';
+    var clRows=tr.clients.slice(0,10).map(function(x){return '<tr><td>'+e2(x.nom||'—')+'</td><td class="r">'+E(x.val)+'</td></tr>';}).join('')||'<tr><td colspan="2">—</td></tr>';
+    var foRows=tr.fourn.slice(0,10).map(function(x){return '<tr><td>'+e2(x.nom||'—')+'</td><td class="r">'+E(x.val)+'</td></tr>';}).join('')||'<tr><td colspan="2">—</td></tr>';
+    var h='<div class="doc"><div class="doc-page"><div style="font-weight:700;font-size:16px">Analytique &amp; rentabilité — Exercice '+e2(y)+'</div>'
+      +'<div style="font-size:12px;margin:2px 0 12px">'+e2(s.raison||'')+(s.formeJur?(' ('+e2(s.formeJur)+')'):'')+'</div>'
+      +'<div class="doc-gl-h">1 · Synthèse</div><table class="doc-t"><tbody>'
+        +'<tr><td>Chiffre d\'affaires (70x)</td><td class="r">'+E(c.ca)+'</td></tr>'
+        +'<tr><td>Charges (60x)</td><td class="r">'+E(c.ch)+'</td></tr>'
+        +'<tr><td><b>Résultat</b></td><td class="r"><b>'+E(c.res)+'</b></td></tr>'
+        +'<tr><td>Marge nette</td><td class="r">'+marge+' %</td></tr>'
+        +'<tr><td>Variation de trésorerie (512)</td><td class="r">'+E(c.tv)+'</td></tr></tbody></table>'
+      +'<div class="doc-gl-h">2 · Détail mensuel</div><table class="doc-t"><thead><tr><th>Mois</th><th class="r">CA</th><th class="r">Charges</th><th class="r">Résultat</th><th class="r">Marge</th></tr></thead><tbody>'+moisRows
+        +'<tr><td><b>Total '+e2(y)+'</b></td><td class="r"><b>'+E(c.ca)+'</b></td><td class="r"><b>'+E(c.ch)+'</b></td><td class="r"><b>'+E(c.res)+'</b></td><td class="r"><b>'+marge+' %</b></td></tr></tbody></table>'
+      +'<div class="doc-gl-h">3 · Répartition des charges</div><table class="doc-t"><thead><tr><th>Compte</th><th class="r">Montant</th><th class="r">%</th></tr></thead><tbody>'+chRows+'</tbody></table>'
+      +'<div class="doc-gl-h">4 · Top clients &amp; fournisseurs</div><table class="doc-t"><thead><tr><th>Client</th><th class="r">CA</th></tr></thead><tbody>'+clRows+'</tbody></table>'
+      +'<table class="doc-t" style="margin-top:6px"><thead><tr><th>Fournisseur</th><th class="r">Dépensé</th></tr></thead><tbody>'+foRows+'</tbody></table>'
+      +'</div></div>';
+    var pa=document.getElementById('print-area'); if(pa){ pa.innerHTML=h; if(typeof toast==='function')toast('Fenêtre d\'impression → « Enregistrer en PDF »'); setTimeout(function(){ try{window.print();}catch(e){} },150); }
+  };
+
+  window.pageAnalytique=function(){
+    var y=anYear(),c=compute(y),tr=tiersRank(y),ch=rankParts(c.charges),ms=monthsWith(c.byMonth);
+    var s=(typeof db!=='undefined'&&db.societe)?db.societe:{};
+    var years=anYears(); if(years.indexOf(y)<0) years.unshift(y);
+    var marge=c.ca?Math.round(c.res/c.ca*100):0;
+    var yrBtns=years.map(function(yy){ return '<button class="an-yr'+(yy===y?' on':'')+'" onclick="anSetYear(\''+yy+'\')">'+e2(yy)+'</button>'; }).join('');
+    /* Section 1 */
+    var s1='<div class="an-card"><div class="an-h">1 · Synthèse de l’exercice</div>'
+      +'<table class="an-t"><tbody>'
+      +'<tr><td>Chiffre d’affaires (70x)</td><td class="r num">'+E(c.ca)+'</td></tr>'
+      +'<tr><td>Charges (60x)</td><td class="r num">'+E(c.ch)+'</td></tr>'
+      +'<tr class="an-tot"><td>Résultat</td><td class="r num">'+E(c.res)+'</td></tr>'
+      +'<tr><td class="dim">Marge nette</td><td class="r num dim">'+marge+' %</td></tr>'
+      +'<tr><td class="dim">Variation de trésorerie (512)</td><td class="r num dim">'+E(c.tv)+'</td></tr>'
+      +'</tbody></table></div>';
+    /* Section 2 */
+    var moisRows=ms.map(function(m){ var b=c.byMonth[m]; var res=R2(b.ca-b.ch); var mg=b.ca?Math.round(res/b.ca*100):0;
+      return '<tr><td>'+e2(m)+'</td><td class="r num">'+E(b.ca)+'</td><td class="r num">'+E(b.ch)+'</td><td class="r num">'+E(res)+'</td><td class="r num dim">'+mg+' %</td></tr>'; }).join('')
+      ||'<tr><td colspan="5" class="an-empty">Aucune écriture sur '+e2(y)+'</td></tr>';
+    var s2='<div class="an-card"><div class="an-h">2 · Détail mensuel</div>'
+      +'<div class="an-twrap"><table class="an-t"><thead><tr><th>Mois</th><th class="r">CA</th><th class="r">Charges</th><th class="r">Résultat</th><th class="r">Marge</th></tr></thead><tbody>'+moisRows
+      +'<tr class="an-tot"><td>Total '+e2(y)+'</td><td class="r num">'+E(c.ca)+'</td><td class="r num">'+E(c.ch)+'</td><td class="r num">'+E(c.res)+'</td><td class="r num">'+marge+' %</td></tr>'
+      +'</tbody></table></div></div>';
+    /* Section 3 */
+    var chRows=ch.map(function(x){ return '<tr><td>'+e2(C9(x.code))+' · '+e2(x.lib)+'</td><td class="r num">'+E(x.val)+'</td><td class="r num dim">'+x.pct+' %</td></tr>'; }).join('')
+      ||'<tr><td colspan="3" class="an-empty">Aucune charge sur '+e2(y)+'</td></tr>';
+    var s3='<div class="an-card"><div class="an-h">3 · Répartition des charges</div>'
+      +'<div class="an-twrap"><table class="an-t"><thead><tr><th>Compte de charge</th><th class="r">Montant</th><th class="r">Part</th></tr></thead><tbody>'+chRows+'</tbody></table></div></div>';
+    /* Section 4 */
+    function tt(arr){ return arr.slice(0,10).map(function(x){ return '<tr><td>'+e2(x.nom||'—')+'</td><td class="r num">'+E(x.val)+'</td></tr>'; }).join(''); }
+    var clRows=tt(tr.clients)||'<tr><td colspan="2" class="an-empty">—</td></tr>';
+    var foRows=tt(tr.fourn)||'<tr><td colspan="2" class="an-empty">—</td></tr>';
+    var s4='<div class="an-card"><div class="an-h">4 · Top clients &amp; fournisseurs</div>'
+      +'<div class="an-g2">'
+      +'<div class="an-twrap"><table class="an-t"><thead><tr><th>Client</th><th class="r">CA facturé</th></tr></thead><tbody>'+clRows+'</tbody></table></div>'
+      +'<div class="an-twrap"><table class="an-t"><thead><tr><th>Fournisseur</th><th class="r">Dépensé</th></tr></thead><tbody>'+foRows+'</tbody></table></div>'
+      +'</div></div>';
+    return '<div id="yada-an"><div class="an-wrap">'
+      +'<div class="an-head"><div class="an-title">Analytique &amp; rentabilité</div>'
+        +'<span class="an-exo">Exercice '+FD(s.exoDebut)+' → '+FD(s.exoFin)+'</span>'
+        +'<button class="an-close" onclick="anFermer()" title="Revenir à la Consultation" aria-label="Fermer">✕</button></div>'
+      +'<div class="an-sub">Rapport calculé sur toutes les écritures · '+e2(s.raison||'')+'</div>'
+      +'<div class="an-bar"><span class="an-lbl">Exercice :</span>'+yrBtns
+        +'<span class="an-sp"></span>'
+        +'<button class="an-btn" onclick="anExportCSV()">⬇ Export CSV</button>'
+        +'<button class="an-btn" onclick="anImprimer()">🖨 Imprimer</button></div>'
+      +s1+s2+s3+s4
+      +'</div></div>';
+  };
+  window.anFermer=function(){ try{current='compta';}catch(e){} if(typeof render==='function')render(); };
+  try{ var st=document.createElement('style'); st.id='yada-an-mod'; st.textContent=
+     '.mod-wrap:has(#yada-an),.fullbleed:has(#yada-an){padding:0!important;max-width:none!important}'
+    +'#yada-an{font-family:Tahoma,"Segoe UI",Geneva,Verdana,sans-serif;color:#fff;background:#000;min-height:100dvh}'
+    +'#yada-an .an-wrap{max-width:940px;margin:0 auto;padding:0 18px 26px}'
+    +'#yada-an .an-head{display:flex;align-items:center;gap:12px;padding:14px 4px 6px;border-bottom:1px solid #1b1b1b}'
+    +'#yada-an .an-title{font-size:17px;font-weight:700}'
+    +'#yada-an .an-exo{margin-left:auto;color:#8a8a8a!important;font-size:12px}'
+    +'#yada-an .an-close{width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:#000;color:#fff!important;border:1.5px solid #fff;border-radius:9px;cursor:pointer;font:inherit;font-size:15px}'
+    +'#yada-an .an-close:hover{background:#fff;color:#000!important}'
+    +'#yada-an .an-sub{color:#8a8a8a!important;font-size:11.5px;padding:8px 4px 14px}'
+    +'#yada-an .an-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:14px}'
+    +'#yada-an .an-lbl{color:#8a8a8a!important;font-size:10.5px;margin-right:2px}'
+    +'#yada-an .an-yr{padding:5px 12px;border:1px solid #2a2a2a;border-radius:7px;background:#000;color:#bbb!important;font:inherit;font-size:11px;cursor:pointer}'
+    +'#yada-an .an-yr:hover{border-color:#3a3a3a;color:#fff!important}'
+    +'#yada-an .an-yr.on{background:#fff;color:#000!important;font-weight:700;border-color:#fff}'
+    +'#yada-an .an-sp{flex:1}'
+    +'#yada-an .an-btn{background:#000;color:#fff!important;border:1px solid #fff;border-radius:8px;padding:7px 12px;cursor:pointer;font:inherit;font-size:11px;white-space:nowrap}'
+    +'#yada-an .an-btn:hover{background:#fff;color:#000!important}'
+    +'#yada-an .an-card{background:#0a0a0a;border:1px solid #1c1c1c;border-radius:12px;padding:16px 18px;margin-bottom:14px}'
+    +'#yada-an .an-h{font-size:13px;font-weight:700;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #1b1b1b}'
+    +'#yada-an .an-twrap{overflow:auto}'
+    +'#yada-an .an-t{width:100%;border-collapse:collapse;font-size:12px}'
+    +'#yada-an .an-t th{text-align:left;color:#8a8a8a!important;background:#000!important;background-image:none!important;font-weight:400;padding:8px 10px;border-bottom:1px solid #222!important;white-space:nowrap}'
+    +'#yada-an .an-t td{padding:8px 10px;border-bottom:1px solid #131313}'
+    +'#yada-an .an-t tr.an-tot td{border-top:1px solid #333;border-bottom:1px solid #333;font-weight:700;color:#fff}'
+    +'#yada-an .an-g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}'
+    +'#yada-an .an-empty{color:#8a8a8a!important;text-align:center;padding:14px}'
+    +'#yada-an .dim{color:#8a8a8a!important}#yada-an .r{text-align:right}#yada-an .num{font-variant-numeric:tabular-nums}'
+    +'#yada-an a{color:#fff!important}'
+    +'@media(max-width:820px){#yada-an .an-g2{grid-template-columns:1fr}}';
     document.head.appendChild(st);
   }catch(e){}
 })();
