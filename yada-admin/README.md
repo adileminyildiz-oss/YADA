@@ -126,6 +126,40 @@ npm run verify:l4
   **clôture** (OD de résultat 6/7 → 120/129 + à-nouveaux → bilan d'ouverture N+1
   équilibré).
 
+## Lot L5 — Fiscalité, pilotage & assistant IA ✅
+
+Migration `0007` : **2 tables seulement** (`declarations`, `ia_suggestions`) —
+le reste (KPI, soldes fiscaux) est **calculé** sur les écritures L4.
+
+**Critère de sortie** (plan) : *fiscalité (calcul + déclarations + échéancier) ;
+pilotage (KPI vivants) ; assistant IA (propose → l'humain valide).*
+
+```bash
+npm run verify:l5
+```
+
+- **Fiscalité** : `calcIS` (15 % PME jusqu'à 42 500 € puis 25 %), `calcIR`
+  (barème 2024 par parts) — purs et testés ; déclarations + échéancier.
+  *Estimations à valider par un expert-comptable.*
+- **Pilotage** : KPI dérivés des écritures (CA, charges, résultat, marge,
+  trésorerie, créances, dettes) — jamais ressaisis.
+- **Assistant IA** : `proposeCompte` (imputation par mots-clés) → suggestion
+  `en_attente` → **l'humain valide** ; contrôle de cohérence (compte d'attente
+  471 non soldé → anomalie). Cloisonné par organisation, tracé.
+
+---
+
+## La série est complète — L0 → L5
+
+| Lot | Contenu | Vérif |
+|-----|---------|-------|
+| L0 | socle CORE (Postgres, RLS multi-tenant, auth) | `verify:l0:local` |
+| L1 | CRM & fiche société (SIREN) | `verify:l1` |
+| L2 | Facturation & e-invoicing (Factur-X) | `verify:l2` |
+| L3 | GED, OCR & réception | `verify:l3` |
+| L4 | Comptabilité — le moteur | `verify:l4` |
+| L5 | Fiscalité, pilotage & IA | `verify:l5` |
+
 ## API
 
 | Méthode | Route                          | Rôle          | Effet |
@@ -167,13 +201,20 @@ npm run verify:l4
 | GET     | `/api/entreprises/:id/compta/ca3/:exId`       | authentifié  | déclaration TVA (CA3) |
 | GET     | `/api/entreprises/:id/compta/fec/:exId`       | authentifié  | export FEC normé |
 | POST    | `/api/entreprises/:id/compta/cloture/:exId`   | admin/collab | clôture + à-nouveaux N+1 |
+| GET     | `/api/entreprises/:id/pilotage/kpis/:exId`    | authentifié  | indicateurs (CA, marge, tréso…) |
+| GET     | `/api/entreprises/:id/pilotage/fisc/:exId`    | authentifié  | calcul IS/IR sur le résultat |
+| POST    | `/api/entreprises/:id/pilotage/declarations`  | admin/collab | planifie une déclaration |
+| GET     | `/api/entreprises/:id/pilotage/declarations`  | authentifié  | échéancier fiscal |
+| POST    | `/api/entreprises/:id/pilotage/ia/proposer`   | admin/collab | propose une imputation (à valider) |
+| POST    | `/api/entreprises/:id/pilotage/ia/controle-attente/:exId` | admin/collab | contrôle des comptes d'attente |
+| GET     | `/api/entreprises/:id/pilotage/ia`            | authentifié  | file des suggestions IA |
+| PATCH   | `/api/entreprises/:id/pilotage/ia/:sid`       | admin/collab | valider / corriger / refuser |
 | GET     | `/api/health`                  | public        | état + ping DB |
 
 ## Vérifier tout le socle construit
 
 ```bash
-npm run verify:l0:local && npm run verify:l1 && npm run verify:l2 && \
-npm run verify:l3 && npm run verify:l4
+npm run verify:all   # L0 → L5, de bout en bout
 ```
 
 ## Sécurité

@@ -8,6 +8,7 @@ import { SirenModule } from './siren/siren.module';
 import { FacturesModule } from './factures/factures.module';
 import { ReceptionModule } from './reception/reception.module';
 import { ComptaModule } from './compta/compta.module';
+import { PilotageModule } from './pilotage/pilotage.module';
 import { HealthController } from './health/health.controller';
 
 @Module({
@@ -21,6 +22,7 @@ import { HealthController } from './health/health.controller';
     FacturesModule,
     ReceptionModule,
     ComptaModule,
+    PilotageModule,
   ],
   controllers: [HealthController],
 })
