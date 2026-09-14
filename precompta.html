@@ -11095,7 +11095,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v598';
+    b.textContent='YADA · v599';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -32390,6 +32390,41 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       +'#yada-jr .jr-tbl tbody tr:hover td{background:#0b0b0c !important}'
       +'#yada-jr .jr-tbl tfoot td{border-top-color:#f5f5f6 !important;font-family:'+MONO+' !important}'
       +'#yada-jr .jr-tbl tfoot td.r.num{font-family:'+SERIF+' !important;font-size:14px !important}';
+    document.head.appendChild(st);
+  }catch(e){}
+})();
+</script>
+<script id="yada-addon-editions-registre">
+/* v599 — MODULE ÉDITIONS / ÉTATS « Registre » (éditorial N&B). Habillage
+   éditorial du module `editions` (#yada-ed, déjà reconstruit : liste des éditions
+   par famille — Balances / Grands livres / États de synthèse / Journaux — +
+   aperçu A4 du document + « 🖨 Imprimer / PDF »). 100% ADDITIF & CSS-ONLY :
+   aucune ligne de logique/handler touchée (sélection d'édition, aperçu,
+   impression conservés). Même système que Journal/Banque/Rapprochement :
+   masthead serif + eyebrow mono (::before), panneaux #0b0b0c, filets #242427,
+   gris #8b8b90, en-têtes de famille et libellés en MONO, édition active en
+   pastille inversée. L'APERÇU A4 (.ed-preview .doc-page) N'EST PAS touché
+   (feuille blanche/encre noire, déjà gérée par doc-edit-mod). Style injecté en
+   DERNIER → prime (spécificité égale + !important, source postérieure à
+   yada-ed-mod). */
+(function(){
+  if(typeof document==='undefined') return;
+  if(window.__editionsRegistre) return; window.__editionsRegistre=true;
+  try{ if(document.getElementById('editions-registre-mod')) return;
+    var SERIF='Georgia,"Times New Roman",serif', MONO='ui-monospace,Menlo,Consolas,monospace';
+    var st=document.createElement('style'); st.id='editions-registre-mod'; st.textContent=
+       '#yada-ed .ed-head{border-bottom:2px solid #f5f5f6 !important;padding:20px 4px 12px !important;align-items:flex-end !important}'
+      +'#yada-ed .ed-title{font-family:'+SERIF+' !important;font-weight:600 !important;font-size:26px !important;color:#fff !important;line-height:1.05}'
+      +'#yada-ed .ed-title::before{content:"YADA · ÉDITIONS COMPTABLES";display:block;font-family:'+MONO+';font-size:11px;font-weight:400;letter-spacing:.28em;color:#8b8b90;margin-bottom:6px}'
+      +'#yada-ed .ed-exo{font-family:'+MONO+' !important;letter-spacing:.05em;color:#8b8b90 !important}'
+      +'#yada-ed .ed-close{border-radius:5px !important;border-color:#f5f5f6 !important}'
+      +'#yada-ed .ed-rail{background:#0b0b0c !important;border-right-color:#242427 !important}'
+      +'#yada-ed .ed-body{border-color:#242427 !important}'
+      +'#yada-ed .ed-gh{font-family:'+MONO+' !important;font-size:9px !important;letter-spacing:.12em !important;color:#8b8b90 !important}'
+      +'#yada-ed .ed-li{background:#0b0b0c !important;border-color:#242427 !important;border-radius:4px !important;font-family:'+MONO+' !important;color:#c8c8c8 !important}'
+      +'#yada-ed .ed-li.on{background:#f2f2f3 !important;color:#0a0a0b !important;border-color:#f2f2f3 !important}'
+      +'#yada-ed .ed-pt{font-family:'+SERIF+' !important;font-weight:600 !important;font-size:16px !important}'
+      +'#yada-ed .ed-print{border-radius:5px !important;font-family:'+MONO+' !important;letter-spacing:.03em}';
     document.head.appendChild(st);
   }catch(e){}
 })();
