@@ -11095,7 +11095,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v604';
+    b.textContent='YADA · v605';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -32638,6 +32638,41 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       +'#yada-cp .cp-in:focus{border-color:#f5f5f6 !important}'
       +'#yada-cp .cp-f label{font-family:'+MONO+' !important;color:#8b8b90 !important}'
       +'#yada-cp .cp-del{border-radius:4px !important}';
+    document.head.appendChild(st);
+  }catch(e){}
+})();
+</script>
+<script id="yada-addon-societe-registre">
+/* v605 — MODULE SOCIÉTÉS (portefeuille) « Registre » (éditorial N&B). Habillage
+   éditorial du module `societe` (#yada-so, déjà reconstruit : en-tête + Accéder
+   à Qonto + 2 KPI + recherche + tableau du portefeuille). 100% ADDITIF &
+   CSS-ONLY : aucune ligne de logique/handler touchée (factCountDossier/
+   ouvrirDossierCabinet/accederQonto conservés). Même système « Registre » :
+   masthead serif + eyebrow mono (::before), KPI/tableau #0b0b0c/#121214, filets
+   #242427, gris #8b8b90, KPI libellés mono / valeurs serif, table en-têtes mono
+   / montants serif, boutons & recherche mono. Style injecté en DERNIER → prime
+   (spécificité égale + !important, source postérieure à yada-so-mod). */
+(function(){
+  if(typeof document==='undefined') return;
+  if(window.__societeRegistre) return; window.__societeRegistre=true;
+  try{ if(document.getElementById('societe-registre-mod')) return;
+    var SERIF='Georgia,"Times New Roman",serif', MONO='ui-monospace,Menlo,Consolas,monospace';
+    var st=document.createElement('style'); st.id='societe-registre-mod'; st.textContent=
+       '#yada-so .so-head{border-bottom:2px solid #f5f5f6 !important;padding:20px 4px 12px !important;align-items:flex-end !important}'
+      +'#yada-so .so-title{font-family:'+SERIF+' !important;font-weight:600 !important;font-size:26px !important;color:#fff !important;line-height:1.05}'
+      +'#yada-so .so-title::before{content:"YADA · SOCIÉTÉS — PORTEFEUILLE";display:block;font-family:'+MONO+';font-size:11px;font-weight:400;letter-spacing:.28em;color:#8b8b90;margin-bottom:6px}'
+      +'#yada-so .so-qonto{border-radius:5px !important;border-color:#f5f5f6 !important;font-family:'+MONO+' !important;letter-spacing:.03em}'
+      +'#yada-so .so-close{border-radius:5px !important;border-color:#f5f5f6 !important}'
+      +'#yada-so .so-kpi{background:#0b0b0c !important;border-color:#242427 !important;border-radius:6px !important}'
+      +'#yada-so .so-kpi .l{font-family:'+MONO+' !important;text-transform:uppercase;letter-spacing:.06em;font-size:9px !important;color:#8b8b90 !important}'
+      +'#yada-so .so-kpi .v{font-family:'+SERIF+' !important;font-weight:600 !important}'
+      +'#yada-so .so-search{background:#000 !important;border-color:#35353a !important;border-radius:5px !important;font-family:'+MONO+' !important}'
+      +'#yada-so .so-search:focus{border-color:#f5f5f6 !important}'
+      +'#yada-so .so-tbl th{font-family:'+MONO+' !important;text-transform:uppercase;letter-spacing:.08em;font-size:9px !important;font-weight:400 !important;color:#8b8b90 !important;background:#121214 !important;border-bottom-color:#242427 !important}'
+      +'#yada-so .so-tbl td{border-bottom-color:#171719 !important}'
+      +'#yada-so .so-tbl td.r.num{font-family:'+SERIF+' !important;font-size:13px !important}'
+      +'#yada-so .so-mut{font-family:'+MONO+' !important;color:#8b8b90 !important}'
+      +'#yada-so .so-open{background:#f2f2f3 !important;color:#0a0a0b !important;border-radius:5px !important;font-family:'+MONO+' !important}';
     document.head.appendChild(st);
   }catch(e){}
 })();

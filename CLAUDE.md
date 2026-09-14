@@ -36,7 +36,16 @@
 
 ---
 
-## 🟢 Dernière mise à jour — Reconstruction N&B : module CHARGES & PAIE en « Registre » (éditorial) — v604
+## 🟢 Dernière mise à jour — Reconstruction N&B : module SOCIÉTÉS (portefeuille) en « Registre » (éditorial) — v605
+**Quoi :** poursuite de la reconstruction **module par module** (en autonomie). Le module **Sociétés (portefeuille)** (`societe`, espace cabinet — déjà reconstruit : en-tête + Accéder à Qonto + 2 KPI + recherche + tableau du portefeuille) est **aligné sur le système éditorial « Registre »** : **bandeau-titre serif** + **eyebrow mono** (« YADA · SOCIÉTÉS — PORTEFEUILLE » via `::before`), **KPI/tableau `#0b0b0c`/`#121214`**, **filets `#242427`**, **gris `#8b8b90`**, **KPI libellés mono / valeurs serif**, **table en-têtes mono / montants serif**, **boutons (Qonto, Ouvrir) & recherche mono**. Toute la mécanique reste intacte (`factCountDossier`/`ouvrirDossierCabinet`/`accederQonto`). L'**Espace Client** n'est pas touché.
+
+**Comment — nouvel addon `yada-addon-societe-registre` (100% ADDITIF & CSS-ONLY, injecté en DERNIER) :** `<style id="societe-registre-mod">` scopé **`#yada-so`**, à spécificité égale + `!important` et source postérieure au style `yada-so-mod` → il prime. Masthead serif + eyebrow via `::before` sur `.so-title` ; KPI (`.so-kpi` re-filetés `#242427`, `.l` mono / `.v` serif) ; recherche (`.so-search`) + bouton Qonto (`.so-qonto`) + Ouvrir (`.so-open` inversé) mono ; table (`.so-tbl`) en-têtes mono `#121214` / montants serif. `sw.js` yada-v200, badge v605, `version.json` 605.
+
+**Validé :** `node --check` (282 scripts inline, 0 erreur) + `node --check sw.js` OK + accolades CSS de l'addon (15/15) + **filet d'équilibre** (vente 1200=1200, achat 600=600 ✅) + **rendu Playwright** (`#yada-so` présent, titre **serif**, eyebrow « YADA · SOCIÉTÉS — PORTEFEUILLE », **2 KPI** `rgb(11,11,12)`, style injecté ; **0 pageerror**). Badge → **v605**.
+
+---
+
+## 🟢 MAJ précédente — Reconstruction N&B : module CHARGES & PAIE en « Registre » (éditorial) — v604
 **Quoi :** poursuite de la reconstruction **module par module** (en autonomie). Le module **Charges & Paie** (`chargespaie`, espace cabinet — déjà reconstruit : ruban des mois + OD de paie/charges équilibrées (chaque libellé porte son compte assimilé) + table des salariés + formulaire d'ajout) est **aligné sur le système éditorial « Registre »** : **bandeau-titre serif** + **eyebrow mono** (« YADA · CHARGES & PAIE » via `::before`), **cartes `#0b0b0c`**, **en-têtes `#121214`**, **filets `#242427`**, **gris `#8b8b90`**, **titres de section/OD serif**, **ruban des mois (actif) en pastille inversée**, **tables en-têtes mono / montants serif**, **boutons & champs mono**. Toute la mécanique reste intacte (`calcPaie`/`posterPaieMois`/`cpAddSal`/`cpMajSal`/`cpDelSal`). L'**Espace Client** n'est pas touché.
 
 **Comment — nouvel addon `yada-addon-chargespaie-registre` (100% ADDITIF & CSS-ONLY, injecté en DERNIER) :** `<style id="chargespaie-registre-mod">` scopé **`#yada-cp`**, à spécificité égale + `!important` et source postérieure au style `yada-cp-mod` → il prime. Masthead serif + eyebrow via `::before` sur `.cp-title` ; ruban (`.cp-rb`) mono, actif inversé ; cartes OD/salariés (`.cp-od`/`.cp-sal`) re-filetées `#242427`, en-tête OD (`.cp-od-h`) `#121214` + titre serif ; tables (`.cp-odt`/`.cp-saltbl`) en-têtes mono `#121214` / montants serif / ligne de total serif ; boutons (`.cp-btn`, `.cp-pri` inversé) et champs (`.cp-in`) mono. `sw.js` yada-v199, badge v604, `version.json` 604.
