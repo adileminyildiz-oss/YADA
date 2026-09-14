@@ -11095,7 +11095,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v597';
+    b.textContent='YADA · v598';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -32344,6 +32344,52 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       +'#yada-bq .bq-in:focus,#yada-rp .rp-in:focus{border-color:#f5f5f6 !important}'
       +'#yada-bq .bq-f label,#yada-rp .rp-cf label{font-family:'+MONO+' !important;font-size:9px !important;letter-spacing:.08em;text-transform:uppercase;color:#8b8b90 !important}'
       +'#yada-bq .bq-sh,#yada-rp .rp-ct{font-family:'+SERIF+' !important;font-weight:600 !important}';
+    document.head.appendChild(st);
+  }catch(e){}
+})();
+</script>
+<script id="yada-addon-journal-registre">
+/* v598 — MODULE JOURNAL COMPTABLE « Registre » (éditorial N&B). Habillage
+   éditorial du module `journal` (#yada-jr, déjà reconstruit : rail des journaux
+   BQ/HA/VT/OD/ODP/ODC/TVA + recherche + table des écritures à plat + totaux +
+   clic droit → éditer). 100% ADDITIF & CSS-ONLY : aucune ligne de logique/
+   handler touchée (jrSel/jrFilter/jrnCtx/ouvrirJournalEditable conservés).
+   Même système que Banque/Rapprochement : bandeau-titre serif + eyebrow mono
+   (::before), panneaux #0b0b0c, en-têtes #121214, filets #242427, gris #8b8b90,
+   libellés/en-têtes en MONO, montants en SERIF tabulaire, journal actif en
+   pastille inversée. Style injecté en DERNIER → prime (spécificité égale +
+   !important, source postérieure à yada-jr-mod). */
+(function(){
+  if(typeof document==='undefined') return;
+  if(window.__journalRegistre) return; window.__journalRegistre=true;
+  try{ if(document.getElementById('journal-registre-mod')) return;
+    var SERIF='Georgia,"Times New Roman",serif', MONO='ui-monospace,Menlo,Consolas,monospace';
+    var st=document.createElement('style'); st.id='journal-registre-mod'; st.textContent=
+       '#yada-jr .jr-head{border-bottom:2px solid #f5f5f6 !important;padding:20px 4px 12px !important;align-items:flex-end !important}'
+      +'#yada-jr .jr-title{font-family:'+SERIF+' !important;font-weight:600 !important;font-size:26px !important;color:#fff !important;line-height:1.05}'
+      +'#yada-jr .jr-title::before{content:"YADA · JOURNAL COMPTABLE";display:block;font-family:'+MONO+';font-size:11px;font-weight:400;letter-spacing:.28em;color:#8b8b90;margin-bottom:6px}'
+      +'#yada-jr .jr-exo{font-family:'+MONO+' !important;letter-spacing:.05em;color:#8b8b90 !important}'
+      +'#yada-jr .jr-close{border-radius:5px !important;border-color:#f5f5f6 !important}'
+      +'#yada-jr .jr-rail{background:#0b0b0c !important;border-right-color:#242427 !important}'
+      +'#yada-jr .jr-body{border-color:#242427 !important}'
+      +'#yada-jr .jr-search{background:#000 !important;border-color:#35353a !important;border-radius:5px !important;font-family:'+MONO+' !important}'
+      +'#yada-jr .jr-search:focus{border-color:#f5f5f6 !important}'
+      +'#yada-jr .jr-ji{background:#0b0b0c !important;border-color:#242427 !important;border-radius:4px !important;font-family:'+MONO+' !important;color:#c8c8c8 !important}'
+      +'#yada-jr .jr-b{border-color:#35353a !important;border-radius:3px !important;font-family:'+MONO+' !important;font-weight:400 !important;letter-spacing:.04em}'
+      +'#yada-jr .jr-cc{font-family:'+SERIF+' !important;color:#8b8b90 !important}'
+      +'#yada-jr .jr-ji.on{background:#f2f2f3 !important;color:#0a0a0b !important;border-color:#f2f2f3 !important}'
+      +'#yada-jr .jr-ji.on .jr-nm{color:#0a0a0b !important}#yada-jr .jr-ji.on .jr-b{border-color:#0a0a0b !important;color:#0a0a0b !important}#yada-jr .jr-ji.on .jr-cc{color:#3a3a3f !important}'
+      +'#yada-jr .jr-pt{font-family:'+SERIF+' !important;font-weight:600 !important;font-size:16px !important}'
+      +'#yada-jr .jr-pt .jr-b{font-family:'+MONO+' !important}'
+      +'#yada-jr .jr-sub{font-family:'+MONO+' !important;color:#8b8b90 !important}'
+      +'#yada-jr .jr-tbl th{font-family:'+MONO+' !important;text-transform:uppercase;letter-spacing:.08em;font-size:9px !important;font-weight:400 !important;color:#8b8b90 !important;background:#121214 !important;border-bottom-color:#242427 !important}'
+      +'#yada-jr .jr-tbl td{border-bottom-color:#171719 !important}'
+      +'#yada-jr .jr-tbl td.num{font-family:'+MONO+' !important}'
+      +'#yada-jr .jr-tbl td.r.num{font-family:'+SERIF+' !important;font-size:13px !important}'
+      +'#yada-jr .jr-tbl tr.jr-sep td{border-top-color:#242427 !important}'
+      +'#yada-jr .jr-tbl tbody tr:hover td{background:#0b0b0c !important}'
+      +'#yada-jr .jr-tbl tfoot td{border-top-color:#f5f5f6 !important;font-family:'+MONO+' !important}'
+      +'#yada-jr .jr-tbl tfoot td.r.num{font-family:'+SERIF+' !important;font-size:14px !important}';
     document.head.appendChild(st);
   }catch(e){}
 })();
