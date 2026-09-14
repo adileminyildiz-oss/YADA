@@ -11095,7 +11095,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v592';
+    b.textContent='YADA · v593';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -31306,6 +31306,181 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     +'#yada-db a{color:#fff!important}';
     document.head.appendChild(st);
   }catch(e){}
+})();
+</script>
+<script id="yada-addon-dash-registre">
+/* v593 — TABLEAU DE BORD « Registre » (maquette A choisie). Refonte éditoriale
+   N&B du module `dash` : bandeau-titre (masthead) + bande de 5 KPI en chiffres
+   serif à filets, graphique Produits vs Charges (barres) + Trésorerie cumulée
+   (courbe), tables « Dernières écritures » et « Top clients ». 100% additif :
+   override de window.pageDash (le plus externe → prime), espace cabinet
+   uniquement (l'Espace Client reste inchangé). Monochrome, cartes fixes (v235). */
+(function(){
+  if(typeof window==='undefined') return;
+  if(window.__dashRegistre) return; window.__dashRegistre=true;
+
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c];}); }
+  function money(n){ try{ return eur(n); }catch(e){ return (typeof r2==='function'?r2(n):n)+' €'; } }
+  function n9(c){ try{ return c9(c); }catch(e){ return String(c||''); } }
+  function kfmt(v){ v=+v||0; var a=Math.abs(v); if(a>=1e6) return (Math.round(v/1e5)/10).toString().replace('.',',')+' M'; if(a>=1e3) return Math.round(v/1e3)+' k'; return Math.round(v)+''; }
+  var MOISC=['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
+  function mLbl(m){ try{ return MOISC[(+String(m).slice(5,7))-1]+' '+String(m).slice(2,4); }catch(e){ return m; } }
+
+  /* Collecte mensuelle depuis les écritures (CA classe 7, Charges classe 6, tréso 512). */
+  function collecte(){
+    var byM={}, caT=0, chT=0, trT=0;
+    (((typeof db!=='undefined'&&db)?db.ecritures:null)||[]).forEach(function(e){
+      var isRes=(e.libelle||'').indexOf('OD RÉSULTAT')>=0;
+      var m=String(e.date||'').slice(0,7); if(!m) m='?';
+      if(!byM[m]) byM[m]={ca:0,ch:0,tr:0};
+      (e.lignes||[]).forEach(function(l){
+        var k=n9(l.compte||''), cl=k.charAt(0), d=+l.debit||0, cr=+l.credit||0;
+        if(k.slice(0,3)==='512'){ byM[m].tr+=(d-cr); trT+=(d-cr); }
+        if(isRes) return;
+        if(cl==='7'){ byM[m].ca+=(cr-d); caT+=(cr-d); }
+        else if(cl==='6'){ byM[m].ch+=(d-cr); chT+=(d-cr); }
+      });
+    });
+    var all=Object.keys(byM).filter(function(m){return m&&m!=='?';}).sort();
+    var cum={}, run=0; all.forEach(function(m){ run+=byM[m].tr; cum[m]=run; });
+    var months=all.slice(); if(months.length>12) months=months.slice(months.length-12);
+    return { byM:byM, months:months, cum:cum, caT:caT, chT:chT, trT:trT };
+  }
+  function regTotal(type){ try{ var g=window.regOpenGroups?window.regOpenGroups(type):{}; return Object.keys(g).reduce(function(a,k){return a+(g[k].total||0);},0); }catch(e){ return 0; } }
+
+  /* Barres Produits (plein) vs Charges (contour) — blanc sur noir. */
+  function svgBars(months, byM){
+    if(!months.length) return '<div class="dbr-empty">Aucune donnée mensuelle</div>';
+    var W=620,H=232,pl=42,pr=12,pt=14,pb=28,iw=W-pl-pr,ih=H-pt-pb;
+    var max=0; months.forEach(function(m){ max=Math.max(max, byM[m].ca||0, byM[m].ch||0); }); if(max<=0) max=1;
+    function y(v){ return pt+ih-((v>0?v:0)/max*ih); }
+    var n=months.length, gw=iw/n, bw=Math.max(4,Math.min(15,(gw-8)/2)), grid='',bars='',labels='';
+    for(var g=0;g<=4;g++){ var gy=pt+ih*(g/4);
+      grid+='<line x1="'+pl+'" y1="'+gy+'" x2="'+(W-pr)+'" y2="'+gy+'" class="dbr-grid"/><text x="'+(pl-6)+'" y="'+(gy+3)+'" class="dbr-axl" text-anchor="end">'+kfmt(max*(1-g/4))+'</text>'; }
+    months.forEach(function(m,i){ var cx=pl+gw*i+gw/2, yca=y(byM[m].ca||0), ych=y(byM[m].ch||0);
+      bars+='<rect x="'+(cx-bw-1)+'" y="'+yca+'" width="'+bw+'" height="'+Math.max(0,pt+ih-yca)+'" class="dbr-bca"><title>Produits '+mLbl(m)+' : '+money(byM[m].ca)+'</title></rect>'
+          +'<rect x="'+(cx+1)+'" y="'+ych+'" width="'+bw+'" height="'+Math.max(0,pt+ih-ych)+'" class="dbr-bch"><title>Charges '+mLbl(m)+' : '+money(byM[m].ch)+'</title></rect>';
+      labels+='<text x="'+cx+'" y="'+(H-9)+'" class="dbr-axx" text-anchor="middle">'+esc(mLbl(m))+'</text>';
+    });
+    return '<svg viewBox="0 0 '+W+' '+H+'" class="dbr-svg" preserveAspectRatio="xMidYMid meet">'+grid+bars
+      +'<line x1="'+pl+'" y1="'+(pt+ih)+'" x2="'+(W-pr)+'" y2="'+(pt+ih)+'" class="dbr-base"/>'+labels+'</svg>';
+  }
+  function svgLine(months, cum){
+    if(!months.length) return '<div class="dbr-empty">Aucune donnée</div>';
+    var W=620,H=232,pl=46,pr=12,pt=14,pb=28,iw=W-pl-pr,ih=H-pt-pb;
+    var vals=months.map(function(m){return cum[m]||0;});
+    var mn=Math.min.apply(null,vals.concat([0])), mx=Math.max.apply(null,vals.concat([0])); if(mx===mn) mx=mn+1;
+    function x(i){ return pl+(months.length<=1? iw/2 : iw*(i/(months.length-1))); }
+    function y(v){ return pt+ih-((v-mn)/(mx-mn)*ih); }
+    var grid='';
+    for(var g=0;g<=4;g++){ var gy=pt+ih*(g/4);
+      grid+='<line x1="'+pl+'" y1="'+gy+'" x2="'+(W-pr)+'" y2="'+gy+'" class="dbr-grid"/><text x="'+(pl-6)+'" y="'+(gy+3)+'" class="dbr-axl" text-anchor="end">'+kfmt(mx-(mx-mn)*(g/4))+'</text>'; }
+    var area='M'+x(0)+','+y(0)+' '+vals.map(function(v,i){return 'L'+x(i)+','+y(v);}).join(' ')+' L'+x(vals.length-1)+','+y(0)+' Z';
+    var pts=vals.map(function(v,i){return x(i)+','+y(v);}).join(' ');
+    var dots=vals.map(function(v,i){ return (i%2===0||i===vals.length-1)?'<circle cx="'+x(i)+'" cy="'+y(v)+'" r="2.6" class="dbr-dot"><title>'+esc(mLbl(months[i]))+' : '+money(v)+'</title></circle>':''; }).join('');
+    var labels=months.map(function(m,i){return '<text x="'+x(i)+'" y="'+(H-9)+'" class="dbr-axx" text-anchor="middle">'+esc(mLbl(m))+'</text>';}).join('');
+    return '<svg viewBox="0 0 '+W+' '+H+'" class="dbr-svg" preserveAspectRatio="xMidYMid meet">'+grid
+      +'<line x1="'+pl+'" y1="'+y(0)+'" x2="'+(W-pr)+'" y2="'+y(0)+'" class="dbr-zero"/>'
+      +'<path d="'+area+'" class="dbr-area"/><polyline points="'+pts+'" class="dbr-linep"/>'+dots+labels+'</svg>';
+  }
+  function kpiCell(l,v,d){ return '<div class="dbr-kpi"><div class="dbr-kl">'+l+'</div><div class="dbr-kv">'+v+'</div><div class="dbr-kd">'+d+'</div></div>'; }
+
+  function dbrBody(){
+    var C; try{ C=collecte(); }catch(e){ C={byM:{},months:[],cum:{},caT:0,chT:0,trT:0}; }
+    var an; try{ an=(typeof analytique==='function')?analytique():null; }catch(e){ an=null; }
+    if(!an) an={prod:{},charge:{},parClient:{},parFourn:{},ca:0,achats:0,resultat:0};
+    var ca=an.ca||C.caT||0, ch=an.achats||C.chT||0, res=(an.resultat!=null?an.resultat:(ca-ch));
+    var marge=ca?(Math.round(res/ca*1000)/10):0;
+    var tvaM='', tva={}; try{ var md=(typeof moisDisponibles==='function')?moisDisponibles():[]; tvaM=(md&&md[0])||((typeof ym==='function'&&typeof todayStr==='function')?ym(todayStr()):''); }catch(e){}
+    try{ tva=(typeof tvaDuMois==='function'&&tvaM)?(tvaDuMois(tvaM)||{}):{}; }catch(e){}
+
+    var s=((typeof db!=='undefined'&&db)?db.societe:null)||{};
+    var nom=s.raison||s.dossierNom||'Cabinet', forme=s.formeJur?(' — '+esc(s.formeJur)):'';
+    var an1=String(s.exoDebut||'').slice(0,4)||''; var exo=an1?('Exercice '+an1):'';
+    var dt=''; try{ var D=new Date(), JJ=['dim.','lun.','mar.','mer.','jeu.','ven.','sam.']; dt=JJ[D.getDay()]+' '+D.getDate()+' '+MOISC[D.getMonth()].replace('.','')+' '+D.getFullYear(); }catch(e){}
+
+    var out=[];
+    /* Masthead */
+    out.push('<header class="dbr-mast"><span class="dbr-brand">YADA</span>'
+      +'<h1 class="dbr-h1">Tableau de bord</h1>'
+      +'<span class="dbr-meta">'+esc(nom)+forme+'<br>'+esc(exo)+(dt?(' · '+dt):'')+'</span></header>');
+    /* Bande KPI */
+    out.push('<section class="dbr-kpis">'
+      +kpiCell('Chiffre d\'affaires', money(ca), 'HT · comptes 70x')
+      +kpiCell('Charges', money(ch), 'comptes 60x')
+      +kpiCell((res>=0?'Résultat (bénéfice)':'Résultat (perte)'), money(res), 'marge nette '+(String(marge).replace('.',','))+' %')
+      +kpiCell('Trésorerie', money(C.trT), 'solde des comptes 512')
+      +kpiCell('TVA'+(tvaM?(' '+mLbl(tvaM)):''), money(tva.aDecaisser||tva.credit||0), (tva.aDecaisser?'à décaisser':'crédit à reporter'))
+      +'</section>');
+    /* Graphiques */
+    out.push('<div class="dbr-grid2">'
+      +'<div class="dbr-panel"><h2>Produits vs Charges</h2><div class="dbr-cap">12 derniers mois — euros HT</div>'+svgBars(C.months,C.byM)
+        +'<div class="dbr-legend"><span><i class="dbr-sw-solid"></i>Produits</span><span><i class="dbr-sw-out"></i>Charges</span></div></div>'
+      +'<div class="dbr-panel"><h2>Trésorerie</h2><div class="dbr-cap">Solde cumulé — compte 512</div>'+svgLine(C.months,C.cum)
+        +'<div class="dbr-legend"><span>Zéro</span><span>Solde fin de mois</span></div></div>'
+      +'</div>');
+    /* Tables */
+    var ecr=(((typeof db!=='undefined'&&db)?db.ecritures:null)||[]).slice(-6).reverse();
+    var trE=ecr.map(function(e){ var d=(e.lignes||[]).reduce(function(a,l){return a+(+l.debit||0);},0);
+      return '<tr><td class="dbr-mono">'+esc(String(e.date||'').slice(8,10)+'/'+String(e.date||'').slice(5,7))+'</td><td class="dbr-mono">'+esc(e.journal||'')+'</td><td class="dbr-ell">'+esc(e.libelle||'')+'</td><td class="r">'+money(d)+'</td></tr>'; }).join('');
+    var cE='<div class="dbr-tbl"><h2>Dernières écritures</h2><div class="dbr-cap">journaux VTE · ACH · BQ</div><table><thead><tr><th>Date</th><th>Jnl</th><th>Libellé</th><th class="r">Montant</th></tr></thead><tbody>'+(trE||'<tr><td colspan="4" class="dbr-empty">Aucune écriture</td></tr>')+'</tbody></table></div>';
+    var pc=an.parClient||{}, keys=Object.keys(pc).filter(function(k){return Math.abs(pc[k])>=0.005;}).sort(function(a,b){return Math.abs(pc[b])-Math.abs(pc[a]);}).slice(0,6);
+    var totCA=keys.reduce(function(a,k){return a+Math.abs(pc[k]);},0)||0;
+    var trC=keys.map(function(k){ var part=totCA?Math.round(Math.abs(pc[k])/totCA*1000)/10:0; return '<tr><td class="dbr-ell">'+esc(k)+'</td><td class="r">'+money(pc[k])+'</td><td class="r dbr-dim">'+String(part).replace('.',',')+' %</td></tr>'; }).join('');
+    var cC='<div class="dbr-tbl"><h2>Top clients</h2><div class="dbr-cap">chiffre d\'affaires cumulé</div><table><thead><tr><th>Client</th><th class="r">CA</th><th class="r">Part</th></tr></thead><tbody>'+(trC||'<tr><td colspan="3" class="dbr-empty">Aucune donnée</td></tr>')+'</tbody></table></div>';
+    out.push('<div class="dbr-grid2b">'+cE+cC+'</div>');
+    out.push('<p class="dbr-foot">Chiffres calculés sur les écritures de l\'exercice. Estimations à valider par un expert-comptable.</p>');
+    return '<div id="yada-dbr">'+out.join('')+'</div>';
+  }
+
+  if(typeof window.pageDash==='function'){
+    var _prev=window.pageDash;
+    window.pageDash=function(){
+      try{ if(window.sessionRole==='client') return _prev.apply(this,arguments); return dbrBody(); }
+      catch(e){ try{ return _prev.apply(this,arguments); }catch(_e){ return '<div class="dash-wrap"></div>'; } }
+    };
+  }
+
+  try{ if(!document.getElementById('dash-registre-mod')){
+    var st=document.createElement('style'); st.id='dash-registre-mod'; st.textContent=
+      '#yada-dbr{max-width:1040px;margin:0 auto;padding:6px 20px 60px;color:#f5f5f6;'
+        +'font-family:Tahoma,"Segoe UI",Geneva,Verdana,sans-serif}'
+      +'#yada-dbr .dbr-mast{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;padding-bottom:10px;border-bottom:2px solid #f5f5f6}'
+      +'#yada-dbr .dbr-brand{font-family:ui-monospace,Menlo,Consolas,monospace;letter-spacing:.32em;font-size:13px;color:#f5f5f6}'
+      +'#yada-dbr .dbr-h1{flex:1;text-align:center;margin:0;font-family:Georgia,"Times New Roman",serif;font-weight:600;font-size:25px;letter-spacing:.01em;color:#fff}'
+      +'#yada-dbr .dbr-meta{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;color:#8b8b90;text-align:right;line-height:1.7}'
+      +'#yada-dbr .dbr-kpis{display:grid;grid-template-columns:repeat(5,1fr);border:1px solid #242427;border-radius:6px;overflow:hidden;background:#0b0b0c;margin-top:22px}'
+      +'#yada-dbr .dbr-kpi{padding:15px 15px 13px;border-right:1px solid #242427}'
+      +'#yada-dbr .dbr-kpi:last-child{border-right:0}'
+      +'#yada-dbr .dbr-kl{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:9px;letter-spacing:.13em;text-transform:uppercase;color:#8b8b90}'
+      +'#yada-dbr .dbr-kv{font-family:Georgia,"Times New Roman",serif;font-weight:600;font-size:24px;line-height:1.1;margin-top:8px;color:#fff;font-variant-numeric:tabular-nums}'
+      +'#yada-dbr .dbr-kd{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:9.5px;color:#616166;margin-top:6px}'
+      +'#yada-dbr .dbr-grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:24px}'
+      +'#yada-dbr .dbr-grid2b{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:24px}'
+      +'#yada-dbr .dbr-panel h2,#yada-dbr .dbr-tbl h2{font-family:Georgia,"Times New Roman",serif;font-weight:600;font-size:15px;margin:0 0 2px;color:#fff}'
+      +'#yada-dbr .dbr-cap{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#616166;margin-bottom:12px}'
+      +'#yada-dbr .dbr-svg{width:100%;height:auto;display:block}'
+      +'#yada-dbr .dbr-grid,#yada-dbr .dbr-base,#yada-dbr .dbr-zero{stroke:#242427;stroke-width:1}'
+      +'#yada-dbr .dbr-base{stroke:#8b8b90}#yada-dbr .dbr-zero{stroke:#35353a;stroke-dasharray:3 3}'
+      +'#yada-dbr .dbr-axl,#yada-dbr .dbr-axx{fill:#616166;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:9px}'
+      +'#yada-dbr .dbr-bca{fill:#f5f5f6}#yada-dbr .dbr-bch{fill:none;stroke:#f5f5f6;stroke-width:1}'
+      +'#yada-dbr .dbr-area{fill:#ffffff;fill-opacity:.06}#yada-dbr .dbr-linep{fill:none;stroke:#f5f5f6;stroke-width:2}'
+      +'#yada-dbr .dbr-dot{fill:#000;stroke:#f5f5f6;stroke-width:1.5}'
+      +'#yada-dbr .dbr-legend{display:flex;gap:18px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;color:#8b8b90;margin-top:10px}'
+      +'#yada-dbr .dbr-legend i{display:inline-block;width:15px;height:9px;margin-right:6px;vertical-align:-1px}'
+      +'#yada-dbr .dbr-sw-solid{background:#f5f5f6}#yada-dbr .dbr-sw-out{background:transparent;border:1px solid #f5f5f6}'
+      +'#yada-dbr .dbr-tbl table{width:100%;border-collapse:collapse;font-size:12.5px}'
+      +'#yada-dbr .dbr-tbl th{text-align:left;font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:400;font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:#8b8b90;padding:0 0 8px;border-bottom:1px solid #35353a}'
+      +'#yada-dbr .dbr-tbl td{padding:9px 0;border-bottom:1px solid #171719;font-variant-numeric:tabular-nums}'
+      +'#yada-dbr .dbr-tbl tr:last-child td{border-bottom:0}'
+      +'#yada-dbr .r{text-align:right}#yada-dbr .dbr-dim{color:#8b8b90}'
+      +'#yada-dbr .dbr-mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;color:#8b8b90}'
+      +'#yada-dbr .dbr-ell{max-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
+      +'#yada-dbr .dbr-empty{color:#8b8b90;text-align:center;padding:16px;font-size:11.5px}'
+      +'#yada-dbr .dbr-foot{margin-top:28px;padding-top:14px;border-top:1px solid #242427;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10.5px;color:#616166}'
+      +'@media(max-width:820px){#yada-dbr .dbr-mast{flex-direction:column;align-items:flex-start}#yada-dbr .dbr-h1{text-align:left}#yada-dbr .dbr-meta{text-align:left}#yada-dbr .dbr-kpis{grid-template-columns:repeat(2,1fr)}#yada-dbr .dbr-kpi{border-bottom:1px solid #242427}#yada-dbr .dbr-grid2,#yada-dbr .dbr-grid2b{grid-template-columns:1fr}}';
+    document.head.appendChild(st);
+  }}catch(e){}
 })();
 </script>
 </body>
