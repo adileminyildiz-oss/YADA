@@ -1,0 +1,80 @@
+name: YADA Administration — CI (API L0→L5 + front)
+
+# Rejoue, sur chaque push / PR touchant le SaaS, la chaîne de vérification :
+#  · API : verify:all (L0→L5) contre un cluster PostgreSQL local éphémère ;
+#  · Front : next build (compilation + typecheck).
+# La vitrine precompta.html n'est pas concernée (voir workflow « tests.yml »).
+on:
+  push:
+    branches: [main, 'claude/**']
+    paths:
+      - 'yada-admin/**'
+      - '.github/workflows/yada-admin-ci.yml'
+  pull_request:
+    paths:
+      - 'yada-admin/**'
+      - '.github/workflows/yada-admin-ci.yml'
+  workflow_dispatch: {}
+
+jobs:
+  api:
+    name: API — verify:all (L0→L5)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: yada-admin
+    env:
+      PGBIN: /usr/lib/postgresql/16/bin
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: yada-admin/package-lock.json
+
+      - name: Localiser PostgreSQL + utilisateur du cluster
+        run: |
+          # initdb/pg_ctl refusent de tourner en root : les scripts s'exécutent
+          # sous l'utilisateur courant (runner non privilégié) → PGRUN = $USER
+          # (utilisé par le chown de PGDATA).
+          echo "PGRUN=$(whoami)" >> "$GITHUB_ENV"
+          if [ ! -x "$PGBIN/initdb" ]; then
+            found=$(ls -d /usr/lib/postgresql/*/bin 2>/dev/null | sort -V | tail -1 || true)
+            if [ -n "$found" ] && [ -x "$found/initdb" ]; then
+              echo "PGBIN=$found" >> "$GITHUB_ENV"
+            else
+              sudo apt-get update
+              sudo apt-get install -y postgresql-16
+              echo "PGBIN=/usr/lib/postgresql/16/bin" >> "$GITHUB_ENV"
+            fi
+          fi
+
+      - name: Version PostgreSQL
+        run: "$PGBIN/initdb --version"
+
+      - run: npm ci
+
+      - name: verify:all (cluster Postgres local, L0→L5)
+        run: npm run verify:all
+
+  web:
+    name: Front — next build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: yada-admin/web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: yada-admin/web/package-lock.json
+
+      - run: npm ci
+
+      - name: Build Next.js (compilation + typecheck)
+        run: npm run build
