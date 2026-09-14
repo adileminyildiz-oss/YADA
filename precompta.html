@@ -11095,7 +11095,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v600';
+    b.textContent='YADA · v601';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -32462,6 +32462,56 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       +'#yada-an .an-t td.r.num{font-family:'+SERIF+' !important;font-size:13px !important}'
       +'#yada-an .an-t tr.an-tot td{border-top-color:#f5f5f6 !important;border-bottom-color:#f5f5f6 !important;font-family:'+MONO+' !important}'
       +'#yada-an .an-t tr.an-tot td.r.num{font-family:'+SERIF+' !important;font-size:14px !important}';
+    document.head.appendChild(st);
+  }catch(e){}
+})();
+</script>
+<script id="yada-addon-tiers-registre">
+/* v601 — MODULE TIERS « Registre » (éditorial N&B). Habillage éditorial du
+   module `tiers` (#yada-ti, déjà reconstruit : segments Fournisseurs / Clients
+   Sté / Clients Part + rail recherche + liste + fiche complète (comptes, TVA,
+   KPI, factures) + formulaire d'édition inline). 100% ADDITIF & CSS-ONLY :
+   aucune ligne de logique/handler touchée (tiersEnregistrer/tiersEditSiret/
+   tiersSupprimer conservés). Même système « Registre » : masthead serif +
+   eyebrow mono (::before), panneaux #0b0b0c, filets #242427, gris #8b8b90,
+   segments/liste/actifs en pastille inversée, KPI libellés mono / valeurs
+   serif, tables en-têtes mono / montants serif, formulaire en mono. Style
+   injecté en DERNIER → prime (spécificité égale + !important, source
+   postérieure à yada-ti-mod). */
+(function(){
+  if(typeof document==='undefined') return;
+  if(window.__tiersRegistre) return; window.__tiersRegistre=true;
+  try{ if(document.getElementById('tiers-registre-mod')) return;
+    var SERIF='Georgia,"Times New Roman",serif', MONO='ui-monospace,Menlo,Consolas,monospace';
+    var st=document.createElement('style'); st.id='tiers-registre-mod'; st.textContent=
+       '#yada-ti .ti-head{border-bottom:2px solid #f5f5f6 !important;padding:20px 4px 12px !important;align-items:flex-end !important}'
+      +'#yada-ti .ti-title{font-family:'+SERIF+' !important;font-weight:600 !important;font-size:26px !important;color:#fff !important;line-height:1.05}'
+      +'#yada-ti .ti-title::before{content:"YADA · TIERS";display:block;font-family:'+MONO+';font-size:11px;font-weight:400;letter-spacing:.28em;color:#8b8b90;margin-bottom:6px}'
+      +'#yada-ti .ti-close{border-radius:5px !important;border-color:#f5f5f6 !important}'
+      +'#yada-ti .ti-tab{background:#0b0b0c !important;border-color:#242427 !important;border-radius:4px !important;font-family:'+MONO+' !important;color:#c8c8c8 !important}'
+      +'#yada-ti .ti-tab.on{background:#f2f2f3 !important;color:#0a0a0b !important;border-color:#f2f2f3 !important}'
+      +'#yada-ti .ti-rail{background:#0b0b0c !important;border-right-color:#242427 !important}'
+      +'#yada-ti .ti-body{border-color:#242427 !important}'
+      +'#yada-ti .ti-search{background:#000 !important;border-color:#35353a !important;border-radius:5px !important;font-family:'+MONO+' !important}'
+      +'#yada-ti .ti-search:focus{border-color:#f5f5f6 !important}'
+      +'#yada-ti .ti-li{background:#0b0b0c !important;border-color:#242427 !important;border-radius:4px !important;font-family:'+MONO+' !important;color:#c8c8c8 !important}'
+      +'#yada-ti .ti-li.on{background:#f2f2f3 !important;color:#0a0a0b !important;border-color:#f2f2f3 !important}'
+      +'#yada-ti .ti-li.on .ti-nm,#yada-ti .ti-li.on .ti-lim,#yada-ti .ti-li.on .ti-linm{color:#0a0a0b !important}'
+      +'#yada-ti .ti-lim,#yada-ti .ti-linm{font-family:'+MONO+' !important;color:#8b8b90 !important}'
+      +'#yada-ti .ti-ph{font-family:'+SERIF+' !important;font-weight:600 !important;font-size:20px !important;color:#fff !important}'
+      +'#yada-ti .ti-badge{border-color:#35353a !important;border-radius:3px !important;font-family:'+MONO+' !important;color:#8b8b90 !important}'
+      +'#yada-ti .ti-kpis{border-color:#242427 !important}'
+      +'#yada-ti .ti-kpi{background:#0b0b0c !important;border-color:#242427 !important}'
+      +'#yada-ti .ti-k{font-family:'+MONO+' !important;text-transform:uppercase;letter-spacing:.06em;font-size:9px !important;color:#8b8b90 !important}'
+      +'#yada-ti .ti-v{font-family:'+SERIF+' !important;font-weight:600 !important}'
+      +'#yada-ti .ti-kv .ti-k{font-family:'+MONO+' !important}#yada-ti .ti-kv .ti-v{font-family:'+SERIF+' !important}'
+      +'#yada-ti .ti-tbl th{font-family:'+MONO+' !important;text-transform:uppercase;letter-spacing:.08em;font-size:9px !important;font-weight:400 !important;color:#8b8b90 !important;background:#121214 !important;border-bottom-color:#242427 !important}'
+      +'#yada-ti .ti-tbl td{border-bottom-color:#171719 !important}'
+      +'#yada-ti .ti-tbl td.r.num{font-family:'+SERIF+' !important;font-size:13px !important}'
+      +'#yada-ti .ti-btn,#yada-ti .ti-save,#yada-ti .ti-new{border-radius:5px !important;font-family:'+MONO+' !important;letter-spacing:.03em}'
+      +'#yada-ti .ti-f label,#yada-ti .ti-fh{font-family:'+MONO+' !important;color:#8b8b90 !important}'
+      +'#yada-ti .ti-fh{font-family:'+SERIF+' !important;color:#fff !important;font-weight:600 !important}'
+      +'#yada-ti .ti-form input,#yada-ti .ti-form select,#yada-ti .ti-f input,#yada-ti .ti-f select{background:#000 !important;border-color:#35353a !important;border-radius:5px !important;font-family:'+MONO+' !important}';
     document.head.appendChild(st);
   }catch(e){}
 })();
