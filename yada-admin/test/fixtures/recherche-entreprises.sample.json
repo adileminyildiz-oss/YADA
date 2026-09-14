@@ -1,0 +1,23 @@
+{
+  "results": [
+    {
+      "siren": "812345678",
+      "nom_complet": "MENUISERIE DURAND",
+      "nom_raison_sociale": "MENUISERIE DURAND",
+      "nature_juridique": "SAS, société par actions simplifiée",
+      "date_creation": "2019-03-04",
+      "siege": {
+        "siret": "81234567800027",
+        "activite_principale": "43.32A",
+        "code_postal": "80000",
+        "libelle_commune": "AMIENS",
+        "numero_voie": "14",
+        "type_voie": "RUE",
+        "libelle_voie": "DES ARTISANS"
+      },
+      "dirigeants": [
+        { "nom": "DURAND", "prenoms": "Jean", "qualite": "Président" }
+      ]
+    }
+  ]
+}
