@@ -11095,7 +11095,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v594';
+    b.textContent='YADA · v595';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -31874,6 +31874,108 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       +'@media(max-width:820px){#yada-tvar .tvar-mast{flex-direction:column;align-items:flex-start}#yada-tvar .tvar-h1{text-align:left}#yada-tvar .tvar-meta{text-align:left}#yada-tvar .tvar-ln{grid-template-columns:30px 1fr 104px}#yada-tvar .tvar-ln.total .tvar-val{font-size:20px}#yada-tvar .tvar-od-r{grid-template-columns:70px 1fr 72px 72px;font-size:11px}#yada-tvar .tvar-sp .tvar-tt{display:none}}';
     document.head.appendChild(st);
   }}catch(e){}
+})();
+</script>
+<script id="yada-addon-consult-registre">
+/* v595 — MODULE CONSULTATION / ANALYSE « Registre » (maquette A choisie).
+   Reconstruction éditoriale N&B de la Consultation des comptes (module `compta`,
+   Centre de Contrôle) : bandeau-titre (masthead), onglets de nature, barre des
+   mois, liste des journaux et grand-livre en table lisible — palette N&B du proto
+   (fond #000, panneaux #0b0b0c, filets #242427, gris #8b8b90), titres & chiffres
+   en SERIF (Georgia/Times), libellés en MONO. 100% ADDITIF & CSS-ONLY : aucune
+   ligne de logique touchée — toute la mécanique reste intacte (éditeur d'écritures,
+   lettrage, gestionnaire de fenêtres, consult-ui/nav/hub, double-clic, clic droit,
+   ouvrirCompteLecture, navigation ↑/↓). L'addon ne fait qu'ajouter la classe
+   `yada-cregi` sur la `.sg-app` de la page compta puis applique un <style> scopé.
+   Espace cabinet uniquement (l'Espace Client n'a pas ce module). */
+(function(){
+  if(typeof window==='undefined') return;
+  if(window.__consultRegistre) return; window.__consultRegistre=true;
+
+  /* ---- feuille de style scopée .sg-app.yada-cregi (injectée en DERNIER) ----
+     Préfixe `html body:not(#_yz)` pour primer sur consult-ui (v563, Segoe UI) à
+     spécificité supérieure (+.yada-cregi), et `!important` là où le reset v548
+     pose déjà des règles `!important` (.sg-tabs, etc.). */
+  var CSS = [
+    "#yada-cregi-x{}",
+    /* fenêtre */
+    "html body:not(#_yz) .sg-app.yada-cregi{background:#000!important;border:1px solid #242427!important;color:#f2f2f3!important;border-radius:0!important;box-shadow:0 24px 60px rgba(0,0,0,.5)!important}",
+    /* bandeau-titre → masthead éditorial */
+    "html body:not(#_yz) .sg-app.yada-cregi .sg-title{position:relative!important;background:#0b0b0c!important;color:#f2f2f3!important;border-bottom:1px solid #242427!important;padding:26px 16px 12px!important;font-family:Georgia,'Times New Roman',serif!important;font-weight:600!important;font-size:19px!important;letter-spacing:-.01em!important;line-height:1.2!important;min-height:0!important}",
+    "html body:not(#_yz) .sg-app.yada-cregi .sg-title::before{content:'YADA · CENTRE DE CONTRÔLE — CONSULTATION DES COMPTES';position:absolute;top:8px;left:16px;font-family:ui-monospace,Menlo,monospace;font-weight:400;font-size:9px;letter-spacing:.26em;color:#8b8b90}",
+    /* flèches d'exercice + lien Éditions (mono, sobre) */
+    "html body:not(#_yz) .sg-app.yada-cregi .sg-exonav{font-family:ui-monospace,Menlo,monospace!important}",
+    "html body:not(#_yz) .sg-app.yada-cregi .sg-exolbl{font-family:ui-monospace,Menlo,monospace!important;font-size:10px!important;letter-spacing:.04em!important;color:#8b8b90!important}",
+    "html body:not(#_yz) .sg-app.yada-cregi .sg-exoarr{background:transparent!important;border:1px solid #3a3b40!important;color:#cfd0d3!important;border-radius:0!important}",
+    "html body:not(#_yz) .sg-app.yada-cregi .sg-exoarr.sg-edlink{border-color:#3a3b40!important;color:#8b8b90!important;font-family:ui-monospace,Menlo,monospace!important;font-size:10px!important;letter-spacing:.05em!important}",
+    "html body:not(#_yz) .sg-app.yada-cregi .sg-win,html body:not(#_yz) .sg-app.yada-cregi .sg-wbtn{color:#8b8b90!important}",
+    /* barre de menus (Fichier · Exercice …) — sobre, mono */
+    "html body:not(#_yz) .sg-app.yada-cregi .sg-menu{background:#0b0b0c!important;border-bottom:1px solid #242427!important}",
+    "html body:not(#_yz) .sg-app.yada-cregi .sg-menu>.mi,html body:not(#_yz) .sg-app.yada-cregi .sg-menu>span{font-family:ui-monospace,Menlo,monospace!important;font-size:10.5px!important;letter-spacing:.04em!important;color:#a8a9ad!important}",
+    "html body:not(#_yz) .sg-app.yada-cregi .sg-menu>.mi:hover{background:#16161a!important;color:#f2f2f3!important}",
+    /* corps : colonnes périodes / journaux */
+    "html body:not(#_yz) .sg-app.yada-cregi .sg-body{background:#000!important}",
+    "html body:not(#_yz) .sg-app.yada-cregi .sg-left{border-right:1px solid #242427!important;background:#08080a!important}",
+    "html body:not(#_yz) .sg-app.yada-cregi .sg-col{border-bottom:1px solid #242427!important}",
+    "html body:not(#_yz) .sg-app.yada-cregi .sg-colh,html body:not(#_yz) .sg-app.yada-cregi .sg-jrnh{background:#0b0b0c!important;color:#8b8b90!important;font-family:ui-monospace,Menlo,monospace!important;font-size:9px!important;letter-spacing:.14em!important;text-transform:uppercase!important;border-bottom:1px solid #242427!important;font-weight:400!important}",
+    "html body:not(#_yz) .sg-app.yada-cregi .sg-perlist,html body:not(#_yz) .sg-app.yada-cregi .sg-jrnlist{background:transparent!important}",
+    /* items périodes (mois) et journaux */
+    "html body:not(#_yz) .sg-app.yada-cregi .sg-peritem,html body:not(#_yz) .sg-app.yada-cregi .sg-jrnitem{font-family:ui-monospace,Menlo,monospace!important;font-size:11px!important;color:#a8a9ad!important;border-bottom:1px solid #16161a!important;letter-spacing:.02em!important;background:transparent!important}",
+    "html body:not(#_yz) .sg-app.yada-cregi .sg-peritem:hover,html body:not(#_yz) .sg-app.yada-cregi .sg-jrnitem:hover{background:#121214!important;color:#f2f2f3!important}",
+    "html body:not(#_yz) .sg-app.yada-cregi .sg-peritem.on,html body:not(#_yz) .sg-app.yada-cregi .sg-jrnitem.on{background:#f2f2f3!important;color:#000!important;font-weight:600!important}",
+    "html body:not(#_yz) .sg-app.yada-cregi .sg-peritem.zero,html body:not(#_yz) .sg-app.yada-cregi .sg-jrnitem.zero{color:#55565a!important}",
+    "html body:not(#_yz) .sg-app.yada-cregi .sg-peritem.zero.on,html body:not(#_yz) .sg-app.yada-cregi .sg-jrnitem.zero.on{color:#000!important}",
+    "html body:not(#_yz) .sg-app.yada-cregi .sg-caret{color:#8b8b90!important}",
+    /* barre de mois de la Consultation-nav (si présente) */
+    "html body:not(#_yz) .sg-app.yada-cregi .sg-mois-nav{border-bottom:1px solid #242427!important}",
+    /* zone de droite + onglets de nature */
+    "html body:not(#_yz) .sg-app.yada-cregi .sg-right{background:#000!important}",
+    "html body:not(#_yz) .sg-app.yada-cregi .sg-tabs{background:#0b0b0c!important;border-bottom:1px solid #242427!important}",
+    "html body:not(#_yz) .sg-app.yada-cregi .sg-tab{font-family:ui-monospace,Menlo,monospace!important;font-size:10px!important;letter-spacing:.05em!important;text-transform:uppercase!important;color:#8b8b90!important;border-right:1px solid #242427!important;background:transparent!important}",
+    "html body:not(#_yz) .sg-app.yada-cregi .sg-tab:hover{color:#f2f2f3!important;background:#121214!important}",
+    "html body:not(#_yz) .sg-app.yada-cregi .sg-tab.on{background:#f2f2f3!important;color:#000!important;font-weight:600!important;border-bottom-color:#f2f2f3!important}",
+    /* tables : grand-livre / grille des comptes / journal */
+    "html body:not(#_yz) .sg-app.yada-cregi .sg-grid,html body:not(#_yz) .sg-app.yada-cregi .sgj-grid{background:#000!important}",
+    "html body:not(#_yz) .sg-app.yada-cregi table{background:transparent!important}",
+    "html body:not(#_yz) .sg-app.yada-cregi thead th{background:#0b0b0c!important;color:#8b8b90!important;font-family:ui-monospace,Menlo,monospace!important;font-size:9px!important;letter-spacing:.1em!important;text-transform:uppercase!important;font-weight:400!important;border-bottom:1px solid #242427!important}",
+    "html body:not(#_yz) .sg-app.yada-cregi tbody td{color:#e6e6e8!important;border-bottom:1px solid #16161a!important;font-size:12px!important}",
+    "html body:not(#_yz) .sg-app.yada-cregi tbody tr:hover td{background:#121214!important}",
+    "html body:not(#_yz) .sg-app.yada-cregi tbody tr.on td{background:#1c1c20!important}",
+    /* numéros de compte en mono, montants en serif tabulaire */
+    "html body:not(#_yz) .sg-app.yada-cregi .sg-tier-code,html body:not(#_yz) .sg-app.yada-cregi td:first-child{font-family:ui-monospace,Menlo,monospace!important;font-size:11px!important;color:#cfd0d3!important}",
+    "html body:not(#_yz) .sg-app.yada-cregi .sg-amt,html body:not(#_yz) .sg-app.yada-cregi td.r,html body:not(#_yz) .sg-app.yada-cregi td.sg-amt{font-family:Georgia,'Times New Roman',serif!important;font-variant-numeric:tabular-nums!important;font-size:14px!important;color:#f2f2f3!important}",
+    "html body:not(#_yz) .sg-app.yada-cregi .sg-sens{color:#8b8b90!important;font-family:ui-monospace,Menlo,monospace!important;font-size:10px!important}",
+    /* pied de fenêtre (cumul + résultat + marque) */
+    "html body:not(#_yz) .sg-app.yada-cregi .sg-status{background:#0b0b0c!important;border-top:1px solid #242427!important;color:#8b8b90!important;font-family:ui-monospace,Menlo,monospace!important;font-size:10px!important;letter-spacing:.03em!important}",
+    "html body:not(#_yz) .sg-app.yada-cregi .sg-status b{font-family:Georgia,'Times New Roman',serif!important;color:#f2f2f3!important;font-weight:600!important;letter-spacing:0!important}",
+    "html body:not(#_yz) .sg-app.yada-cregi .sg-brand{color:#f2f2f3!important;font-family:ui-monospace,Menlo,monospace!important;letter-spacing:.22em!important}",
+    "html body:not(#_yz) .sg-app.yada-cregi .sg-dot{background:#f2f2f3!important}",
+    /* barres d'outils de l'éditeur intégré (si affiché dans .sg-app) — filets sobres */
+    "html body:not(#_yz) .sg-app.yada-cregi .sg-tabnav{color:#8b8b90!important}"
+  ].join("\n");
+
+  function injectCSS(){
+    if(document.getElementById('consult-registre-mod')) return;
+    var st=document.createElement('style'); st.id='consult-registre-mod'; st.textContent=CSS;
+    (document.head||document.documentElement).appendChild(st);
+  }
+
+  function ensure(){
+    try{
+      injectCSS();
+      if((window.sessionRole||'cabinet')==='client') return;
+      if(typeof current==='undefined' || current!=='compta') return;
+      var app=document.querySelector('#main .sg-app') || document.querySelector('.sg-app');
+      if(app && !app.classList.contains('yada-cregi')) app.classList.add('yada-cregi');
+    }catch(e){}
+  }
+
+  /* greffe sur render (idempotent) + filet périodique */
+  try{
+    if(typeof render==='function'){ var _r=render; window.render=render=function(){ var x=_r.apply(this,arguments); try{ensure();}catch(e){} return x; }; }
+  }catch(e){}
+  if(document.readyState!=='loading') ensure(); else document.addEventListener('DOMContentLoaded',ensure);
+  setInterval(ensure,900);
 })();
 </script>
 </body>
