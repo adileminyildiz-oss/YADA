@@ -58,6 +58,15 @@ export class ComptaService {
     return r.rows[0].id;
   }
 
+  async listExercices(org: string, ent: string) {
+    return this.db.withTenant(org, async (c) => {
+      const r = await c.query(
+        `select id, date_debut, date_fin, statut, created_at
+           from exercices where entreprise_id=$1 order by date_debut desc`, [ent]);
+      return r.rows;
+    });
+  }
+
   async createExercice(org: string, user: string, ent: string, dateDebut: string, dateFin: string) {
     return this.db.withTenant(org, async (c) => {
       const e = await c.query('select 1 from entreprises where id=$1 and deleted_at is null', [ent]);

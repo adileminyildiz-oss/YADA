@@ -3,6 +3,7 @@ import { PoolClient } from 'pg';
 import { DatabaseService } from '../database/database.service';
 import { CreateFactureDto, ReglementDto } from './dto';
 import { computeTotals, facturxXML, LigneInput } from './facture.calc';
+import { facturePdf } from './facture.pdf';
 
 const PREFIX: Record<string, string> = { devis: 'DEV', facture: 'BR', avoir: 'AV', acompte: 'AC' };
 
@@ -104,6 +105,39 @@ export class FacturesService {
       await c.query('update factures set montant_paye=$2, statut=$3 where id=$1', [factureId, paye, statut]);
       await this.db.audit(c, orgId, userId, 'factures', factureId, 'modification', { reglement: dto.montant, paye, statut });
       return this.loadDetail(c, factureId);
+    });
+  }
+
+  /** PDF lisible de la facture (aperçu / téléchargement). */
+  async pdf(orgId: string, factureId: string): Promise<{ numero: string; buffer: Buffer }> {
+    return this.db.withTenant(orgId, async (c) => {
+      const d = await this.loadDetail(c, factureId);
+      const ent = await c.query('select denomination, siren, tva_intra from entreprises where id=$1', [d.facture.entreprise_id]);
+      let acheteur: { nom: string; tvaIntra: string | null } = { nom: 'Client', tvaIntra: null };
+      if (d.facture.tiers_id) {
+        const t = await c.query('select nom, tva_intra from tiers where id=$1', [d.facture.tiers_id]);
+        if (t.rows[0]) acheteur = { nom: t.rows[0].nom, tvaIntra: t.rows[0].tva_intra };
+      }
+      const v = ent.rows[0] || { denomination: 'Vendeur', siren: null, tva_intra: null };
+      const iso = (x: unknown) => (x instanceof Date ? x.toISOString().slice(0, 10) : (x ? String(x) : null));
+      const buffer = facturePdf({
+        numero: d.facture.numero,
+        type: d.facture.type,
+        dateEmission: iso(d.facture.date_emission) || '',
+        dateEcheance: iso(d.facture.date_echeance),
+        devise: d.facture.devise,
+        statut: d.facture.statut,
+        conditions: d.facture.conditions,
+        vendeur: { nom: v.denomination, siren: v.siren, tvaIntra: v.tva_intra },
+        acheteur,
+        lignes: d.lignes.map((x: Record<string, unknown>) => ({
+          designation: x.designation as string, quantite: Number(x.quantite),
+          prixUnitaireHt: Number(x.prix_unitaire_ht), tauxTva: Number(x.taux_tva),
+          remisePct: Number(x.remise_pct),
+        })),
+        totaux: d.ventilation,
+      });
+      return { numero: d.facture.numero as string, buffer };
     });
   }
 

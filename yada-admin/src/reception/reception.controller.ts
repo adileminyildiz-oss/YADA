@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, Req, UseGuards, ParseUUIDPipe } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, Req, UseGuards, ParseUUIDPipe, StreamableFile } from '@nestjs/common';
 import { ReceptionService } from './reception.service';
 import { DepositDto, RapprocherDto, ComptabiliserDto, ValiderFicheDto } from './dto';
 import { JwtGuard, AuthedRequest } from '../auth/jwt.guard';
@@ -29,6 +29,15 @@ export class EntrepriseReceptionController {
   @Get('documents')
   documents(@Req() req: AuthedRequest, @Param('id', ParseUUIDPipe) id: string, @Query('q') q?: string) {
     return this.service.documents(req.user.orgId, id, q);
+  }
+
+  @Get('documents/:docId/contenu')
+  async contenu(@Req() req: AuthedRequest, @Param('id', ParseUUIDPipe) id: string, @Param('docId', ParseUUIDPipe) docId: string) {
+    const f = await this.service.contenu(req.user.orgId, id, docId);
+    return new StreamableFile(f.buffer, {
+      type: f.mime,
+      disposition: `inline; filename="${encodeURIComponent(f.nomFichier)}"`,
+    });
   }
 }
 

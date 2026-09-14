@@ -21,13 +21,16 @@ export class ReceptionService {
 
       const data = dto.texteOcr ? extractInvoiceData(dto.texteOcr) : null;
 
+      const contenu = dto.contenuBase64 ? dto.contenuBase64.replace(/^data:[^,]*,/, '') : null;
+      const taille = contenu ? Math.floor(contenu.length * 3 / 4) : null;
       const doc = await c.query(
         `insert into documents
            (organisation_id, entreprise_id, categorie, nom_fichier, chemin_stockage, mime,
-            texte_ocr, hash_sha256, canal, confiance_ocr, created_by)
-         values ($1,$2,'facture',$3,$4,$5,$6,$7, coalesce($8,'manuel'), $9, $10) returning id`,
+            texte_ocr, hash_sha256, canal, confiance_ocr, contenu_base64, taille_octets, created_by)
+         values ($1,$2,'facture',$3,$4,$5,$6,$7, coalesce($8,'manuel'), $9, $10, $11, $12) returning id`,
         [orgId, entrepriseId, dto.nomFichier, dto.cheminStockage, dto.mime ?? null,
-         dto.texteOcr ?? null, dto.hash ?? null, dto.canal ?? null, data?.confiance ?? null, userId],
+         dto.texteOcr ?? null, dto.hash ?? null, dto.canal ?? null, data?.confiance ?? null,
+         contenu, taille, userId],
       );
       const documentId = doc.rows[0].id;
 
@@ -98,7 +101,8 @@ export class ReceptionService {
   listBannette(orgId: string, entrepriseId: string) {
     return this.db.withTenant(orgId, async (c) => {
       const r = await c.query(
-        `select r.*, (r.doublon_de is not null) as est_doublon, d.nom_fichier
+        `select r.*, (r.doublon_de is not null) as est_doublon, d.nom_fichier,
+                (d.contenu_base64 is not null) as a_fichier
            from receptions r left join documents d on d.id = r.document_id
            where r.entreprise_id=$1 order by r.created_at desc`, [entrepriseId]);
       return r.rows;
@@ -199,6 +203,22 @@ export class ReceptionService {
       await this.db.audit(c, orgId, userId, 'fiches_tiers', ficheId, 'modification',
         { validee: tiers.id, rattachees: fiche.reception_ids?.length ?? 0 });
       return { tiers, receptionsRattachees: fiche.reception_ids?.length ?? 0 };
+    });
+  }
+
+  /** Contenu binaire d'une pièce (téléchargement / aperçu). */
+  async contenu(orgId: string, entrepriseId: string, documentId: string) {
+    return this.db.withTenant(orgId, async (c) => {
+      const r = await c.query(
+        `select nom_fichier, mime, contenu_base64 from documents
+           where id=$1 and entreprise_id=$2 and deleted_at is null`, [documentId, entrepriseId]);
+      if (!r.rows[0]) throw new NotFoundException('Pièce introuvable.');
+      if (!r.rows[0].contenu_base64) throw new NotFoundException('Aucun fichier stocké pour cette pièce.');
+      return {
+        nomFichier: r.rows[0].nom_fichier as string,
+        mime: (r.rows[0].mime as string) || 'application/octet-stream',
+        buffer: Buffer.from(r.rows[0].contenu_base64 as string, 'base64'),
+      };
     });
   }
 
