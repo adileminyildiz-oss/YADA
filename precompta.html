@@ -11095,7 +11095,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v602';
+    b.textContent='YADA · v603';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -32554,6 +32554,46 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       +'#yada-im .im-t tr.im-cur td{background:#121214 !important}'
       +'#yada-im .im-in{background:#000 !important;border-color:#35353a !important;border-radius:5px !important;font-family:'+MONO+' !important}'
       +'#yada-im .im-in:focus{border-color:#f5f5f6 !important}';
+    document.head.appendChild(st);
+  }catch(e){}
+})();
+</script>
+<script id="yada-addon-fec-registre">
+/* v603 — MODULE IMPORT / EXPORT FEC « Registre » (éditorial N&B). Habillage
+   éditorial du module `fec` (#yada-fe, déjà reconstruit : assistant vertical à
+   étapes 1. format → 2. fichier → 3. analyse → 4. intégration + export + histo).
+   100% ADDITIF & CSS-ONLY : aucune ligne de logique/handler touchée (importFEC/
+   afficherPropositionFEC/confirmerImportFEC/exportFEC conservés). Même système
+   « Registre » : masthead serif + eyebrow mono (::before), cartes #0b0b0c,
+   filets #242427, gris #8b8b90, titres de carte/étape serif, numéros d'étape
+   serif, libellés/notes en mono, table en-têtes mono / montants serif,
+   boutons & champs mono. Style injecté en DERNIER → prime (spécificité égale +
+   !important, source postérieure à yada-fe-mod). */
+(function(){
+  if(typeof document==='undefined') return;
+  if(window.__fecRegistre) return; window.__fecRegistre=true;
+  try{ if(document.getElementById('fec-registre-mod')) return;
+    var SERIF='Georgia,"Times New Roman",serif', MONO='ui-monospace,Menlo,Consolas,monospace';
+    var st=document.createElement('style'); st.id='fec-registre-mod'; st.textContent=
+       '#yada-fe .fe-head{border-bottom:2px solid #f5f5f6 !important;padding:20px 4px 10px !important;align-items:flex-end !important}'
+      +'#yada-fe .fe-title{font-family:'+SERIF+' !important;font-weight:600 !important;font-size:26px !important;color:#fff !important;line-height:1.05}'
+      +'#yada-fe .fe-title::before{content:"YADA · IMPORT / EXPORT FEC";display:block;font-family:'+MONO+';font-size:11px;font-weight:400;letter-spacing:.28em;color:#8b8b90;margin-bottom:6px}'
+      +'#yada-fe .fe-exo{font-family:'+MONO+' !important;letter-spacing:.05em;color:#8b8b90 !important}'
+      +'#yada-fe .fe-close{border-radius:5px !important;border-color:#f5f5f6 !important}'
+      +'#yada-fe .fe-sub,#yada-fe .fe-sd,#yada-fe .fe-note{font-family:'+MONO+' !important;color:#8b8b90 !important}'
+      +'#yada-fe .fe-card{background:#0b0b0c !important;border-color:#242427 !important;border-radius:6px !important}'
+      +'#yada-fe .fe-h{font-family:'+SERIF+' !important;font-weight:600 !important;font-size:16px !important;color:#fff !important}'
+      +'#yada-fe .fe-n{border-color:#f5f5f6 !important;font-family:'+SERIF+' !important}'
+      +'#yada-fe .fe-step.done .fe-n{background:#f2f2f3 !important;color:#0a0a0b !important}'
+      +'#yada-fe .fe-st{font-family:'+SERIF+' !important;font-weight:600 !important;font-size:14px !important;color:#fff !important}'
+      +'#yada-fe .fe-btn{background:#000 !important;border-color:#f5f5f6 !important;border-radius:5px !important;font-family:'+MONO+' !important;letter-spacing:.03em}'
+      +'#yada-fe .fe-btn.fe-pri{background:#f2f2f3 !important;color:#0a0a0b !important}'
+      +'#yada-fe .fe-in{background:#000 !important;border-color:#35353a !important;border-radius:5px !important;font-family:'+MONO+' !important}'
+      +'#yada-fe .fe-in:focus{border-color:#f5f5f6 !important}'
+      +'#yada-fe .fe-tg{border-color:#35353a !important;font-family:'+MONO+' !important;color:#8b8b90 !important}'
+      +'#yada-fe .fe-t th{font-family:'+MONO+' !important;text-transform:uppercase;letter-spacing:.08em;font-size:9px !important;font-weight:400 !important;color:#8b8b90 !important;background:#121214 !important;border-bottom-color:#242427 !important}'
+      +'#yada-fe .fe-t td{border-bottom-color:#171719 !important}'
+      +'#yada-fe .fe-t td.r.num{font-family:'+SERIF+' !important;font-size:12.5px !important}';
     document.head.appendChild(st);
   }catch(e){}
 })();
