@@ -81,6 +81,28 @@ npm run verify:l2        # calculs + Factur-X (purs) + émission/encaissement (l
   (schéma officiel + PDF/A-3) avant transmission réelle PDP*.
 - **Règlements** — partiels/total → `montant_paye` + statut `partielle`/`payee`.
 
+## Lot L3 — GED, OCR & réception fournisseurs ✅
+
+Migration `0005` : colonnes GED sur `documents` (`canal`, `confiance_ocr`) +
+tables `receptions` (bannette) et `fiches_tiers` (fournisseur inconnu).
+
+**Critère de sortie** (plan) : *déposer une facture → lue & pré-remplie ;
+validation cabinet en 2 temps ; doublon signalé ; fournisseur inconnu → fiche ;
+pièce rangée & cherchable.*
+
+```bash
+npm run verify:l3        # extraction (pure) + réception/doublon/fiche/coffre-fort (live)
+```
+
+- **Lecture** : `extractInvoiceData` (pur) extrait numéro/date/HT/TVA/TTC/taux
+  d'une couche texte (PDF/OCR), avec déductions croisées. Texte **indexé**
+  (`to_tsvector` français) → coffre-fort cherchable *par contenu*.
+- **Réception** : `recue → lue → a_valider → comptabilisee` (validation cabinet
+  en 2 temps). Écriture ACH produite au lot **L4**.
+- **Doublon** signalé (même n°, sinon même tiers+TTC+date).
+- **Fournisseur inconnu** → `fiches_tiers` (regroupe plusieurs pièces) → à la
+  validation, crée le tiers (compte auxiliaire `401…`) et rattache ses pièces.
+
 ## API
 
 | Méthode | Route                          | Rôle          | Effet |
@@ -103,12 +125,21 @@ npm run verify:l2        # calculs + Factur-X (purs) + émission/encaissement (l
 | POST    | `/api/entreprises/:id/factures/:fid/emettre`  | admin/collab | émet → numéro FAC continu |
 | POST    | `/api/entreprises/:id/factures/:fid/reglements`| admin/collab | encaissement (partiel/total) |
 | GET     | `/api/entreprises/:id/factures/:fid/facturx`  | authentifié  | Factur-X (XML CII) |
+| POST    | `/api/entreprises/:id/receptions`             | admin/collab/client | dépose une pièce → lecture auto |
+| GET     | `/api/entreprises/:id/receptions`             | authentifié  | bannette de réception |
+| GET     | `/api/entreprises/:id/fiches-tiers`           | authentifié  | fournisseurs inconnus à créer |
+| GET     | `/api/entreprises/:id/documents?q=`           | authentifié  | coffre-fort (recherche plein-texte) |
+| POST    | `/api/receptions/:rid/recevoir`               | admin/collab | 1er temps de validation |
+| POST    | `/api/receptions/:rid/rapprocher`             | admin/collab | rattache un tiers connu |
+| POST    | `/api/receptions/:rid/comptabiliser`          | admin/collab | 2e temps (écriture ACH → L4) |
+| POST    | `/api/receptions/:rid/refuser`                | admin/collab | écarte la pièce |
+| POST    | `/api/fiches-tiers/:fid/valider`              | admin/collab | crée le tiers + rattache les pièces |
 | GET     | `/api/health`                  | public        | état + ping DB |
 
 ## Vérifier tout le socle construit
 
 ```bash
-npm run verify:l0:local && npm run verify:l1 && npm run verify:l2
+npm run verify:l0:local && npm run verify:l1 && npm run verify:l2 && npm run verify:l3
 ```
 
 ## Sécurité
