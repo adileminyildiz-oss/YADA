@@ -11095,7 +11095,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v607';
+    b.textContent='YADA · v608';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -32740,6 +32740,70 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
         +id+' input,'+id+' select,'+id+' textarea{border-radius:5px !important;border-color:#35353a !important;font-family:'+MONO+' !important}';
     });
     var st=document.createElement('style'); st.id='reglages-registre-mod'; st.textContent=css;
+    document.head.appendChild(st);
+  }catch(e){}
+})();
+</script>
+<script id="yada-addon-mod-rhpilotage">
+/* ═══ RECONSTRUCTION — MODULES 19-20 : PILOTAGE & SALARIÉ (Registre éditorial N&B) ═══
+   Ces deux modules du prototype (pages héritées pagePilotage / pageSalarie, à onglets,
+   toute la mécanique intacte) avaient été retirés de la navigation lors de la table rase
+   (v535) et étaient donc inatteignables (absents de window.YADA_OK). On les REMET dans le
+   parcours (YADA_OK + menu Modules) puis on les ALIGNE sur le système éditorial « Registre » :
+   bandeau-titre serif + eyebrow mono (via .page-head), cartes #0b0b0c / filets #242427,
+   onglets mono (actif = pastille inversée), KPI libellés mono / valeurs serif, tables
+   en-têtes mono #121214 / montants serif, champs mono. 100% ADDITIF & CSS-ONLY (aucune
+   ligne de logique/handler touchée) ; scopé body[data-page="pilotage"] / [="salarie"]. */
+(function(){
+  if(typeof document==='undefined') return;
+  if(window.__rhpilRegistre) return; window.__rhpilRegistre=true;
+  try{
+    window.YADA_OK=(window.YADA_OK||[]);
+    if(window.YADA_OK.indexOf('pilotage')<0) window.YADA_OK.push('pilotage');
+    if(window.YADA_OK.indexOf('salarie')<0) window.YADA_OK.push('salarie');
+    window.YADA_LBL=window.YADA_LBL||{};
+    if(!window.YADA_LBL.pilotage) window.YADA_LBL.pilotage='Pilotage';
+    if(!window.YADA_LBL.salarie) window.YADA_LBL.salarie='Salarié';
+  }catch(e){}
+  try{
+    if(document.getElementById('rhpil-registre-mod')) return;
+    var SERIF='Georgia,"Times New Roman",serif', MONO='ui-monospace,Menlo,Consolas,monospace';
+    var PG=['pilotage','salarie'];
+    /* préfixe #main → spécificité niveau id (1,x,y) pour battre la règle police v560
+       (html body:not(#_yz) * {font-family:Tahoma!important}, spécificité 1,0,3) */
+    function both(sel,decl){ return PG.map(function(p){ return 'body[data-page="'+p+'"] #main '+sel+'{'+decl+'}'; }).join(''); }
+    var css=''
+      /* fond éditorial de la page */
+      +both('.mod-wrap','background:#000 !important')
+      /* masthead */
+      +both('.page-head','border-bottom:2px solid #f5f5f6 !important;align-items:flex-end !important;padding-bottom:12px !important')
+      +both('.page-head h1','font-family:'+SERIF+' !important;font-weight:600 !important;font-size:26px !important;color:#fff !important;line-height:1.05')
+      +both('.page-head p','font-family:'+MONO+' !important;color:#8b8b90 !important;font-size:11px !important;letter-spacing:.02em')
+      +'body[data-page="pilotage"] #main .page-head h1::before{content:"YADA · PILOTAGE";display:block;font-family:'+MONO+';font-size:11px;font-weight:400;letter-spacing:.28em;color:#8b8b90;margin-bottom:6px}'
+      +'body[data-page="salarie"] #main .page-head h1::before{content:"YADA · SALARIÉ";display:block;font-family:'+MONO+';font-size:11px;font-weight:400;letter-spacing:.28em;color:#8b8b90;margin-bottom:6px}'
+      /* cartes */
+      +both('.card','background:#0b0b0c !important;border-color:#242427 !important')
+      +both('.card h2','font-family:'+SERIF+' !important;font-weight:600 !important;color:#fff !important')
+      +both('.sub','font-family:'+MONO+' !important;color:#8b8b90 !important;font-size:11.5px !important')
+      /* onglets */
+      +both('.pil-tab','font-family:'+MONO+' !important;text-transform:uppercase;letter-spacing:.04em;background:#0b0b0c !important;border:1px solid #242427 !important;color:#8b8b90 !important;border-radius:5px !important;font-weight:400 !important')
+      +both('.pil-tab.on','background:#f2f2f3 !important;color:#0a0a0b !important;border-color:#f2f2f3 !important;font-weight:600 !important')
+      /* KPI */
+      +both('.pil-k','background:#0b0b0c !important;border-color:#242427 !important')
+      +both('.pil-k span','font-family:'+MONO+' !important;color:#8b8b90 !important')
+      +both('.pil-k b','font-family:'+SERIF+' !important;color:#fff !important')
+      /* tables */
+      +both('.pil-t th','font-family:'+MONO+' !important;text-transform:uppercase;letter-spacing:.08em;font-size:9px !important;font-weight:400 !important;color:#8b8b90 !important;background:#121214 !important;border-bottom-color:#242427 !important')
+      +both('.pil-t td','border-bottom-color:#171719 !important')
+      +both('.pil-t td.r','font-family:'+SERIF+' !important')
+      +both('.pil-t .pil-tot td','font-family:'+SERIF+' !important;color:#fff !important')
+      /* formulaires */
+      +both('.pil-form label','font-family:'+MONO+' !important;color:#8b8b90 !important;font-size:11px !important')
+      +both('.sal-form label','font-family:'+MONO+' !important;color:#8b8b90 !important;font-size:11px !important')
+      +both('input','background:#000 !important;border-radius:5px !important;border-color:#35353a !important;font-family:'+MONO+' !important;color:#f5f5f6 !important')
+      +both('select','background:#000 !important;border-radius:5px !important;border-color:#35353a !important;font-family:'+MONO+' !important;color:#f5f5f6 !important')
+      +both('textarea','background:#000 !important;border-radius:5px !important;border-color:#35353a !important;font-family:'+MONO+' !important;color:#f5f5f6 !important');
+    var st=document.createElement('style'); st.id='rhpil-registre-mod'; st.textContent=css;
     document.head.appendChild(st);
   }catch(e){}
 })();
