@@ -1,0 +1,170 @@
+<style>
+:root{
+  --green:#0d0f12; --green-2:#1a1d22; --green-3:#14171c; --gold:#14171c; --gold-2:#3a3f47;
+  --ink:#17231e; --muted:#5a6b63; --line:#e6e8eb; --bg:#ffffff; --bg-2:#f5f6f8; --card:#ffffff;
+  --shadow:0 12px 34px rgba(13,15,18,.12); --shadow-sm:0 4px 14px rgba(13,15,18,.09);
+  --serif:'Helvetica Neue',Helvetica,Arial,'Segoe UI',system-ui,sans-serif;
+  --sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{--ink:#eaf1ec;--muted:#98a99f;--line:#23262b;--bg:#0b0c0e;--bg-2:#131518;--card:#101215;
+    --green-3:#f2f3f5;--gold:#ffffff;--shadow:0 14px 44px rgba(0,0,0,.5);--shadow-sm:0 4px 16px rgba(0,0,0,.42)}
+}
+:root[data-theme="light"]{--ink:#17231e;--muted:#5a6b63;--line:#e6e8eb;--bg:#ffffff;--bg-2:#f5f6f8;--card:#ffffff;--green-3:#14171c;--gold:#14171c}
+:root[data-theme="dark"]{--ink:#eaf1ec;--muted:#98a99f;--line:#23262b;--bg:#0b0c0e;--bg-2:#131518;--card:#101215;--green-3:#f2f3f5;--gold:#ffffff}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--sans);background:var(--bg);color:var(--ink);line-height:1.6;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1120px;margin:0 auto;padding:0 22px}
+header{padding:56px 0 10px;text-align:center}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:.76rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--green-3);background:var(--bg-2);padding:6px 13px;border-radius:999px;border:1px solid var(--line)}
+.eyebrow::before{content:"";width:14px;height:2px;border-radius:2px;background:var(--gold)}
+h1{font-family:var(--serif);font-weight:600;font-size:clamp(2rem,4.5vw,3rem);margin:16px 0 8px;text-wrap:balance}
+.sub{color:var(--muted);max-width:620px;margin:0 auto 8px}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:22px;padding:34px 0 20px}
+@media(max-width:760px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow-sm);overflow:hidden;
+  display:flex;flex-direction:column;transition:transform .18s,box-shadow .2s}
+.card:hover{transform:translateY(-4px);box-shadow:var(--shadow)}
+.stage{display:grid;grid-template-columns:1.4fr 1fr;min-height:180px}
+@media(max-width:420px){.stage{grid-template-columns:1fr;grid-template-rows:1fr auto}}
+.on-light{background:
+  radial-gradient(120% 120% at 15% 0%,rgba(13,15,18,.05),transparent 60%),#fbfaf5;
+  display:grid;place-items:center;padding:26px}
+.on-dark{background:linear-gradient(150deg,#0d0f12,#0d0f12);display:grid;place-items:center;padding:22px}
+.stage svg{width:100%;height:auto;max-height:110px}
+.on-dark svg{max-height:76px}
+.meta{padding:18px 20px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:6px}
+.meta .no{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--gold-2);font-weight:700}
+.meta h3{margin:0;font-family:var(--serif);font-size:1.18rem}
+.meta p{margin:0;color:var(--muted);font-size:.9rem}
+.meta .dl{align-self:flex-start;margin-top:8px;display:inline-flex;align-items:center;gap:8px;cursor:pointer;
+  border:1.5px solid var(--line);background:transparent;color:var(--green-3);font-weight:600;font-size:.82rem;
+  padding:8px 14px;border-radius:9px;font-family:var(--sans);transition:.15s}
+.meta .dl:hover{border-color:var(--green-3);background:rgba(13,15,18,.06)}
+.note{background:var(--bg-2);border:1px solid var(--line);border-radius:14px;padding:20px 22px;margin:8px 0 60px;color:var(--muted);font-size:.92rem}
+.note b{color:var(--ink)}
+.pref{display:flex;gap:10px;justify-content:center;margin-top:14px;flex-wrap:wrap}
+.pref button{border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:8px 16px;
+  cursor:pointer;font-family:var(--sans);font-weight:600;font-size:.86rem}
+.pref button:hover{border-color:var(--green-3)}
+footer{text-align:center;color:var(--muted);font-size:.82rem;padding:20px 0 50px}
+</style>
+<header class="wrap">
+  <span class="eyebrow">Identité de marque</span>
+  <h1>LAST — propositions de logo</h1>
+  <p class="sub">Six pistes autour du nom <b>LAST</b>, dans l'identité monochrome (noir & blanc) du site. Survolez pour comparer version claire et version sombre. Chaque logo est téléchargeable en SVG (vectoriel, redimensionnable à l'infini).</p>
+</header>
+
+<main class="wrap">
+  <div class="grid" id="grid"></div>
+
+  <div class="note">
+    <b>À savoir.</b> Ces logos utilisent une police système à empattement pour la lecture ; pour la version finale
+    retenue, le texte sera <b>vectorisé (converti en tracés)</b> afin d'obtenir un rendu identique partout et de figer
+    la typographie. Dites-moi le(s) concept(s) qui vous parle(nt) — je peux ensuite affiner (proportions, graisse,
+    espacement), décliner en favicon / fond sombre / monochrome, et l'intégrer au site.
+  </div>
+</main>
+
+<footer>LAST · Accompagnement administratif des professions libérales</footer>
+
+<script>
+'use strict';
+/* Chaque concept fournit un SVG "signature" (couleurs par variables) rendu sur fond clair ET sombre.
+   Les couleurs sont passées en paramètres pour adapter au fond. */
+function svg(vb, inner, {fg,gold}){
+  return `<svg viewBox="${vb}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Logo LAST">${inner(fg,gold)}</svg>`;
+}
+
+const CONCEPTS = [
+  {
+    no:'01', nom:'Monogramme — écu', desc:"Initiale L dans un écu arrondi. Sobre, institutionnel, parfait en favicon et sur petit format.",
+    vb:'0 0 88 88',
+    draw:(fg,gold)=>`
+      <rect x="4" y="4" width="80" height="80" rx="20" fill="${fg}"/>
+      <text x="44" y="58" font-family="Georgia,serif" font-size="46" font-weight="600" fill="${gold}" text-anchor="middle">L</text>
+      <rect x="30" y="64" width="28" height="3" rx="1.5" fill="${gold}"/>`
+  },
+  {
+    no:'02', nom:'Mot — LAST.', desc:"Logotype à empattement avec un point final marqué : la marque comme signe de complétude, de dossier « mené à terme ».",
+    vb:'0 0 300 76',
+    draw:(fg,gold)=>`
+      <text x="8" y="54" font-family="Georgia,serif" font-size="54" font-weight="600" letter-spacing="3" fill="${fg}">LAST<tspan fill="${gold}">.</tspan></text>`
+  },
+  {
+    no:'03', nom:'Mot + coche', desc:"LAST suivi d'une pastille à coche : « dernière étape validée ». Rassurant, orienté service accompli.",
+    vb:'0 0 340 76',
+    draw:(fg,gold)=>`
+      <text x="8" y="54" font-family="Georgia,serif" font-size="54" font-weight="600" letter-spacing="3" fill="${fg}">LAST</text>
+      <circle cx="300" cy="38" r="22" fill="${gold}"/>
+      <path d="M289 39 l7 7 l14 -16" fill="none" stroke="${fg}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>`
+  },
+  {
+    no:'04', nom:'Progression', desc:"Le nom posé sur une barre de progression presque achevée, point d'arrivée marqué : l'idée d'aller jusqu'au bout du dossier.",
+    vb:'0 0 300 92',
+    draw:(fg,gold)=>`
+      <text x="8" y="50" font-family="Georgia,serif" font-size="50" font-weight="600" letter-spacing="3" fill="${fg}">LAST</text>
+      <rect x="10" y="72" width="260" height="6" rx="3" fill="${gold}" opacity="0.22"/>
+      <rect x="10" y="72" width="212" height="6" rx="3" fill="${gold}"/>
+      <circle cx="222" cy="75" r="8" fill="${gold}"/>`
+  },
+  {
+    no:'05', nom:'Lockup empilé', desc:"Monogramme + nom + signature. La configuration complète pour l'en-tête du site, les documents et la signature d'e-mail.",
+    vb:'0 0 380 96',
+    draw:(fg,gold)=>`
+      <rect x="4" y="14" width="68" height="68" rx="17" fill="${fg}"/>
+      <text x="38" y="60" font-family="Georgia,serif" font-size="38" font-weight="600" fill="${gold}" text-anchor="middle">L</text>
+      <text x="92" y="52" font-family="Georgia,serif" font-size="44" font-weight="600" letter-spacing="2" fill="${fg}">LAST</text>
+      <text x="94" y="74" font-family="Inter,Arial,sans-serif" font-size="12.5" letter-spacing="3" fill="${gold}">ACCOMPAGNEMENT&#160;LIBÉRAL</text>`
+  },
+  {
+    no:'06', nom:'Sceau', desc:"Cachet circulaire évoquant l'étude / le registre officiel. Idéal en tampon, filigrane ou marque secondaire.",
+    vb:'0 0 200 200',
+    draw:(fg,gold)=>`
+      <circle cx="100" cy="100" r="92" fill="${fg}"/>
+      <circle cx="100" cy="100" r="82" fill="none" stroke="${gold}" stroke-width="2"/>
+      <circle cx="100" cy="100" r="66" fill="none" stroke="${gold}" stroke-width="1" opacity="0.55"/>
+      <path id="arcTop" d="M40 100 a60 60 0 0 1 120 0" fill="none"/>
+      <path id="arcBot" d="M42 108 a58 58 0 0 0 116 0" fill="none"/>
+      <text font-family="Inter,Arial,sans-serif" font-size="11" letter-spacing="4" fill="${gold}">
+        <textPath href="#arcTop" startOffset="50%" text-anchor="middle">PROFESSIONS LIBÉRALES</textPath></text>
+      <text font-family="Inter,Arial,sans-serif" font-size="10" letter-spacing="4" fill="${gold}" opacity="0.85">
+        <textPath href="#arcBot" startOffset="50%" text-anchor="middle">CRÉATION · GESTION</textPath></text>
+      <text x="100" y="112" font-family="Georgia,serif" font-size="42" font-weight="600" fill="${gold}" text-anchor="middle">LAST</text>`
+  }
+];
+
+const grid=document.getElementById('grid');
+CONCEPTS.forEach((c,i)=>{
+  const light=svg(c.vb,c.draw,{fg:'#0d0f12',gold:'#74797f'});
+  const dark =svg(c.vb,c.draw,{fg:'#ffffff',gold:'#8a9098'});
+  const el=document.createElement('div');
+  el.className='card';
+  el.innerHTML=`
+    <div class="stage">
+      <div class="on-light">${light}</div>
+      <div class="on-dark">${dark}</div>
+    </div>
+    <div class="meta">
+      <span class="no">Concept ${c.no}</span>
+      <h3>${c.nom}</h3>
+      <p>${c.desc}</p>
+      <button class="dl" data-i="${i}">⬇ Télécharger le SVG</button>
+    </div>`;
+  grid.appendChild(el);
+});
+
+grid.addEventListener('click',e=>{
+  const b=e.target.closest('.dl'); if(!b) return;
+  const c=CONCEPTS[+b.dataset.i];
+  // Version fond clair, en couleurs de marque, autonome
+  const out=`<?xml version="1.0" encoding="UTF-8"?>\n`+
+    `<svg viewBox="${c.vb}" xmlns="http://www.w3.org/2000/svg">${c.draw('#0d0f12','#74797f')}</svg>`;
+  const blob=new Blob([out],{type:'image/svg+xml'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='last-logo-'+c.no+'-'+c.nom.toLowerCase().normalize('NFD').replace(/[^\w]+/g,'-').replace(/^-|-$/g,'')+'.svg';
+  a.click();
+});
+</script>
