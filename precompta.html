@@ -11095,7 +11095,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v596';
+    b.textContent='YADA · v597';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -32279,6 +32279,73 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       +'#yada-four .four-kpis{grid-template-columns:1fr}#yada-four .four-fr{grid-template-columns:1fr .8fr .9fr;font-size:11px}#yada-four .four-fr>span:nth-child(4),#yada-four .four-fr>span:nth-child(6){display:none}}';
     document.head.appendChild(st);
   }}catch(e){}
+})();
+</script>
+<script id="yada-addon-banque-registre">
+/* v597 — MODULE BANQUE / RAPPROCHEMENT « Registre » (mix B Pointage + C Cockpit
+   choisi par l'utilisateur). Habillage ÉDITORIAL N&B des modules déjà
+   reconstruits `banque` (#yada-bq, cockpit : comptes + relevé + saisie) et
+   `rappro` (#yada-rp, pointage : périodes + comptes/relevés + panneau + grille
+   de rapprochement). 100% ADDITIF & CSS-ONLY : aucune ligne de logique/handler
+   touchée (bqSelCompte/bqSelMois/validerBanque/majBq, rapSetMois/rapSetCompte/
+   rapToggle/rapToutRapprocher/rapMajSolde/rapCreerReleve/rapVerrouiller/
+   rapImprimer… tous conservés). Applique la palette N&B du proto (fond #000,
+   panneaux #0b0b0c, en-têtes #121214, filets #242427, gris #8b8b90), un
+   bandeau-titre serif avec eyebrow mono (::before), des libellés/en-têtes en
+   MONO, des montants en SERIF tabulaire, et les éléments actifs (compte / mois /
+   période / onglet / relevé) en pastille inversée. Style injecté en DERNIER →
+   prime, à spécificité égale + !important, sur les styles yada-bq-mod /
+   yada-rp-mod. */
+(function(){
+  if(typeof document==='undefined') return;
+  if(window.__banqueRegistre) return; window.__banqueRegistre=true;
+  try{ if(document.getElementById('banque-registre-mod')) return;
+    var SERIF='Georgia,"Times New Roman",serif', MONO='ui-monospace,Menlo,Consolas,monospace';
+    var st=document.createElement('style'); st.id='banque-registre-mod'; st.textContent=
+      /* Masthead éditorial (Banque + Rapprochement) */
+       '#yada-bq .bq-head,#yada-rp .rp-head{border-bottom:2px solid #f5f5f6 !important;padding:20px 4px 12px !important;align-items:flex-end !important}'
+      +'#yada-bq .bq-title,#yada-rp .rp-title{font-family:'+SERIF+' !important;font-weight:600 !important;font-size:26px !important;color:#fff !important;line-height:1.05}'
+      +'#yada-bq .bq-title::before{content:"YADA · BANQUE — TRÉSORERIE";display:block;font-family:'+MONO+';font-size:11px;font-weight:400;letter-spacing:.28em;color:#8b8b90;margin-bottom:6px}'
+      +'#yada-rp .rp-title::before{content:"YADA · RAPPROCHEMENT BANCAIRE";display:block;font-family:'+MONO+';font-size:11px;font-weight:400;letter-spacing:.28em;color:#8b8b90;margin-bottom:6px}'
+      +'#yada-bq .bq-exo,#yada-rp .rp-exo{font-family:'+MONO+' !important;letter-spacing:.05em;color:#8b8b90 !important}'
+      +'#yada-bq .bq-close,#yada-rp .rp-close{border-radius:5px !important;border-color:#f5f5f6 !important}'
+      /* Rails / panneaux */
+      +'#yada-bq .bq-rail,#yada-rp .rp-per,#yada-rp .rp-jr{background:#0b0b0c !important;border-right-color:#242427 !important}'
+      +'#yada-bq .bq-body,#yada-rp .rp-top,#yada-rp .rp-grid{border-color:#242427 !important}'
+      +'#yada-bq .bq-gh,#yada-rp .rp-colh{font-family:'+MONO+' !important;font-size:9px !important;letter-spacing:.12em !important;color:#8b8b90 !important}'
+      /* Boutons de liste (compte / mois / période / relevé) */
+      +'#yada-bq .bq-acc,#yada-bq .bq-mi,#yada-rp .rp-it,#yada-rp .rp-cpt,#yada-rp .rp-rel{background:#0b0b0c !important;border-color:#242427 !important;border-radius:4px !important;font-family:'+MONO+' !important;color:#c8c8c8 !important}'
+      +'#yada-bq .bq-al{font-family:'+MONO+' !important;color:#8b8b90 !important}'
+      +'#yada-bq .bq-acc.on,#yada-bq .bq-mi.on,#yada-rp .rp-it.on,#yada-rp .rp-cpt.on{background:#f2f2f3 !important;color:#0a0a0b !important;border-color:#f2f2f3 !important}'
+      +'#yada-rp .rp-rel.on{background:#f2f2f3 !important;color:#0a0a0b !important;border-color:#f2f2f3 !important}'
+      +'#yada-bq .bq-acc.on .bq-al{color:#3a3a3f !important}#yada-bq .bq-mi.on .bq-c{color:#3a3a3f !important}#yada-rp .rp-it.on .rp-et{color:#3a3a3f !important}'
+      /* Barre de relevé / titres de panneau */
+      +'#yada-bq .bq-pt,#yada-rp .rp-ct{font-family:'+SERIF+' !important;font-weight:600 !important}'
+      /* Onglets rappro */
+      +'#yada-rp .rp-tab{background:#0b0b0c !important;border-color:#242427 !important;border-radius:4px !important;font-family:'+MONO+' !important;letter-spacing:.03em}'
+      +'#yada-rp .rp-tab.on{background:#f2f2f3 !important;color:#0a0a0b !important;border-color:#f2f2f3 !important}'
+      /* Tables : en-têtes mono, filets, montants serif */
+      +'#yada-bq .bq-tbl th,#yada-rp .rp-t th{font-family:'+MONO+' !important;text-transform:uppercase;letter-spacing:.08em;font-size:9px !important;font-weight:400 !important;color:#8b8b90 !important;background:#121214 !important;border-bottom-color:#242427 !important}'
+      +'#yada-bq .bq-tbl td,#yada-rp .rp-t td{border-bottom-color:#171719 !important}'
+      +'#yada-bq .bq-tbl td.r.num,#yada-rp .rp-t td.r.num{font-family:'+SERIF+' !important;font-size:13px !important}'
+      +'#yada-bq .bq-tbl tbody tr:hover td,#yada-rp .rp-t tbody tr:hover td{background:#0b0b0c !important}'
+      +'#yada-rp .rp-t tr.rp-rapp td{background:#121214 !important}'
+      /* Pastille de lettrage / états */
+      +'#yada-bq .bq-tg{border-color:#35353a !important;border-radius:3px !important;color:#8b8b90 !important;font-family:'+MONO+' !important}'
+      /* Panneau clé/valeur (Relevé / Totaux / Justificatif) */
+      +'#yada-rp .rp-kv .k{font-family:'+MONO+' !important;text-transform:uppercase;letter-spacing:.06em;font-size:10px !important;color:#8b8b90 !important}'
+      +'#yada-rp .rp-kv .v,#yada-rp .rp-kv .v.num{font-family:'+SERIF+' !important}'
+      /* Barre d'écart / compteur */
+      +'#yada-rp .rp-gc,#yada-rp .rp-ecart{font-family:'+MONO+' !important;font-size:11px;letter-spacing:.03em;color:#8b8b90 !important}'
+      /* Boutons génériques : coins nets */
+      +'#yada-bq .bq-btn,#yada-rp .rp-btn{border-radius:5px !important;font-family:'+MONO+' !important;letter-spacing:.03em}'
+      /* Champs de saisie / création */
+      +'#yada-bq .bq-in,#yada-rp .rp-in{background:#000 !important;border-color:#35353a !important;border-radius:5px !important;font-family:'+MONO+' !important}'
+      +'#yada-bq .bq-in:focus,#yada-rp .rp-in:focus{border-color:#f5f5f6 !important}'
+      +'#yada-bq .bq-f label,#yada-rp .rp-cf label{font-family:'+MONO+' !important;font-size:9px !important;letter-spacing:.08em;text-transform:uppercase;color:#8b8b90 !important}'
+      +'#yada-bq .bq-sh,#yada-rp .rp-ct{font-family:'+SERIF+' !important;font-weight:600 !important}';
+    document.head.appendChild(st);
+  }catch(e){}
 })();
 </script>
 </body>
