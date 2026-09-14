@@ -61,6 +61,26 @@ npm run verify:l1        # cluster local : mapper SIREN (pur) + pipeline live
   suppression). La conversion `gagne` bascule `statut = actif` **et ouvre une
   première mission** (pont vers L2/L4).
 
+## Lot L2 — Facturation & e-invoicing ✅
+
+Migration `0004` : colonnes L2 sur `factures`/`facture_lignes` + tables
+`reglements` et `numerotation` (+ fonction `next_numero`).
+
+**Critère de sortie** (plan) : *émettre une facture multi-taux conforme
+(numéro continu) ; générer le Factur-X ; encaisser et suivre les impayés.*
+
+```bash
+npm run verify:l2        # calculs + Factur-X (purs) + émission/encaissement (live)
+```
+
+- **Numérotation** : brouillon `BR-AAAA-####` provisoire → à l'émission,
+  `FAC-AAAA-####` **continu par entreprise** (`next_numero`, compteurs distincts →
+  supprimer un brouillon ne troue pas la suite FAC).
+- **TVA ventilée par taux** (jamais un taux moyen) — `computeTotals` pur.
+- **Factur-X / CII** (`GET …/facturx`) — profil simplifié EN 16931, *à fiabiliser
+  (schéma officiel + PDF/A-3) avant transmission réelle PDP*.
+- **Règlements** — partiels/total → `montant_paye` + statut `partielle`/`payee`.
+
 ## API
 
 | Méthode | Route                          | Rôle          | Effet |
@@ -77,7 +97,19 @@ npm run verify:l1        # cluster local : mapper SIREN (pur) + pipeline live
 | POST    | `/api/entreprises/:id/tiers`   | admin/collab  | ajoute un interlocuteur |
 | GET     | `/api/entreprises/:id/tiers`   | authentifié   | liste les interlocuteurs |
 | GET     | `/api/siren/:siren`            | authentifié   | fiche société pré-remplie (503 si source injoignable) |
+| POST    | `/api/entreprises/:id/factures`               | admin/collab | crée une facture/devis (brouillon, TVA ventilée) |
+| GET     | `/api/entreprises/:id/factures`               | authentifié  | liste des factures |
+| GET     | `/api/entreprises/:id/factures/:fid`          | authentifié  | détail + lignes + règlements + ventilation |
+| POST    | `/api/entreprises/:id/factures/:fid/emettre`  | admin/collab | émet → numéro FAC continu |
+| POST    | `/api/entreprises/:id/factures/:fid/reglements`| admin/collab | encaissement (partiel/total) |
+| GET     | `/api/entreprises/:id/factures/:fid/facturx`  | authentifié  | Factur-X (XML CII) |
 | GET     | `/api/health`                  | public        | état + ping DB |
+
+## Vérifier tout le socle construit
+
+```bash
+npm run verify:l0:local && npm run verify:l1 && npm run verify:l2
+```
 
 ## Sécurité
 
