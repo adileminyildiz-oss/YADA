@@ -5,6 +5,7 @@ import { AuthModule } from './auth/auth.module';
 import { EntreprisesModule } from './entreprises/entreprises.module';
 import { TiersModule } from './tiers/tiers.module';
 import { SirenModule } from './siren/siren.module';
+import { FacturesModule } from './factures/factures.module';
 import { HealthController } from './health/health.controller';
 
 @Module({
@@ -15,6 +16,7 @@ import { HealthController } from './health/health.controller';
     EntreprisesModule,
     TiersModule,
     SirenModule,
+    FacturesModule,
   ],
   controllers: [HealthController],
 })
