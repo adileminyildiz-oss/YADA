@@ -11095,7 +11095,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v603';
+    b.textContent='YADA · v604';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -32594,6 +32594,50 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       +'#yada-fe .fe-t th{font-family:'+MONO+' !important;text-transform:uppercase;letter-spacing:.08em;font-size:9px !important;font-weight:400 !important;color:#8b8b90 !important;background:#121214 !important;border-bottom-color:#242427 !important}'
       +'#yada-fe .fe-t td{border-bottom-color:#171719 !important}'
       +'#yada-fe .fe-t td.r.num{font-family:'+SERIF+' !important;font-size:12.5px !important}';
+    document.head.appendChild(st);
+  }catch(e){}
+})();
+</script>
+<script id="yada-addon-chargespaie-registre">
+/* v604 — MODULE CHARGES & PAIE « Registre » (éditorial N&B). Habillage éditorial
+   du module `chargespaie` (#yada-cp, déjà reconstruit : ruban des mois + OD de
+   paie/charges équilibrées (chaque libellé porte son compte) + table des
+   salariés + formulaire). 100% ADDITIF & CSS-ONLY : aucune ligne de logique/
+   handler touchée (calcPaie/posterPaieMois/cpAddSal/cpMajSal/cpDelSal conservés).
+   Même système « Registre » : masthead serif + eyebrow mono (::before), cartes
+   #0b0b0c, en-têtes #121214, filets #242427, gris #8b8b90, titres serif, ruban/
+   actif en pastille inversée, tables en-têtes mono / montants serif, boutons &
+   champs mono. Style injecté en DERNIER → prime (spécificité égale + !important,
+   source postérieure à yada-cp-mod). */
+(function(){
+  if(typeof document==='undefined') return;
+  if(window.__chargespaieRegistre) return; window.__chargespaieRegistre=true;
+  try{ if(document.getElementById('chargespaie-registre-mod')) return;
+    var SERIF='Georgia,"Times New Roman",serif', MONO='ui-monospace,Menlo,Consolas,monospace';
+    var st=document.createElement('style'); st.id='chargespaie-registre-mod'; st.textContent=
+       '#yada-cp .cp-head{border-bottom:2px solid #f5f5f6 !important;padding:20px 4px 12px !important;align-items:flex-end !important}'
+      +'#yada-cp .cp-title{font-family:'+SERIF+' !important;font-weight:600 !important;font-size:26px !important;color:#fff !important;line-height:1.05}'
+      +'#yada-cp .cp-title::before{content:"YADA · CHARGES & PAIE";display:block;font-family:'+MONO+';font-size:11px;font-weight:400;letter-spacing:.28em;color:#8b8b90;margin-bottom:6px}'
+      +'#yada-cp .cp-exo{font-family:'+MONO+' !important;letter-spacing:.05em;color:#8b8b90 !important}'
+      +'#yada-cp .cp-close{border-radius:5px !important;border-color:#f5f5f6 !important}'
+      +'#yada-cp .cp-rb{background:#0b0b0c !important;border-color:#242427 !important;font-family:'+MONO+' !important;color:#c8c8c8 !important}'
+      +'#yada-cp .cp-rb.on{background:#f2f2f3 !important;color:#0a0a0b !important;border-color:#f2f2f3 !important}'
+      +'#yada-cp .cp-info,#yada-cp .cp-ok,#yada-cp .cp-acc{font-family:'+MONO+' !important;color:#8b8b90 !important}'
+      +'#yada-cp .cp-btn{background:#000 !important;border-color:#f5f5f6 !important;border-radius:5px !important;font-family:'+MONO+' !important;letter-spacing:.03em}'
+      +'#yada-cp .cp-btn.cp-pri{background:#f2f2f3 !important;color:#0a0a0b !important}'
+      +'#yada-cp .cp-od,#yada-cp .cp-sal{background:#0b0b0c !important;border-color:#242427 !important;border-radius:6px !important}'
+      +'#yada-cp .cp-od-h{background:#121214 !important;border-bottom-color:#242427 !important}'
+      +'#yada-cp .cp-od-h .t{font-family:'+SERIF+' !important;font-weight:600 !important}'
+      +'#yada-cp .cp-sh{font-family:'+SERIF+' !important;font-weight:600 !important;font-size:15px !important}'
+      +'#yada-cp .cp-odt th,#yada-cp .cp-saltbl th{font-family:'+MONO+' !important;text-transform:uppercase;letter-spacing:.08em;font-size:9px !important;font-weight:400 !important;color:#8b8b90 !important;background:#121214 !important;border-bottom-color:#242427 !important}'
+      +'#yada-cp .cp-odt td,#yada-cp .cp-saltbl td{border-bottom-color:#171719 !important}'
+      +'#yada-cp .cp-odt td.r.num,#yada-cp .cp-saltbl td.r.num{font-family:'+SERIF+' !important;font-size:13px !important}'
+      +'#yada-cp .cp-odt tr.tot td{border-top-color:#f5f5f6 !important;font-family:'+MONO+' !important}'
+      +'#yada-cp .cp-odt tr.tot td.r.num{font-family:'+SERIF+' !important;font-size:14px !important}'
+      +'#yada-cp .cp-in{background:#000 !important;border-color:#35353a !important;border-radius:5px !important;font-family:'+MONO+' !important}'
+      +'#yada-cp .cp-in:focus{border-color:#f5f5f6 !important}'
+      +'#yada-cp .cp-f label{font-family:'+MONO+' !important;color:#8b8b90 !important}'
+      +'#yada-cp .cp-del{border-radius:4px !important}';
     document.head.appendChild(st);
   }catch(e){}
 })();
