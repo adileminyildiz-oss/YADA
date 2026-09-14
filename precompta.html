@@ -11095,7 +11095,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v595';
+    b.textContent='YADA · v596';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -31976,6 +31976,309 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
   }catch(e){}
   if(document.readyState!=='loading') ensure(); else document.addEventListener('DOMContentLoaded',ensure);
   setInterval(ensure,900);
+})();
+</script>
+<script id="yada-addon-fourn-registre">
+/* v596 — MODULE FOURNISSEURS / ACHATS « Registre » (mix A+B+C choisi par
+   l'utilisateur : A dépôt+capture · B bannette workflow · C explorateur
+   fournisseurs). Refonte éditoriale N&B du module `achats` (espace cabinet) :
+   masthead, puis 3 sections — (1) DÉPÔT & CAPTURE (dropzone + formulaire de
+   capture qui génère l'écriture ACH), (2) BANNETTE (pipeline déposée→reçue→
+   comptabilisée + maître-détail : recevoir / comptabiliser / refuser), (3)
+   EXPLORATEUR fournisseurs (liste + fiche + factures/correspondance ACH).
+   Palette N&B du proto (fond #000, panneaux #0b0b0c, filets #242427,
+   gris #8b8b90), titres & chiffres en SERIF, libellés en MONO. 100% ADDITIF :
+   override le plus externe de window.pageAchats (cabinet uniquement ; client →
+   délégué à l'affichage existant). Réutilise TOUS les handlers/calculs :
+   acSource/majAc/acAction/ocrDemo (capture), factPick/factDrop/factFile (dépôt),
+   depotRecevoir/depotComptabiliser/depotRefuser/depotSupprimer (bannette),
+   statsTiers/factDepuisEcritures/voirFactureAchat/gedVoir/gedDl/ouvrirCompteLecture
+   (explorateur). Aucune ligne de logique comptable modifiée. */
+(function(){
+  if(typeof window==='undefined') return;
+  if(window.__fournRegistre) return; window.__fournRegistre=true;
+
+  /* Enregistrement dans le routage (reset) + le menu « Modules » de la Consultation */
+  window.YADA_OK=(window.YADA_OK||[]);
+  if(window.YADA_OK.indexOf('achats')<0) window.YADA_OK.push('achats');
+  window.YADA_LBL=window.YADA_LBL||{}; window.YADA_LBL.achats='Fournisseurs';
+
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c];}); }
+  function money(n){ try{ return eur(n); }catch(e){ return (typeof r2==='function'?r2(n):n)+' €'; } }
+  function n9(c){ try{ return c9(c); }catch(e){ return String(c||''); } }
+  function depotsA(){ try{ return (((typeof db!=='undefined'&&db&&db.parametres)?db.parametres.depots:null)||[]).filter(function(d){return d.cat==='achat';}); }catch(e){ return []; } }
+  function fourns(){ try{ return ((typeof db!=='undefined'&&db&&db.tiers)||[]).filter(function(t){return t.type==='fournisseur';}); }catch(e){ return []; } }
+  function scode(t){ try{ return n9(t.compteAux||sageCode(t)); }catch(e){ return n9(t&&t.compteAux||''); } }
+
+  window.fourSetDep=function(id){ window.fourDep=id; render(); };
+  window.fourSetFour=function(id){ window.fourSel=id; render(); };
+
+  function statutInfo(s){
+    if(s==='recue') return {t:'réception validée',cls:'now'};
+    if(s==='comptabilisee') return {t:'comptabilisée',cls:'done'};
+    if(s==='refusee') return {t:'refusée',cls:'neant'};
+    return {t:'à valider',cls:'todo'};
+  }
+
+  /* ---- Section 1 : Dépôt & capture (A) ---- */
+  function sectionDepot(){
+    var src=(typeof acSource!=='undefined'&&acSource)||'manuelle';
+    var fl=fourns();
+    var o=[];
+    o.push('<section class="four-sec"><div class="four-sec-h"><span class="four-sec-t">Dépôt &amp; capture d\'une facture fournisseur</span>'
+      +'<span class="four-sec-p">déposez le PDF (lecture auto) ou saisissez — l\'écriture ACH se génère équilibrée</span></div>');
+    /* Zone de dépôt (réutilise factPick/factDrop/factFile) */
+    o.push('<div class="four-drop" onclick="factPick(\'achat\')" ondragover="event.preventDefault();this.classList.add(\'drag\')" ondragleave="this.classList.remove(\'drag\')" ondrop="factDrop(event,\'achat\')">'
+      +'<b>Glissez une facture ici</b><span>ou cliquez — PDF · JPG · PNG · le cabinet reçoit et vérifie</span>'
+      +'<input type="file" id="fdep-achat" hidden multiple accept=".pdf,.jpg,.jpeg,.png,image/*" onchange="factFile(event,\'achat\')"></div>');
+    /* Modes d'entrée */
+    o.push('<div class="four-modes">'
+      +'<button class="four-mode'+(src==='manuelle'?' on':'')+'" onclick="acSource=\'manuelle\';render()">Saisie manuelle</button>'
+      +'<button class="four-mode'+(src==='scan'?' on':'')+'" onclick="acSource=\'scan\';render()">Scan</button>'
+      +'<button class="four-mode'+(src==='ocr'?' on':'')+'" onclick="acSource=\'ocr\';render()">Photo / OCR</button>'
+      +(src!=='manuelle'?'<button class="four-mode ghost" onclick="ocrDemo()">↻ Simuler l\'extraction</button>':'')+'</div>');
+    /* Formulaire de capture (mêmes ids : majAc post-rendu remplit ac-contre + ac-apercu) */
+    o.push('<div class="four-form">'
+      +'<div class="four-row">'
+        +'<label class="four-f"><span>Fournisseur</span><select id="ac-four" onchange="majAc()">'+fl.map(function(f){return '<option value="'+f.id+'">'+esc(f.nom)+'</option>';}).join('')+'</select></label>'
+        +'<label class="four-f"><span>Date facture</span><input type="date" id="ac-date" value="'+((typeof todayStr==='function')?todayStr():'')+'"></label>'
+        +'<label class="four-f"><span>Montant TTC'+(src!=='manuelle'?' (extrait)':'')+'</span><input type="number" id="ac-ttc" value="384" oninput="majAc()"></label>'
+      +'</div>'
+      +'<div class="four-row">'
+        +'<label class="four-f"><span>Taux TVA'+(src!=='manuelle'?' (extrait)':'')+'</span><select id="ac-taux" onchange="majAc()"><option>20</option><option>10</option><option>5.5</option><option>0</option></select></label>'
+        +'<label class="four-f"><span>Compte de charge</span><select id="ac-contre"></select></label>'
+        +'<label class="four-f"><span>Mode de règlement</span><select id="ac-mode"><option>Virement</option><option>Prélèvement</option><option>CB</option><option>Chèque</option></select></label>'
+      +'</div>'
+      +'<label class="four-check"><input type="checkbox" id="ac-autoliq" onchange="majAc()"> Autoliquidation de TVA (achat UE / hors-UE / sous-traitance) — le fournisseur facture HT</label>'
+      +'<div id="ac-apercu" class="four-apercu"></div>'
+      +'<div class="four-cta">'+((typeof acAction==='function')?acAction():'')+'</div>'
+      +'</div>');
+    o.push('</section>');
+    return o.join('');
+  }
+
+  /* ---- Section 2 : Bannette workflow (B) ---- */
+  function sectionBannette(){
+    var deps=depotsA().slice().reverse();
+    var nDep=deps.filter(function(d){return d.statut==='deposee';}).length;
+    var nRec=deps.filter(function(d){return d.statut==='recue';}).length;
+    var nCpt=deps.filter(function(d){return d.statut==='comptabilisee';}).length;
+    var nDup=deps.filter(function(d){return d.doublon && d.statut!=='refusee';}).length;
+    var o=[];
+    o.push('<section class="four-sec"><div class="four-sec-h"><span class="four-sec-t">Bannette des factures reçues</span>'
+      +'<span class="four-sec-p">déposée → reçue → comptabilisée · double validation cabinet</span></div>');
+    /* Pipeline */
+    o.push('<div class="four-pipe">'
+      +'<div class="four-st"><span class="four-st-k">Déposées</span><span class="four-st-v">'+nDep+'</span></div>'
+      +'<div class="four-st on"><span class="four-st-k">Reçues · à vérifier</span><span class="four-st-v">'+nRec+'</span></div>'
+      +'<div class="four-st"><span class="four-st-k">Comptabilisées</span><span class="four-st-v">'+nCpt+'</span></div>'
+      +'<div class="four-st"><span class="four-st-k">Doublons repérés</span><span class="four-st-v">'+nDup+'</span></div>'
+      +'</div>');
+    if(!deps.length){ o.push('<div class="four-empty">Aucune facture déposée pour l\'instant — utilisez la zone de dépôt ci-dessus.</div></section>'); return o.join(''); }
+    /* Sélection courante */
+    var sel=window.fourDep && deps.filter(function(d){return d.id===window.fourDep;})[0];
+    if(!sel) sel=deps.filter(function(d){return d.statut==='recue';})[0]||deps.filter(function(d){return d.statut==='deposee';})[0]||deps[0];
+    /* Maître-détail */
+    o.push('<div class="four-md">');
+    /* Liste */
+    o.push('<div class="four-list">');
+    deps.forEach(function(d){ var si=statutInfo(d.statut);
+      o.push('<button class="four-li'+(sel&&d.id===sel.id?' on':'')+'" onclick="fourSetDep(\''+d.id+'\')">'
+        +'<span class="four-li-nm">'+esc(d.nom||'pièce')+(d.doublon?' <em class="four-dup">doublon</em>':'')+'</span>'
+        +'<span class="four-li-mt">'+((typeof frDate==='function')?frDate(d.date):d.date)+' · '+esc(si.t)+'</span>'
+        +'<span class="four-li-amt">'+(d.statut==='comptabilisee'?money(d.ttc):'—')+'</span></button>');
+    });
+    o.push('</div>');
+    /* Détail */
+    o.push('<div class="four-detail">'+bannetteDetail(sel)+'</div>');
+    o.push('</div></section>');
+    return o.join('');
+  }
+
+  function bannetteDetail(d){
+    if(!d) return '<div class="four-empty">Sélectionnez une facture dans la bannette.</div>';
+    var si=statutInfo(d.statut);
+    var file=d.fichierId?'<button class="four-btn" onclick="gedVoir(\''+d.fichierId+'\')">Ouvrir la facture</button> <button class="four-btn" onclick="gedDl(\''+d.fichierId+'\')">⤓</button>':'';
+    var o=['<div class="four-dh"><span class="four-dh-t">'+esc(d.nom||'pièce')+'</span>'
+      +'<span class="four-dh-p">'+((typeof frDate==='function')?frDate(d.date):d.date)+' · '+esc(si.t)+(d.doublon?' · doublon repéré':'')+'</span></div>'];
+    if(d.statut==='deposee'){
+      o.push('<div class="four-drow"><span class="four-drow-l">Déposée par le client</span>'
+        +'<span class="four-drow-v">à valider en réception</span></div>');
+      o.push('<div class="four-cta">'+file
+        +' <button class="four-btn pri" onclick="depotRecevoir(\''+d.id+'\')">Valider la réception</button>'
+        +' <button class="four-btn" onclick="depotRefuser(\''+d.id+'\')">Refuser</button></div>');
+    } else if(d.statut==='recue'){
+      var opts=fourns().map(function(t){return '<option value="'+t.id+'">'+esc(t.nom)+'</option>';}).join('')||'<option value="">— aucun fournisseur —</option>';
+      o.push('<div class="four-form four-cmp">'
+        +'<div class="four-row">'
+          +'<label class="four-f"><span>Fournisseur</span><select id="cmp-tiers-'+d.id+'">'+opts+'</select></label>'
+          +'<label class="four-f"><span>N° facture</span><input id="cmp-num-'+d.id+'" placeholder="(auto si vide)"></label>'
+          +'<label class="four-f"><span>Date</span><input type="date" id="cmp-date-'+d.id+'" value="'+(d.date||((typeof todayStr==='function')?todayStr():''))+'"></label>'
+        +'</div>'
+        +'<div class="four-row">'
+          +'<label class="four-f"><span>Montant TTC</span><input type="number" id="cmp-ttc-'+d.id+'" placeholder="0.00"></label>'
+          +'<label class="four-f"><span>Taux TVA</span><select id="cmp-taux-'+d.id+'"><option>20</option><option>10</option><option>5.5</option><option>0</option></select></label>'
+          +'<span></span>'
+        +'</div></div>');
+      o.push('<div class="four-cta">'+file
+        +' <button class="four-btn pri" onclick="depotComptabiliser(\''+d.id+'\')">Comptabiliser</button>'
+        +' <button class="four-btn" onclick="depotRefuser(\''+d.id+'\')">Refuser</button></div>');
+    } else if(d.statut==='comptabilisee'){
+      o.push('<div class="four-drow"><span class="four-drow-l">N° pièce</span><span class="four-drow-v">'+esc(d.numero||'—')+'</span></div>');
+      o.push('<div class="four-drow"><span class="four-drow-l">HT · TVA · TTC</span><span class="four-drow-v">'+money(d.ht||0)+' · '+money(d.tva||0)+' · '+money(d.ttc||0)+'</span></div>');
+      o.push('<div class="four-drow"><span class="four-drow-l">Écriture</span><span class="four-drow-v">journal ACH · comptabilisée ✓</span></div>');
+      o.push('<div class="four-cta">'+file+(d.factureId?' <button class="four-btn" onclick="voirFactureAchat(\''+d.factureId+'\')">Voir l\'écriture</button>':'')+'</div>');
+    } else {
+      o.push('<div class="four-drow"><span class="four-drow-l">Dépôt refusé</span><span class="four-drow-v">non comptabilisé</span></div>');
+      o.push('<div class="four-cta">'+file+'</div>');
+    }
+    return o.join('');
+  }
+
+  /* ---- Section 3 : Explorateur fournisseurs (C) ---- */
+  function sectionExplorateur(){
+    var fl=fourns();
+    var o=[];
+    o.push('<section class="four-sec"><div class="four-sec-h"><span class="four-sec-t">Explorateur des fournisseurs</span>'
+      +'<span class="four-sec-p">un compte par fournisseur · factures &amp; correspondance ACH</span></div>');
+    if(!fl.length){ o.push('<div class="four-empty">Aucun fournisseur enregistré.</div></section>'); return o.join(''); }
+    var stats={}; fl.forEach(function(t){ try{ stats[t.id]=statsTiers(t.id); }catch(e){ stats[t.id]={ht:0,tva:0,ttc:0}; } });
+    var sel=window.fourSel && fl.filter(function(t){return t.id===window.fourSel;})[0];
+    if(!sel){ var srt=fl.slice().sort(function(a,b){return (stats[b.id].ttc||0)-(stats[a.id].ttc||0);}); sel=srt[0]; }
+    var lignes=[]; try{ lignes=(typeof factDepuisEcritures==='function')?factDepuisEcritures('achat').filter(function(x){return x.tiersId===sel.id;}):[]; }catch(e){ lignes=[]; }
+    o.push('<div class="four-md">');
+    /* Liste fournisseurs */
+    o.push('<div class="four-list">');
+    fl.slice().sort(function(a,b){return (stats[b.id].ttc||0)-(stats[a.id].ttc||0);}).forEach(function(t){ var st=stats[t.id]||{};
+      o.push('<button class="four-li'+(sel&&t.id===sel.id?' on':'')+'" onclick="fourSetFour(\''+t.id+'\')">'
+        +'<span class="four-li-nm">'+esc(t.nom)+'</span>'
+        +'<span class="four-li-mt">'+esc(scode(t))+'</span>'
+        +'<span class="four-li-amt">'+money(st.ttc||0)+'</span></button>');
+    });
+    o.push('</div>');
+    /* Fiche fournisseur */
+    var st=stats[sel.id]||{ht:0,tva:0,ttc:0};
+    var fi=['<div class="four-detail">'];
+    fi.push('<div class="four-dh"><span class="four-dh-t">'+esc(sel.nom)+'</span>'
+      +'<span class="four-dh-p">'+esc(scode(sel))+(sel.siret?(' · SIRET '+esc(sel.siret)):'')+'</span></div>');
+    fi.push('<div class="four-kpis">'
+      +'<div class="four-kpi"><span class="four-kpi-k">HT dépensé</span><span class="four-kpi-v">'+money(st.ht||0)+'</span></div>'
+      +'<div class="four-kpi"><span class="four-kpi-k">TVA déductible</span><span class="four-kpi-v">'+money(st.tva||0)+'</span></div>'
+      +'<div class="four-kpi"><span class="four-kpi-k">Total TTC</span><span class="four-kpi-v">'+money(st.ttc||0)+'</span></div>'
+      +'</div>');
+    var rows=lignes.map(function(x){ var corr=x.lie?'<span class="four-tag done">liée</span>':'<span class="four-tag">FEC / écriture</span>';
+      return '<div class="four-fr"><span class="four-fr-p">'+esc(x.piece||'—')+'</span><span class="four-fr-d">'+((typeof frDate==='function')?frDate(x.date):x.date)+'</span>'
+        +'<span class="r">'+money(x.ht)+'</span><span class="r">'+money(x.tva)+'</span><span class="r">'+money(x.ttc)+'</span><span class="four-fr-c">'+corr+'</span></div>'; }).join('');
+    fi.push('<div class="four-ftable"><div class="four-fr head"><span class="four-fr-p">Pièce</span><span class="four-fr-d">Date</span><span class="r">HT</span><span class="r">TVA</span><span class="r">TTC</span><span class="four-fr-c">Corr.</span></div>'
+      +(rows||'<div class="four-fr"><span class="four-fr-p">—</span><span class="four-fr-d">aucune écriture</span><span class="r">—</span><span class="r">—</span><span class="r">—</span><span class="four-fr-c"></span></div>')+'</div>');
+    fi.push('<div class="four-cta"><button class="four-btn" onclick="ouvrirCompteLecture(\''+esc(scode(sel))+'\')">Ouvrir le grand-livre du compte</button></div>');
+    fi.push('</div>');
+    o.push(fi.join(''));
+    o.push('</div></section>');
+    return o.join('');
+  }
+
+  function fourBody(){
+    var s=((typeof db!=='undefined'&&db)?db.societe:null)||{};
+    var nom=s.raison||s.dossierNom||'Dossier';
+    var exoY=String(s.exoDebut||'').slice(0,4)||'';
+    var out=[];
+    out.push('<header class="four-mast"><span class="four-brand">YADA</span>'
+      +'<h1 class="four-h1">Fournisseurs — Achats</h1>'
+      +'<span class="four-meta">'+esc(nom)+(exoY?('<br>exercice '+esc(exoY)):'')+'</span></header>');
+    out.push(sectionDepot());
+    out.push(sectionBannette());
+    out.push(sectionExplorateur());
+    /* Pont : fiches « fournisseur inconnu » en attente de validation (carte existante, seulement si besoin) */
+    try{
+      var fiches=(((typeof db!=='undefined'&&db&&db.parametres)?db.parametres.fichesTiers:null)||[]).filter(function(f){return f.type==='fournisseur' && f.statut!=='validee';});
+      if(fiches.length && typeof fichesCabinetCard==='function'){ out.push('<div class="four-legacy">'+fichesCabinetCard('fournisseur')+'</div>'); }
+    }catch(e){}
+    out.push('<p class="four-foot">Le client dépose · YADA lit le PDF · le cabinet reçoit puis comptabilise (double validation). Fournisseur inconnu → fiche à valider (compte 401 auxiliaire) · doublon repéré à la réception · un seul compte par fournisseur. Écriture ACH : compte de tiers · TVA déductible · charge. La facturation client est gérée par Mar\'q (transmission directe à YADA).</p>');
+    return '<div id="yada-four">'+out.join('')+'</div>';
+  }
+
+  if(typeof window.pageAchats==='function'){
+    var _prev=window.pageAchats;
+    window.pageAchats=function(){
+      try{ if((window.sessionRole||'cabinet')==='client') return _prev.apply(this,arguments); return fourBody(); }
+      catch(e){ try{ return _prev.apply(this,arguments); }catch(_e){ return '<div class="mod-wrap"></div>'; } }
+    };
+  }
+
+  try{ if(!document.getElementById('fourn-registre-mod')){
+    var st=document.createElement('style'); st.id='fourn-registre-mod'; st.textContent=
+      '#yada-four{max-width:1000px;margin:0 auto;padding:6px 20px 60px;color:#f5f5f6;font-family:Tahoma,"Segoe UI",Geneva,Verdana,sans-serif}'
+      +'#yada-four .four-mast{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;padding-bottom:10px;border-bottom:2px solid #f5f5f6}'
+      +'#yada-four .four-brand{font-family:ui-monospace,Menlo,Consolas,monospace;letter-spacing:.32em;font-size:13px;color:#f5f5f6}'
+      +'#yada-four .four-h1{flex:1;text-align:center;margin:0;font-family:Georgia,"Times New Roman",serif;font-weight:600;font-size:25px;color:#fff}'
+      +'#yada-four .four-meta{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;color:#8b8b90;text-align:right;line-height:1.7}'
+      +'#yada-four .four-sec{margin-top:22px;border:1px solid #242427;border-radius:6px;overflow:hidden;background:#0b0b0c}'
+      +'#yada-four .four-sec-h{background:#121214;padding:12px 16px;border-bottom:1px solid #242427;display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px}'
+      +'#yada-four .four-sec-t{font-family:Georgia,"Times New Roman",serif;font-weight:600;font-size:17px;color:#fff}'
+      +'#yada-four .four-sec-p{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10.5px;letter-spacing:.04em;color:#8b8b90}'
+      +'#yada-four .four-drop{margin:16px;padding:22px 14px;border:1.5px dashed #35353a;border-radius:6px;text-align:center;cursor:pointer}'
+      +'#yada-four .four-drop.drag{border-color:#f5f5f6;background:#121214}'
+      +'#yada-four .four-drop b{display:block;font-family:Georgia,"Times New Roman",serif;font-weight:600;font-size:15px;color:#f5f5f6;margin-bottom:4px}'
+      +'#yada-four .four-drop span{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;color:#8b8b90}'
+      +'#yada-four .four-modes{display:flex;flex-wrap:wrap;gap:0;margin:0 16px;border:1px solid #35353a;border-radius:6px;overflow:hidden}'
+      +'#yada-four .four-mode{flex:1 0 auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;padding:9px 14px;border:0;border-right:1px solid #242427;background:#0b0b0c;color:#8b8b90;cursor:pointer}'
+      +'#yada-four .four-mode:last-child{border-right:0}#yada-four .four-mode.on{background:#f5f5f6;color:#0a0a0b}#yada-four .four-mode.ghost{color:#616166}'
+      +'#yada-four .four-form{padding:16px}'
+      +'#yada-four .four-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px}'
+      +'#yada-four .four-f{display:flex;flex-direction:column;gap:5px}'
+      +'#yada-four .four-f>span{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#8b8b90}'
+      +'#yada-four .four-f input,#yada-four .four-f select{background:#000;border:1px solid #35353a;border-radius:5px;color:#f5f5f6;padding:8px 10px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px}'
+      +'#yada-four .four-check{display:flex;align-items:center;gap:8px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;color:#8b8b90;margin:2px 0 12px}'
+      +'#yada-four .four-apercu{margin-top:8px}'
+      +'#yada-four .four-cta{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:4px;padding:0 0 4px}'
+      +'#yada-four .four-btn{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;letter-spacing:.04em;text-transform:uppercase;padding:9px 15px;border:1px solid #f5f5f6;background:#000;color:#f5f5f6;border-radius:5px;cursor:pointer}'
+      +'#yada-four .four-btn.pri{background:#f5f5f6;color:#0a0a0b}'
+      +'#yada-four .four-pipe{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin:16px;border:1px solid #35353a;border-radius:6px;overflow:hidden}'
+      +'#yada-four .four-st{padding:11px 13px;border-right:1px solid #242427;background:#0b0b0c}'
+      +'#yada-four .four-st:last-child{border-right:0}'
+      +'#yada-four .four-st-k{display:block;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:#616166}'
+      +'#yada-four .four-st-v{display:block;font-family:Georgia,"Times New Roman",serif;font-weight:600;font-size:22px;color:#f5f5f6;margin-top:4px}'
+      +'#yada-four .four-st.on{background:#f5f5f6}#yada-four .four-st.on .four-st-k{color:#0a0a0b;opacity:.7}#yada-four .four-st.on .four-st-v{color:#0a0a0b}'
+      +'#yada-four .four-md{display:grid;grid-template-columns:320px 1fr;gap:0;margin:16px;border:1px solid #242427;border-radius:6px;overflow:hidden}'
+      +'#yada-four .four-list{border-right:1px solid #242427;max-height:460px;overflow:auto}'
+      +'#yada-four .four-li{display:block;width:100%;text-align:left;padding:11px 13px;border:0;border-bottom:1px solid #171719;background:#0b0b0c;color:#f5f5f6;cursor:pointer}'
+      +'#yada-four .four-li:last-child{border-bottom:0}'
+      +'#yada-four .four-li-nm{display:block;font-size:12px;color:#f5f5f6}'
+      +'#yada-four .four-dup{font-style:normal;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:8px;letter-spacing:.06em;text-transform:uppercase;border:1px dashed #616166;padding:1px 5px;margin-left:6px;color:#8b8b90}'
+      +'#yada-four .four-li-mt{display:block;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:9.5px;color:#616166;margin-top:2px}'
+      +'#yada-four .four-li-amt{display:block;font-family:Georgia,"Times New Roman",serif;font-size:14px;color:#fff;margin-top:3px;font-variant-numeric:tabular-nums}'
+      +'#yada-four .four-li.on{background:#f5f5f6}#yada-four .four-li.on .four-li-nm,#yada-four .four-li.on .four-li-amt{color:#0a0a0b}#yada-four .four-li.on .four-li-mt{color:#3a3a3f}#yada-four .four-li.on .four-dup{border-color:#0a0a0b;color:#0a0a0b}'
+      +'#yada-four .four-detail{padding:16px}'
+      +'#yada-four .four-dh{padding-bottom:10px;border-bottom:1px solid #242427;margin-bottom:12px}'
+      +'#yada-four .four-dh-t{display:block;font-family:Georgia,"Times New Roman",serif;font-weight:600;font-size:18px;color:#fff}'
+      +'#yada-four .four-dh-p{display:block;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10.5px;color:#8b8b90;margin-top:2px}'
+      +'#yada-four .four-drow{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:baseline;padding:9px 0;border-bottom:1px solid #171719}'
+      +'#yada-four .four-drow-l{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#8b8b90}'
+      +'#yada-four .four-drow-v{font-family:Georgia,"Times New Roman",serif;font-size:15px;color:#f5f5f6;text-align:right;font-variant-numeric:tabular-nums}'
+      +'#yada-four .four-cmp{padding:0}'
+      +'#yada-four .four-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border:1px solid #242427;border-radius:6px;overflow:hidden;margin-bottom:14px}'
+      +'#yada-four .four-kpi{padding:11px 13px;border-right:1px solid #242427;background:#0b0b0c}'
+      +'#yada-four .four-kpi:last-child{border-right:0}'
+      +'#yada-four .four-kpi-k{display:block;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:#616166}'
+      +'#yada-four .four-kpi-v{display:block;font-family:Georgia,"Times New Roman",serif;font-weight:600;font-size:18px;color:#fff;margin-top:4px;font-variant-numeric:tabular-nums}'
+      +'#yada-four .four-ftable{border:1px solid #242427;border-radius:6px;overflow:hidden;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px}'
+      +'#yada-four .four-fr{display:grid;grid-template-columns:1.3fr .8fr .9fr .8fr .9fr .8fr;gap:8px;padding:8px 12px;border-bottom:1px solid #171719;color:#f5f5f6;align-items:baseline}'
+      +'#yada-four .four-fr:last-child{border-bottom:0}'
+      +'#yada-four .four-fr.head{background:#121214;color:#8b8b90;font-size:9px;letter-spacing:.06em;text-transform:uppercase}'
+      +'#yada-four .four-fr-p{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
+      +'#yada-four .four-fr-d{color:#8b8b90}#yada-four .four-fr.head .four-fr-d{color:#8b8b90}'
+      +'#yada-four .four-fr .r,#yada-four .r{text-align:right;font-variant-numeric:tabular-nums}'
+      +'#yada-four .four-tag{display:inline-block;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:8.5px;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border:1px solid #35353a;color:#8b8b90}'
+      +'#yada-four .four-tag.done{background:#f5f5f6;color:#0a0a0b;border-color:#f5f5f6}'
+      +'#yada-four .four-empty{padding:20px 16px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:#8b8b90}'
+      +'#yada-four .four-legacy{margin-top:22px}'
+      +'#yada-four .four-foot{margin-top:26px;padding-top:14px;border-top:1px solid #242427;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10.5px;color:#616166;line-height:1.7}'
+      +'@media(max-width:820px){#yada-four .four-mast{flex-direction:column;align-items:flex-start}#yada-four .four-h1{text-align:left}#yada-four .four-meta{text-align:left}'
+      +'#yada-four .four-row{grid-template-columns:1fr}#yada-four .four-pipe{grid-template-columns:1fr 1fr}#yada-four .four-md{grid-template-columns:1fr}#yada-four .four-list{border-right:0;border-bottom:1px solid #242427;max-height:260px}'
+      +'#yada-four .four-kpis{grid-template-columns:1fr}#yada-four .four-fr{grid-template-columns:1fr .8fr .9fr;font-size:11px}#yada-four .four-fr>span:nth-child(4),#yada-four .four-fr>span:nth-child(6){display:none}}';
+    document.head.appendChild(st);
+  }}catch(e){}
 })();
 </script>
 </body>
