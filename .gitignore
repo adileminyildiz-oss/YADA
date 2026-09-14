@@ -12,3 +12,12 @@ test-results/
 
 # Captures / scripts de test jetables (hors dépôt)
 scratchpad/
+
+# ── YADA Administration (SaaS, dossier yada-admin/) ──
+# Le SaaS a ses propres manifestes versionnés (ré-autorisés malgré la règle globale ci-dessus)
+!yada-admin/package.json
+!yada-admin/package-lock.json
+yada-admin/node_modules/
+yada-admin/dist/
+yada-admin/.env
+yada-admin/*.log
