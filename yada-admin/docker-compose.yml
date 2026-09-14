@@ -1,0 +1,40 @@
+# YADA Administration — infrastructure locale (Lot L0)
+# `docker compose up -d db` lance PostgreSQL avec un VOLUME nommé :
+# la donnée survit à un redémarrage du conteneur → critère de sortie L0.
+services:
+  db:
+    image: postgres:16
+    container_name: yada-db
+    environment:
+      POSTGRES_USER: yada_owner
+      POSTGRES_PASSWORD: yada_owner_pwd
+      POSTGRES_DB: yada
+    ports:
+      - "5433:5432"
+    volumes:
+      - yada-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U yada_owner -d yada"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  # API optionnelle en conteneur (hébergement). En dev, on lance `npm start` en local.
+  api:
+    build: .
+    container_name: yada-api
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgres://yada_app:yada_app_pwd@db:5432/yada
+      DATABASE_ADMIN_URL: postgres://yada_owner:yada_owner_pwd@db:5432/yada
+      JWT_SECRET: ${JWT_SECRET:-change-me}
+    ports:
+      - "3000:3000"
+    profiles: ["full"]
+
+volumes:
+  yada-pgdata:
