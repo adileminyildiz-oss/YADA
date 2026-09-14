@@ -21,3 +21,12 @@ yada-admin/node_modules/
 yada-admin/dist/
 yada-admin/.env
 yada-admin/*.log
+# Front Next.js (yada-admin/web/)
+!yada-admin/web/package.json
+!yada-admin/web/package-lock.json
+yada-admin/web/node_modules/
+yada-admin/web/.next/
+yada-admin/web/out/
+yada-admin/web/.env*.local
+yada-admin/web/next-env.d.ts
+yada-admin/web/tsconfig.tsbuildinfo

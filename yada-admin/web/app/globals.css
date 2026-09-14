@@ -1,0 +1,56 @@
+:root{
+  --paper:#f6f6f3; --surface:#fff; --ink:#111113; --muted:#5d5d64; --faint:#8c8c93;
+  --line:#e5e4df; --line2:#d5d4ce; --fill:#eeeeea; --chip:#111113; --chiptx:#f6f6f3;
+  --shadow:0 1px 2px rgba(0,0,0,.05),0 8px 30px rgba(0,0,0,.05);
+}
+@media (prefers-color-scheme:dark){:root{
+  --paper:#0a0a0b; --surface:#121214; --ink:#ececed; --muted:#9b9ba3; --faint:#6b6b73;
+  --line:#232327; --line2:#303035; --fill:#17171a; --chip:#ececed; --chiptx:#0a0a0b;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 34px rgba(0,0,0,.5);
+}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font-family:"IBM Plex Sans",system-ui,-apple-system,Segoe UI,sans-serif;font-size:15px;line-height:1.5}
+a{color:inherit}
+h1,h2,h3{font-weight:600;letter-spacing:-.01em;margin:0}
+.wrap{max-width:1080px;margin:0 auto;padding:22px 20px 64px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:20px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:600}
+.brand .mk{width:26px;height:26px;border-radius:7px;background:var(--chip);color:var(--chiptx);display:flex;align-items:center;justify-content:center;font-weight:700}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace}
+.muted{color:var(--muted)} .faint{color:var(--faint)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:16px 18px;margin-bottom:14px}
+.card h2{font-size:15px;margin-bottom:10px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.grid{display:grid;gap:12px}
+.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}
+@media(max-width:760px){.g2,.g3,.g4{grid-template-columns:1fr 1fr}}
+label{display:block;font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);margin:8px 0 3px}
+input,select,textarea{width:100%;background:var(--surface);color:var(--ink);border:1px solid var(--line2);border-radius:8px;padding:8px 10px;font:inherit}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--ink);outline-offset:1px}
+button{font:inherit;border:1px solid var(--line2);background:var(--surface);color:var(--ink);border-radius:8px;padding:8px 14px;cursor:pointer}
+button:hover{background:var(--fill)}
+button.pri{background:var(--chip);color:var(--chiptx);border-color:var(--chip)}
+button.sm{padding:5px 10px;font-size:13px}
+button:disabled{opacity:.5;cursor:not-allowed}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);font-weight:500}
+.n{font-family:"IBM Plex Mono",monospace;text-align:right;font-variant-numeric:tabular-nums}
+.pill{display:inline-block;font-family:"IBM Plex Mono",monospace;font-size:11px;border:1px solid var(--line2);border-radius:999px;padding:2px 9px}
+.pill.solid{background:var(--chip);color:var(--chiptx);border-color:var(--chip)}
+.kpi{border:1px solid var(--line2);border-radius:10px;padding:12px 14px;background:var(--surface)}
+.kpi .l{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+.kpi .v{font-family:"IBM Plex Mono",monospace;font-size:20px;margin-top:3px}
+.kan{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;overflow-x:auto}
+@media(max-width:760px){.kan{grid-template-columns:repeat(2,1fr)}}
+.kan .col{min-width:130px}
+.kan .h{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin-bottom:6px;display:flex;justify-content:space-between}
+.kard{border:1px solid var(--line2);border-radius:9px;padding:8px 10px;margin-bottom:7px;background:var(--surface)}
+.kard .nm{font-weight:600;font-size:13px}
+.err{color:#b3261e;font-size:13px;margin:6px 0}
+:root[data-theme] .err{color:#ff6b5e}
+.link{background:none;border:none;color:var(--ink);text-decoration:underline;padding:0;cursor:pointer}
+.tabs{display:flex;gap:14px;border-bottom:1px solid var(--line);margin-bottom:14px;flex-wrap:wrap}
+.tabs button{background:none;border:none;border-radius:0;border-bottom:2px solid transparent;color:var(--muted);padding:6px 2px}
+.tabs button.on{color:var(--ink);border-bottom-color:var(--ink)}
