@@ -133,6 +133,11 @@ function Facturation({ id }: { id: string }) {
     try { ouvrirBlob(await api.facturePdf(id, fid)); }
     catch (e: any) { setErr(e.message); }
   }
+  async function dlFacturxPdf(fid: string) {
+    setErr('');
+    try { ouvrirBlob(await api.facturxPdf(id, fid)); }
+    catch (e: any) { setErr(e.message); }
+  }
 
   return (
     <>
@@ -161,7 +166,8 @@ function Facturation({ id }: { id: string }) {
                   {f.statut === 'brouillon' && <button className="sm" onClick={act(() => api.emettre(id, f.id))}>Émettre</button>}
                   <button className="sm" onClick={act(() => api.ecritureFacture(id, f.id))}>Écriture VTE</button>
                   <button className="sm" onClick={() => dlPdf(f.id)}>⤓ PDF</button>
-                  <button className="sm" onClick={() => dlFacturx(f.id)}>Factur-X</button>
+                  <button className="sm" onClick={() => dlFacturx(f.id)}>Factur-X XML</button>
+                  <button className="sm" onClick={() => dlFacturxPdf(f.id)}>Factur-X PDF/A-3</button>
                 </td>
               </tr>
             ))}

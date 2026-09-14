@@ -77,8 +77,17 @@ npm run verify:l2        # calculs + Factur-X (purs) + émission/encaissement (l
   `FAC-AAAA-####` **continu par entreprise** (`next_numero`, compteurs distincts →
   supprimer un brouillon ne troue pas la suite FAC).
 - **TVA ventilée par taux** (jamais un taux moyen) — `computeTotals` pur.
-- **Factur-X / CII** (`GET …/facturx`) — profil simplifié EN 16931, *à fiabiliser
-  (schéma officiel + PDF/A-3) avant transmission réelle PDP*.
+- **Factur-X / CII conforme EN 16931** (`GET …/facturx?profil=`) — contexte + URN
+  de guideline (minimum/basicwl/basic/en16931/extended), parties avec **adresses
+  postales**, immatriculations (SIREN/TVA), **ventilation TVA par taux** (BG-23),
+  récapitulatif monétaire (BG-22), échéance de paiement.
+- **Conteneur Factur-X PDF/A-3** (`GET …/facturx-pdf`) — PDF embarquant le
+  `factur-x.xml` (`/AF` + `/Names/EmbeddedFiles`, `AFRelationship /Data`), XMP
+  d'identification **PDF/A-3B** + schéma d'extension Factur-X, OutputIntent +
+  profil **ICC sRGB embarqué**. *Dernière validation avant transmission PDP :
+  veraPDF (l'embarquement des polices Standard-14 reste à ajouter pour la
+  certification PDF/A-3b stricte) + contrôle Schematron EN 16931 / Chorus Pro.*
+- **PDF de facture** (`GET …/pdf`) — PDF A4 lisible (writer PDF pur, sans dépendance).
 - **Règlements** — partiels/total → `montant_paye` + statut `partielle`/`payee`.
 
 ## Lot L3 — GED, OCR & réception fournisseurs ✅
@@ -181,9 +190,12 @@ npm run verify:l5
 | GET     | `/api/entreprises/:id/factures/:fid`          | authentifié  | détail + lignes + règlements + ventilation |
 | POST    | `/api/entreprises/:id/factures/:fid/emettre`  | admin/collab | émet → numéro FAC continu |
 | POST    | `/api/entreprises/:id/factures/:fid/reglements`| admin/collab | encaissement (partiel/total) |
-| GET     | `/api/entreprises/:id/factures/:fid/facturx`  | authentifié  | Factur-X (XML CII) |
-| POST    | `/api/entreprises/:id/receptions`             | admin/collab/client | dépose une pièce → lecture auto |
+| GET     | `/api/entreprises/:id/factures/:fid/facturx?profil=` | authentifié | Factur-X XML CII conforme EN 16931 |
+| GET     | `/api/entreprises/:id/factures/:fid/pdf`      | authentifié  | PDF A4 lisible de la facture |
+| GET     | `/api/entreprises/:id/factures/:fid/facturx-pdf?profil=` | authentifié | conteneur Factur-X PDF/A-3 (XML embarqué) |
+| POST    | `/api/entreprises/:id/receptions`             | admin/collab/client | dépose une pièce (octets réels) → lecture auto |
 | GET     | `/api/entreprises/:id/receptions`             | authentifié  | bannette de réception |
+| GET     | `/api/entreprises/:id/documents/:docId/contenu` | authentifié | télécharge/consulte la pièce stockée |
 | GET     | `/api/entreprises/:id/fiches-tiers`           | authentifié  | fournisseurs inconnus à créer |
 | GET     | `/api/entreprises/:id/documents?q=`           | authentifié  | coffre-fort (recherche plein-texte) |
 | POST    | `/api/receptions/:rid/recevoir`               | admin/collab | 1er temps de validation |
@@ -191,6 +203,7 @@ npm run verify:l5
 | POST    | `/api/receptions/:rid/comptabiliser`          | admin/collab | 2e temps (écriture ACH → L4) |
 | POST    | `/api/receptions/:rid/refuser`                | admin/collab | écarte la pièce |
 | POST    | `/api/fiches-tiers/:fid/valider`              | admin/collab | crée le tiers + rattache les pièces |
+| GET     | `/api/entreprises/:id/compta/exercices`       | authentifié  | liste des exercices |
 | POST    | `/api/entreprises/:id/compta/exercices`       | admin/collab | ouvre un exercice (+ plan & journaux) |
 | POST    | `/api/entreprises/:id/compta/ecritures`       | admin/collab | saisie manuelle (équilibre imposé) |
 | POST    | `/api/entreprises/:id/compta/facture/:fid`    | admin/collab | génère l'écriture VTE d'une facture |

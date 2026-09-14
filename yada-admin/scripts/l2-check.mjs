@@ -41,11 +41,24 @@ const d3 = await post(`/entreprises/${ent.id}/factures`, { type: 'facture', tier
 const e3 = await post(`/entreprises/${ent.id}/factures/${d3.facture.id}/emettre`, {}, T);
 assert(/^FAC-\d{4}-0003$/.test(e3.facture.numero), `suite FAC continue et sans trou ${e3.facture.numero}`);
 
-console.log('· Factur-X (XML CII)');
+console.log('· Factur-X (XML CII conforme EN 16931)');
 const xml = await req('GET', `/entreprises/${ent.id}/factures/${e1.facture.id}/facturx`, undefined, T).then((r) => r.text());
 assert(xml.includes('<rsm:CrossIndustryInvoice') && xml.includes(e1.facture.numero), 'Factur-X généré (racine + numéro)');
-assert(xml.includes('<ram:GrandTotalAmount>2196</ram:GrandTotalAmount>'), 'Factur-X : TTC 2196');
+assert(xml.includes('urn:cen.eu:en16931:2017'), 'URN de guideline EN 16931');
+assert(xml.includes('<ram:GrandTotalAmount>2196.00</ram:GrandTotalAmount>'), 'Factur-X : TTC 2196.00 (2 décimales)');
+assert(xml.includes('<ram:CountryID>FR</ram:CountryID>'), 'adresse postale (pays) présente');
 assert(xml.includes('812345678'), 'Factur-X : SIREN vendeur');
+const xmlB = await req('GET', `/entreprises/${ent.id}/factures/${e1.facture.id}/facturx?profil=basic`, undefined, T).then((r) => r.text());
+assert(xmlB.includes('urn:factur-x.eu:1p0:basic'), 'profil BASIC sélectionnable (URN dédiée)');
+
+console.log('· Conteneur Factur-X (PDF/A-3 embarquant le XML)');
+const fxRes = await req('GET', `/entreprises/${ent.id}/factures/${e1.facture.id}/facturx-pdf`, undefined, T);
+assert((fxRes.headers.get('content-type') || '').includes('application/pdf'), 'Content-Type application/pdf');
+const fxBuf = Buffer.from(await fxRes.arrayBuffer());
+const fxStr = fxBuf.toString('latin1');
+assert(fxStr.startsWith('%PDF-') && fxStr.includes('(factur-x.xml)') && fxStr.includes('/AFRelationship /Data'), 'PDF/A-3 : factur-x.xml embarqué (AF /Data)');
+assert(fxStr.includes('<pdfaid:part>3</pdfaid:part>'), 'PDF/A-3 : identification XMP');
+assert(fxBuf.includes(Buffer.from('<rsm:CrossIndustryInvoice', 'utf8')), 'le XML CII est bien dans le PDF');
 
 console.log('· PDF de facture (téléchargement)');
 const pdfRes = await req('GET', `/entreprises/${ent.id}/factures/${e1.facture.id}/pdf`, undefined, T);

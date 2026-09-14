@@ -60,6 +60,7 @@ export const api = {
   regler: (id: string, fid: string, d: any) => req('POST', `/entreprises/${id}/factures/${fid}/reglements`, d),
   facturx: (id: string, fid: string) => req('GET', `/entreprises/${id}/factures/${fid}/facturx`, undefined, true),
   facturePdf: (id: string, fid: string) => reqBlob(`/entreprises/${id}/factures/${fid}/pdf`),
+  facturxPdf: (id: string, fid: string, profil = 'en16931') => reqBlob(`/entreprises/${id}/factures/${fid}/facturx-pdf?profil=${profil}`),
   // Réception
   receptions: (id: string) => req('GET', `/entreprises/${id}/receptions`),
   deposer: (id: string, d: any) => req('POST', `/entreprises/${id}/receptions`, d),

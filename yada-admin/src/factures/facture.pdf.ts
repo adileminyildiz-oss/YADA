@@ -46,7 +46,10 @@ function pdfText(s: unknown): string {
 function trunc(s: string, n: number): string { s = String(s ?? ''); return s.length > n ? s.slice(0, n - 1) + '…' : s; }
 const TYPE_LABEL: Record<string, string> = { facture: 'FACTURE', devis: 'DEVIS', avoir: 'AVOIR', acompte: 'FACTURE D\'ACOMPTE' };
 
-export function facturePdf(f: PdfFacture): Buffer {
+export interface FactureContent { content: Buffer; W: number; H: number; }
+
+/** Construit le flux de contenu (dessin) de la page A4 — réutilisé par le PDF simple ET le PDF/A-3. */
+export function factureContentStream(f: PdfFacture): FactureContent {
   const W = 595, H = 842, M = 50;
   const ops: string[] = [];
   const gray = (g: number) => ops.push(`${g} g`);
@@ -129,8 +132,12 @@ export function facturePdf(f: PdfFacture): Buffer {
   if (f.conditions) { gray(0.4); text(M, Math.max(y + 30, H - 120), trunc(`Conditions : ${f.conditions}`, 95), 8); }
   gray(0.55); text(M, H - 40, `Document généré par YADA Administration — ${f.numero}`, 7);
 
+  return { content: Buffer.from(ops.join('\n'), 'latin1'), W, H };
+}
+
+export function facturePdf(f: PdfFacture): Buffer {
+  const { content, W, H } = factureContentStream(f);
   // ── Assemblage du PDF (objets + xref) ──────────────────────────────────────
-  const content = Buffer.from(ops.join('\n'), 'latin1');
   const objs: Buffer[] = [];
   objs.push(Buffer.from('<< /Type /Catalog /Pages 2 0 R >>', 'latin1'));
   objs.push(Buffer.from('<< /Type /Pages /Kids [3 0 R] /Count 1 >>', 'latin1'));

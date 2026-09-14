@@ -41,6 +41,7 @@ npm run build >/dev/null
 echo "═══ 4. Calculs multi-taux + Factur-X + PDF (purs) ═══"
 node scripts/facture-calc.test.mjs
 node scripts/facture-pdf.test.mjs
+node scripts/facturx.test.mjs
 
 echo "═══ 5. Émission / Factur-X / encaissement (live) ═══"
 node dist/main.js >/tmp/yada-api.log 2>&1 & API_PID=$!; wait_api

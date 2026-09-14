@@ -2,8 +2,10 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PoolClient } from 'pg';
 import { DatabaseService } from '../database/database.service';
 import { CreateFactureDto, ReglementDto } from './dto';
-import { computeTotals, facturxXML, LigneInput } from './facture.calc';
-import { facturePdf } from './facture.pdf';
+import { computeTotals, LigneInput } from './facture.calc';
+import { facturePdf, PdfFacture } from './facture.pdf';
+import { facturxCII, FacturxProfil, FacturxDoc } from './facturx';
+import { facturxPdfA3 } from './pdfa3';
 
 const PREFIX: Record<string, string> = { devis: 'DEV', facture: 'BR', avoir: 'AV', acompte: 'AC' };
 
@@ -141,32 +143,57 @@ export class FacturesService {
     });
   }
 
-  /** Génère le Factur-X (XML CII) de la facture. */
-  async facturx(orgId: string, factureId: string): Promise<string> {
+  private static readonly PROFILS = new Set<FacturxProfil>(['minimum', 'basicwl', 'basic', 'en16931', 'extended']);
+  private normProfil(p?: string): FacturxProfil {
+    return (p && FacturesService.PROFILS.has(p as FacturxProfil)) ? (p as FacturxProfil) : 'en16931';
+  }
+
+  /** Construit le modèle Factur-X (parties + lignes + totaux) depuis la base. */
+  private async buildFacturxDoc(c: PoolClient, factureId: string): Promise<FacturxDoc> {
+    const d = await this.loadDetail(c, factureId);
+    const ent = await c.query(
+      'select denomination, siren, tva_intra, adresse, code_postal, ville, pays from entreprises where id=$1',
+      [d.facture.entreprise_id]);
+    const v = ent.rows[0] || {};
+    let acheteur: FacturxDoc['acheteur'] = { nom: 'Client' };
+    if (d.facture.tiers_id) {
+      const t = await c.query('select nom, tva_intra, adresse, code_postal, ville from tiers where id=$1', [d.facture.tiers_id]);
+      if (t.rows[0]) acheteur = { nom: t.rows[0].nom, tvaIntra: t.rows[0].tva_intra, adresse: t.rows[0].adresse, cp: t.rows[0].code_postal, ville: t.rows[0].ville };
+    }
+    const iso = (val: unknown) => (val instanceof Date ? val.toISOString().slice(0, 10) : (val ? String(val) : null));
+    return {
+      numero: d.facture.numero, type: d.facture.type,
+      dateEmission: iso(d.facture.date_emission) || '', dateEcheance: iso(d.facture.date_echeance),
+      devise: d.facture.devise, buyerReference: d.facture.conditions || null,
+      vendeur: { nom: v.denomination || 'Vendeur', siren: v.siren, tvaIntra: v.tva_intra, adresse: v.adresse, cp: v.code_postal, ville: v.ville, pays: v.pays },
+      acheteur,
+      lignes: d.lignes.map((x: Record<string, unknown>) => ({
+        designation: x.designation as string, quantite: Number(x.quantite),
+        prixUnitaireHt: Number(x.prix_unitaire_ht), tauxTva: Number(x.taux_tva), remisePct: Number(x.remise_pct),
+      })),
+      totaux: d.ventilation,
+    };
+  }
+
+  /** Factur-X (XML CII conforme EN 16931), profil sélectionnable. */
+  async facturx(orgId: string, factureId: string, profil?: string): Promise<string> {
+    return this.db.withTenant(orgId, async (c) => facturxCII(await this.buildFacturxDoc(c, factureId), this.normProfil(profil)));
+  }
+
+  /** Conteneur Factur-X : PDF/A-3 embarquant le XML CII conforme. */
+  async facturxPdf(orgId: string, factureId: string, profil?: string): Promise<{ numero: string; buffer: Buffer }> {
+    const p = this.normProfil(profil);
     return this.db.withTenant(orgId, async (c) => {
-      const d = await this.loadDetail(c, factureId);
-      const ent = await c.query('select denomination, siren, tva_intra from entreprises where id=$1', [d.facture.entreprise_id]);
-      let acheteur = { nom: 'Client', tvaIntra: null as string | null };
-      if (d.facture.tiers_id) {
-        const t = await c.query('select nom, tva_intra from tiers where id=$1', [d.facture.tiers_id]);
-        if (t.rows[0]) acheteur = { nom: t.rows[0].nom, tvaIntra: t.rows[0].tva_intra };
-      }
-      const v = ent.rows[0] || { denomination: 'Vendeur', siren: null, tva_intra: null };
-      return facturxXML({
-        numero: d.facture.numero,
-        dateEmission: (d.facture.date_emission instanceof Date
-          ? d.facture.date_emission.toISOString().slice(0, 10)
-          : String(d.facture.date_emission)),
-        vendeur: { nom: v.denomination, siren: v.siren, tvaIntra: v.tva_intra },
-        acheteur,
-        lignes: d.lignes.map((x: Record<string, unknown>) => ({
-          designation: x.designation as string, quantite: Number(x.quantite),
-          prixUnitaireHt: Number(x.prix_unitaire_ht), tauxTva: Number(x.taux_tva),
-          remisePct: Number(x.remise_pct),
-        })),
-        totaux: d.ventilation,
-        devise: d.facture.devise,
-      });
+      const doc = await this.buildFacturxDoc(c, factureId);
+      const xml = facturxCII(doc, p);
+      const pdf: PdfFacture = {
+        numero: doc.numero, type: doc.type, dateEmission: doc.dateEmission, dateEcheance: doc.dateEcheance,
+        devise: doc.devise, conditions: doc.buyerReference,
+        vendeur: { nom: doc.vendeur.nom, siren: doc.vendeur.siren, tvaIntra: doc.vendeur.tvaIntra },
+        acheteur: { nom: doc.acheteur.nom, tvaIntra: doc.acheteur.tvaIntra ?? null },
+        lignes: doc.lignes, totaux: doc.totaux,
+      };
+      return { numero: doc.numero, buffer: facturxPdfA3(pdf, xml, p) };
     });
   }
 }

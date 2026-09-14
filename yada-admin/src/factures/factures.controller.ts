@@ -1,5 +1,5 @@
 import {
-  Body, Controller, Get, Header, Param, Post, Req, UseGuards, ParseUUIDPipe, StreamableFile,
+  Body, Controller, Get, Header, Param, Post, Query, Req, UseGuards, ParseUUIDPipe, StreamableFile,
 } from '@nestjs/common';
 import { FacturesService } from './factures.service';
 import { CreateFactureDto, ReglementDto } from './dto';
@@ -41,8 +41,8 @@ export class FacturesController {
 
   @Get(':factureId/facturx')
   @Header('Content-Type', 'application/xml; charset=utf-8')
-  facturx(@Req() req: AuthedRequest, @Param('factureId', ParseUUIDPipe) factureId: string) {
-    return this.service.facturx(req.user.orgId, factureId);
+  facturx(@Req() req: AuthedRequest, @Param('factureId', ParseUUIDPipe) factureId: string, @Query('profil') profil?: string) {
+    return this.service.facturx(req.user.orgId, factureId, profil);
   }
 
   @Get(':factureId/pdf')
@@ -51,6 +51,15 @@ export class FacturesController {
     return new StreamableFile(f.buffer, {
       type: 'application/pdf',
       disposition: `inline; filename="${f.numero}.pdf"`,
+    });
+  }
+
+  @Get(':factureId/facturx-pdf')
+  async facturxPdf(@Req() req: AuthedRequest, @Param('factureId', ParseUUIDPipe) factureId: string, @Query('profil') profil?: string) {
+    const f = await this.service.facturxPdf(req.user.orgId, factureId, profil);
+    return new StreamableFile(f.buffer, {
+      type: 'application/pdf',
+      disposition: `inline; filename="${f.numero}-facturx.pdf"`,
     });
   }
 }
