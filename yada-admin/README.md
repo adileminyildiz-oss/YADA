@@ -40,16 +40,44 @@ un admin, se connecte, crée un dossier, **vérifie l'isolation entre deux
 organisations (RLS)**, puis **redémarre le conteneur PostgreSQL** et confirme
 que la donnée est toujours là.
 
-## API (L0)
+## Lot L1 — CRM & fiche société ✅
 
-| Méthode | Route                | Rôle            | Effet |
-|--------:|----------------------|-----------------|-------|
-| POST    | `/api/auth/register` | public          | crée une organisation + son admin, renvoie un JWT |
-| POST    | `/api/auth/login`    | public          | authentifie, renvoie un JWT |
-| GET     | `/api/auth/me`       | authentifié     | profil du jeton |
-| POST    | `/api/entreprises`   | admin/collab    | crée un dossier (isolé au tenant) |
-| GET     | `/api/entreprises`   | authentifié     | liste les dossiers du tenant |
-| GET     | `/api/health`        | public          | état + ping DB |
+Se greffe sur le socle **sans nouvelle table** (migration 0003 : colonnes CRM sur
+`entreprises` + `tiers`). Pipeline prospect → client, fiche pré-remplie via SIREN,
+ouverture d'une mission à la conversion.
+
+**Critère de sortie** (plan) : *« Saisir un SIREN → fiche pré-remplie ; suivre un
+prospect jusqu'à client. »*
+
+```bash
+npm run verify:l1        # cluster local : mapper SIREN (pur) + pipeline live
+```
+
+- **Auto-remplissage SIREN** : source publique `recherche-entreprises.api.gouv.fr`
+  (sans clé). Le *mapper* est une fonction pure (testée hors-ligne) ;
+  si la source est injoignable (pare-feu), l'API renvoie **503 mode dégradé** →
+  saisie manuelle, jamais de blocage.
+- **Pipeline** : `nouveau → qualifie → proposition → gagne` (+ `perdu`, fermé sans
+  suppression). La conversion `gagne` bascule `statut = actif` **et ouvre une
+  première mission** (pont vers L2/L4).
+
+## API
+
+| Méthode | Route                          | Rôle          | Effet |
+|--------:|--------------------------------|---------------|-------|
+| POST    | `/api/auth/register`           | public        | crée une organisation + son admin, renvoie un JWT |
+| POST    | `/api/auth/login`              | public        | authentifie, renvoie un JWT |
+| GET     | `/api/auth/me`                 | authentifié   | profil du jeton |
+| POST    | `/api/entreprises`             | admin/collab  | crée un dossier / prospect |
+| GET     | `/api/entreprises`             | authentifié   | liste les dossiers du tenant |
+| GET     | `/api/entreprises/pipeline`    | authentifié   | dossiers regroupés par étape CRM |
+| GET     | `/api/entreprises/:id`         | authentifié   | fiche + missions |
+| PATCH   | `/api/entreprises/:id`         | admin/collab  | met à jour la fiche (dont champs SIREN) |
+| POST    | `/api/entreprises/:id/etape`   | admin/collab  | fait avancer le pipeline (gagne → mission) |
+| POST    | `/api/entreprises/:id/tiers`   | admin/collab  | ajoute un interlocuteur |
+| GET     | `/api/entreprises/:id/tiers`   | authentifié   | liste les interlocuteurs |
+| GET     | `/api/siren/:siren`            | authentifié   | fiche société pré-remplie (503 si source injoignable) |
+| GET     | `/api/health`                  | public        | état + ping DB |
 
 ## Sécurité
 
