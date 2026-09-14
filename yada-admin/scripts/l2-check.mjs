@@ -47,6 +47,13 @@ assert(xml.includes('<rsm:CrossIndustryInvoice') && xml.includes(e1.facture.nume
 assert(xml.includes('<ram:GrandTotalAmount>2196</ram:GrandTotalAmount>'), 'Factur-X : TTC 2196');
 assert(xml.includes('812345678'), 'Factur-X : SIREN vendeur');
 
+console.log('· PDF de facture (téléchargement)');
+const pdfRes = await req('GET', `/entreprises/${ent.id}/factures/${e1.facture.id}/pdf`, undefined, T);
+assert((pdfRes.headers.get('content-type') || '').includes('application/pdf'), 'Content-Type application/pdf');
+const pdfBuf = Buffer.from(await pdfRes.arrayBuffer());
+assert(pdfBuf.slice(0, 5).toString('latin1') === '%PDF-', 'corps = PDF (magic %PDF-)');
+assert(pdfBuf.toString('latin1').includes(e1.facture.numero), 'le PDF contient le numéro de facture');
+
 console.log('· Encaissement & impayés');
 const p1 = await post(`/entreprises/${ent.id}/factures/${e1.facture.id}/reglements`, { montant: 1000, moyen: 'virement' }, T);
 assert(p1.facture.statut === 'partielle' && Number(p1.facture.montant_paye) === 1000, 'règlement partiel → partielle');

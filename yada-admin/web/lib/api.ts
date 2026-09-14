@@ -27,6 +27,17 @@ async function req<T = any>(method: string, path: string, body?: unknown, asText
   try { return JSON.parse(raw) as T; } catch { return raw as unknown as T; }
 }
 
+// Récupère un binaire (PDF, pièce) en Blob avec le jeton — un simple <a href> ne
+// porterait pas l'en-tête d'autorisation.
+async function reqBlob(path: string): Promise<Blob> {
+  const headers: Record<string, string> = {};
+  const tk = getToken();
+  if (tk) headers['authorization'] = 'Bearer ' + tk;
+  const res = await fetch(BASE + path, { headers });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.blob();
+}
+
 export const api = {
   // Auth
   register: (d: any) => req('POST', '/auth/register', d),
@@ -48,15 +59,18 @@ export const api = {
   emettre: (id: string, fid: string) => req('POST', `/entreprises/${id}/factures/${fid}/emettre`, {}),
   regler: (id: string, fid: string, d: any) => req('POST', `/entreprises/${id}/factures/${fid}/reglements`, d),
   facturx: (id: string, fid: string) => req('GET', `/entreprises/${id}/factures/${fid}/facturx`, undefined, true),
+  facturePdf: (id: string, fid: string) => reqBlob(`/entreprises/${id}/factures/${fid}/pdf`),
   // Réception
   receptions: (id: string) => req('GET', `/entreprises/${id}/receptions`),
   deposer: (id: string, d: any) => req('POST', `/entreprises/${id}/receptions`, d),
+  pieceContenu: (id: string, docId: string) => reqBlob(`/entreprises/${id}/documents/${docId}/contenu`),
   recevoir: (rid: string) => req('POST', `/receptions/${rid}/recevoir`, {}),
   comptabiliserRec: (rid: string, d: any = {}) => req('POST', `/receptions/${rid}/comptabiliser`, d),
   rapprocher: (rid: string, tiersId: string) => req('POST', `/receptions/${rid}/rapprocher`, { tiersId }),
   fiches: (id: string) => req('GET', `/entreprises/${id}/fiches-tiers`),
   validerFiche: (fid: string, d: any = {}) => req('POST', `/fiches-tiers/${fid}/valider`, d),
   // Compta
+  exercices: (id: string) => req('GET', `/entreprises/${id}/compta/exercices`),
   creerExercice: (id: string, d: any) => req('POST', `/entreprises/${id}/compta/exercices`, d),
   ecriture: (id: string, d: any) => req('POST', `/entreprises/${id}/compta/ecritures`, d),
   ecritureFacture: (id: string, fid: string) => req('POST', `/entreprises/${id}/compta/facture/${fid}`, {}),

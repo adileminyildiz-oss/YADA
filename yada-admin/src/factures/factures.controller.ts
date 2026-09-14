@@ -1,5 +1,5 @@
 import {
-  Body, Controller, Get, Header, Param, Post, Req, UseGuards, ParseUUIDPipe,
+  Body, Controller, Get, Header, Param, Post, Req, UseGuards, ParseUUIDPipe, StreamableFile,
 } from '@nestjs/common';
 import { FacturesService } from './factures.service';
 import { CreateFactureDto, ReglementDto } from './dto';
@@ -43,5 +43,14 @@ export class FacturesController {
   @Header('Content-Type', 'application/xml; charset=utf-8')
   facturx(@Req() req: AuthedRequest, @Param('factureId', ParseUUIDPipe) factureId: string) {
     return this.service.facturx(req.user.orgId, factureId);
+  }
+
+  @Get(':factureId/pdf')
+  async pdf(@Req() req: AuthedRequest, @Param('factureId', ParseUUIDPipe) factureId: string) {
+    const f = await this.service.pdf(req.user.orgId, factureId);
+    return new StreamableFile(f.buffer, {
+      type: 'application/pdf',
+      disposition: `inline; filename="${f.numero}.pdf"`,
+    });
   }
 }

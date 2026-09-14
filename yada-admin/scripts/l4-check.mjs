@@ -17,6 +17,8 @@ const cpath = `/entreprises/${ent}/compta`;
 console.log('· Exercice 2026');
 const ex = await post(`${cpath}/exercices`, { dateDebut: '2026-01-01', dateFin: '2026-12-31' }, T);
 assert(ex.statut === 'ouvert', 'exercice ouvert');
+const exList = await get(`${cpath}/exercices`, T);
+assert(Array.isArray(exList) && exList.some((x) => x.id === ex.id), 'GET exercices liste l\'exercice créé');
 
 console.log('· Saisie manuelle équilibrée (OD)');
 const od = await post(`${cpath}/ecritures`, { journal: 'OD', date: '2026-03-10', piece: 'OD1', libelle: 'Frais de mission',

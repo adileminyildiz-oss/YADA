@@ -11,6 +11,11 @@ import { RolesGuard, Roles } from '../auth/roles';
 export class ComptaController {
   constructor(private readonly service: ComptaService) {}
 
+  @Get('exercices')
+  listExercices(@Req() req: AuthedRequest, @Param('id', ParseUUIDPipe) id: string) {
+    return this.service.listExercices(req.user.orgId, id);
+  }
+
   @Post('exercices')
   @Roles('admin', 'collaborateur')
   createExercice(@Req() req: AuthedRequest, @Param('id', ParseUUIDPipe) id: string, @Body() dto: CreateExerciceDto) {

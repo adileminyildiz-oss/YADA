@@ -6,6 +6,13 @@ import Header from '../../components/Header';
 
 const exKey = (id: string) => `yada-ex-${id}`;
 
+// Ouvre un Blob dans un onglet (aperçu) ; nettoie l'URL après.
+function ouvrirBlob(blob: Blob) {
+  const u = URL.createObjectURL(blob);
+  window.open(u, '_blank');
+  setTimeout(() => URL.revokeObjectURL(u), 60000);
+}
+
 export default function DossierPage() {
   const router = useRouter();
   const id = String(useParams().id);
@@ -118,7 +125,12 @@ function Facturation({ id }: { id: string }) {
   }
   const act = (fn: () => Promise<any>) => async () => { setErr(''); try { await fn(); load(); } catch (e: any) { setErr(e.message); } };
   async function dlFacturx(fid: string) {
-    try { const xml = await api.facturx(id, fid); const b = new Blob([xml as any], { type: 'application/xml' }); const u = URL.createObjectURL(b); window.open(u, '_blank'); }
+    try { const xml = await api.facturx(id, fid); ouvrirBlob(new Blob([xml as any], { type: 'application/xml' })); }
+    catch (e: any) { setErr(e.message); }
+  }
+  async function dlPdf(fid: string) {
+    setErr('');
+    try { ouvrirBlob(await api.facturePdf(id, fid)); }
     catch (e: any) { setErr(e.message); }
   }
 
@@ -148,6 +160,7 @@ function Facturation({ id }: { id: string }) {
                 <td className="row" style={{ gap: 6, justifyContent: 'flex-end' }}>
                   {f.statut === 'brouillon' && <button className="sm" onClick={act(() => api.emettre(id, f.id))}>Émettre</button>}
                   <button className="sm" onClick={act(() => api.ecritureFacture(id, f.id))}>Écriture VTE</button>
+                  <button className="sm" onClick={() => dlPdf(f.id)}>⤓ PDF</button>
                   <button className="sm" onClick={() => dlFacturx(f.id)}>Factur-X</button>
                 </td>
               </tr>
@@ -163,14 +176,33 @@ function Facturation({ id }: { id: string }) {
 function Reception({ id }: { id: string }) {
   const [list, setList] = useState<any[]>([]); const [fiches, setFiches] = useState<any[]>([]); const [err, setErr] = useState('');
   const [d, setD] = useState({ nomFichier: 'facture.pdf', texteOcr: 'FOURNISSEUR X\nFacture n° F-001\nDate : 06/04/2026\nTotal HT 500,00\nTVA 20% 100,00\nNet à payer 600,00 EUR' });
+  const [fichier, setFichier] = useState<{ nom: string; mime: string; b64: string } | null>(null);
   const load = useCallback(async () => {
     try { setList(await api.receptions(id)); setFiches(await api.fiches(id)); } catch (e: any) { setErr(e.message); }
   }, [id]);
   useEffect(() => { load(); }, [load]);
   const act = (fn: () => Promise<any>) => async () => { setErr(''); try { await fn(); load(); } catch (e: any) { setErr(e.message); } };
+
+  function choisirFichier(e: any) {
+    const f = e.target.files?.[0]; if (!f) { setFichier(null); return; }
+    const r = new FileReader();
+    r.onload = () => setFichier({ nom: f.name, mime: f.type || 'application/octet-stream', b64: String(r.result || '') });
+    r.readAsDataURL(f);
+  }
   async function deposer(e: any) {
     e.preventDefault(); setErr('');
-    try { await api.deposer(id, { sens: 'achat', canal: 'manuel', nomFichier: d.nomFichier, cheminStockage: 'obj://' + d.nomFichier, texteOcr: d.texteOcr }); load(); }
+    const nom = fichier?.nom || d.nomFichier;
+    try {
+      await api.deposer(id, {
+        sens: 'achat', canal: 'manuel', nomFichier: nom, cheminStockage: 'obj://' + nom,
+        mime: fichier?.mime, contenuBase64: fichier?.b64, texteOcr: d.texteOcr || undefined,
+      });
+      setFichier(null); load();
+    } catch (e: any) { setErr(e.message); }
+  }
+  async function voir(docId: string) {
+    setErr('');
+    try { ouvrirBlob(await api.pieceContenu(id, docId)); }
     catch (e: any) { setErr(e.message); }
   }
 
@@ -179,8 +211,11 @@ function Reception({ id }: { id: string }) {
       <div className="card">
         <h2>Déposer une pièce fournisseur</h2>
         <form onSubmit={deposer}>
-          <label>Nom du fichier</label><input value={d.nomFichier} onChange={(e) => setD({ ...d, nomFichier: e.target.value })} />
-          <label>Couche texte (OCR simulé)</label><textarea rows={4} value={d.texteOcr} onChange={(e) => setD({ ...d, texteOcr: e.target.value })} />
+          <label>Fichier (PDF / image) — stocké et consultable</label>
+          <input type="file" accept="application/pdf,image/*" onChange={choisirFichier} />
+          {fichier && <p className="muted" style={{ fontSize: 12 }}>Sélectionné : <b>{fichier.nom}</b> ({fichier.mime})</p>}
+          {!fichier && <><label>…ou nom du fichier (sans upload)</label><input value={d.nomFichier} onChange={(e) => setD({ ...d, nomFichier: e.target.value })} /></>}
+          <label>Couche texte (OCR simulé) — pour la lecture auto</label><textarea rows={4} value={d.texteOcr} onChange={(e) => setD({ ...d, texteOcr: e.target.value })} />
           <div style={{ marginTop: 10 }}><button className="pri" type="submit">Déposer → lecture auto</button></div>
         </form>
       </div>
@@ -208,6 +243,7 @@ function Reception({ id }: { id: string }) {
                 <td className="n">{r.montant_ttc ? eur(r.montant_ttc) : '—'}</td>
                 <td><span className={'pill' + (r.statut === 'comptabilisee' ? ' solid' : '')}>{r.statut}</span></td>
                 <td className="row" style={{ gap: 6, justifyContent: 'flex-end' }}>
+                  {r.a_fichier && <button className="sm" onClick={() => voir(r.document_id)}>Voir</button>}
                   {(r.statut === 'lue' || r.statut === 'recue') && <button className="sm" onClick={act(() => api.recevoir(r.id))}>Recevoir</button>}
                   {r.statut === 'a_valider' && <button className="sm" onClick={act(() => api.comptabiliserRec(r.id))}>Comptabiliser</button>}
                   {r.statut === 'comptabilisee' && <button className="sm" onClick={act(() => api.ecritureReception(id, r.id))}>Écriture ACH</button>}
@@ -223,13 +259,27 @@ function Reception({ id }: { id: string }) {
 }
 
 function Compta({ id }: { id: string }) {
+  const [exList, setExList] = useState<any[]>([]);
   const [ex, setEx] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
   const [kpis, setKpis] = useState<any>(null); const [bal, setBal] = useState<any>(null);
   const [ca3, setCa3] = useState<any>(null); const [fisc, setFisc] = useState<any>(null);
   const [err, setErr] = useState('');
   const [dates, setDates] = useState({ dateDebut: '2026-01-01', dateFin: '2026-12-31' });
+  const dstr = (v: any) => String(v ?? '').slice(0, 10);
 
-  useEffect(() => { try { setEx(localStorage.getItem(exKey(id))); } catch { /* */ } }, [id]);
+  const loadEx = useCallback(async () => {
+    try {
+      const list: any[] = await api.exercices(id);
+      setExList(list);
+      let stored: string | null = null; try { stored = localStorage.getItem(exKey(id)); } catch { /* */ }
+      const chosen = (list.find((x) => x.id === stored) || list[0])?.id || null;
+      setEx(chosen);
+      if (chosen) { try { localStorage.setItem(exKey(id), chosen); } catch { /* */ } }
+    } catch (e: any) { setErr(e.message); }
+  }, [id]);
+  useEffect(() => { loadEx(); }, [loadEx]);
+
   const refresh = useCallback(async (exId: string) => {
     setErr('');
     try {
@@ -239,26 +289,46 @@ function Compta({ id }: { id: string }) {
   }, [id]);
   useEffect(() => { if (ex) refresh(ex); }, [ex, refresh]);
 
+  function choisirEx(exId: string) { setEx(exId); try { localStorage.setItem(exKey(id), exId); } catch { /* */ } }
   async function creerEx(e: any) {
     e.preventDefault(); setErr('');
-    try { const r: any = await api.creerExercice(id, dates); localStorage.setItem(exKey(id), r.id); setEx(r.id); }
+    try { const r: any = await api.creerExercice(id, dates); setCreating(false); await loadEx(); choisirEx(r.id); }
     catch (e: any) { setErr(e.message); }
   }
 
-  if (!ex) return (
+  const creerForm = (
     <div className="card">
       <h2>Ouvrir un exercice</h2>
       <form onSubmit={creerEx} className="row" style={{ alignItems: 'flex-end' }}>
         <div><label>Début</label><input type="date" value={dates.dateDebut} onChange={(e) => setDates({ ...dates, dateDebut: e.target.value })} /></div>
         <div><label>Fin</label><input type="date" value={dates.dateFin} onChange={(e) => setDates({ ...dates, dateFin: e.target.value })} /></div>
         <button className="pri" type="submit">Ouvrir</button>
+        {exList.length > 0 && <button type="button" className="sm" onClick={() => setCreating(false)}>Annuler</button>}
       </form>
       {err && <div className="err">{err}</div>}
     </div>
   );
 
+  if (!ex && exList.length === 0) return creerForm;
+  if (creating) return creerForm;
+
   return (
     <>
+      <div className="card" style={{ padding: '12px 16px', marginBottom: 14 }}>
+        <div className="row" style={{ alignItems: 'flex-end', gap: 10 }}>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <label>Exercice</label>
+            <select value={ex || ''} onChange={(e) => choisirEx(e.target.value)}>
+              {exList.map((x) => (
+                <option key={x.id} value={x.id}>
+                  {dstr(x.date_debut)} → {dstr(x.date_fin)}{x.statut === 'cloture' ? ' (clôturé)' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button className="sm" onClick={() => setCreating(true)}>＋ Nouvel exercice</button>
+        </div>
+      </div>
       {err && <div className="err">{err}</div>}
       {kpis && (
         <div className="grid g4" style={{ marginBottom: 14 }}>

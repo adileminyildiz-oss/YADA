@@ -8,6 +8,7 @@ export class DepositDto {
   @IsOptional() @IsString() mime?: string;
   @IsOptional() @IsString() hash?: string;
   @IsOptional() @IsString() texteOcr?: string; // couche texte / sortie OCR
+  @IsOptional() @IsString() contenuBase64?: string; // octets réels du fichier (upload)
 }
 
 export class RapprocherDto {

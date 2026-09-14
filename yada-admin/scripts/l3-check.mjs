@@ -50,6 +50,19 @@ await post(`/receptions/${dep.reception.id}/recevoir`, {}, T);
 const done = await post(`/receptions/${dep.reception.id}/comptabiliser`, {}, T);
 assert(done.statut === 'comptabilisee', 'pièce comptabilisée (écriture ACH = L4)');
 
+console.log('· Upload réel d\'un fichier → stockage puis téléchargement conforme');
+const octets = Buffer.from('%PDF-1.4 fichier de test YADA — octets réels\n', 'latin1');
+const depF = await post(`/entreprises/${E}/receptions`, {
+  sens: 'achat', canal: 'manuel', nomFichier: 'piece_reelle.pdf', mime: 'application/pdf',
+  cheminStockage: 'obj://depot/piece_reelle.pdf', contenuBase64: octets.toString('base64'),
+}, T);
+const docId = depF.reception.document_id;
+assert(!!docId, 'pièce déposée avec un document lié');
+const dl = await req('GET', `/entreprises/${E}/documents/${docId}/contenu`, undefined, T);
+assert(dl.ok && (dl.headers.get('content-type') || '').includes('application/pdf'), 'téléchargement 200 + Content-Type pièce');
+const back = Buffer.from(await dl.arrayBuffer());
+assert(back.equals(octets), 'octets téléchargés identiques aux octets déposés');
+
 console.log('· Coffre-fort : recherche plein-texte (par contenu)');
 const found = await get(`/entreprises/${E}/documents?q=${encodeURIComponent('EDF')}`, T);
 assert(found.length >= 1 && found.some((d) => d.nom_fichier === 'facture_edf_09.pdf'), 'document retrouvé par son contenu OCR');
