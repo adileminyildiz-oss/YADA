@@ -11095,7 +11095,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v606';
+    b.textContent='YADA · v607';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -32704,6 +32704,42 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       +'#yada-rg .rg-t th{font-family:'+MONO+' !important;color:#8b8b90 !important}'
       +'#yada-rg .rg-t td.r.num{font-family:'+SERIF+' !important;font-size:13px !important}'
       +'#yada-rg .rg-btn{font-family:'+MONO+' !important;border-radius:5px !important;letter-spacing:.03em}';
+    document.head.appendChild(st);
+  }catch(e){}
+})();
+</script>
+<script id="yada-addon-reglages-registre">
+/* v607 — MODULES RÉGLAGES « Registre » (éditorial N&B) : Informations société
+   (#yada-is), Paramétrage (#yada-set), Coffre-fort (#yada-cf), Plan comptable
+   (#yada-pc) — tous déjà reconstruits en N&B. Cet addon leur applique la
+   TYPOGRAPHIE éditoriale « Registre » commune : masthead serif + eyebrow mono
+   (::before) propre à chaque module, cartes #0b0b0c / filets #242427, titres de
+   carte serif, en-têtes de table mono #121214, montants serif, champs mono.
+   100% ADDITIF & CSS-ONLY : aucune ligne de logique/handler touchée. Injecté en
+   DERNIER → prime (spécificité égale + !important, source postérieure aux styles
+   yada-is-mod / yada-set-mod / yada-cf-mod / yada-pc-mod). */
+(function(){
+  if(typeof document==='undefined') return;
+  if(window.__reglagesRegistre) return; window.__reglagesRegistre=true;
+  try{ if(document.getElementById('reglages-registre-mod')) return;
+    var SERIF='Georgia,"Times New Roman",serif', MONO='ui-monospace,Menlo,Consolas,monospace';
+    /* masthead par module (préfixe, eyebrow) */
+    var MODS=[['is','YADA · INFORMATIONS SOCIÉTÉ'],['set','YADA · PARAMÉTRAGE'],['cf','YADA · COFFRE-FORT'],['pc','YADA · PLAN COMPTABLE']];
+    var css='';
+    MODS.forEach(function(m){ var p=m[0], id='#yada-'+p, cl='.'+p+'-';
+      css+=id+' '+cl+'head{border-bottom:2px solid #f5f5f6 !important;align-items:flex-end !important}'
+        +id+' '+cl+'title{font-family:'+SERIF+' !important;font-weight:600 !important;font-size:26px !important;color:#fff !important;line-height:1.05}'
+        +id+' '+cl+'title::before{content:"'+m[1]+'";display:block;font-family:'+MONO+';font-size:11px;font-weight:400;letter-spacing:.28em;color:#8b8b90;margin-bottom:6px}'
+        +id+' '+cl+'close{border-radius:5px !important;border-color:#f5f5f6 !important}'
+        /* typographie générique dans chaque conteneur (no-op si la classe est absente) */
+        +id+' .card{background:#0b0b0c !important;border-color:#242427 !important}'
+        +id+' h2{font-family:'+SERIF+' !important;font-weight:600 !important}'
+        +id+' table th{font-family:'+MONO+' !important;text-transform:uppercase;letter-spacing:.08em;font-size:9px !important;font-weight:400 !important;color:#8b8b90 !important;background:#121214 !important;border-bottom-color:#242427 !important}'
+        +id+' table td{border-bottom-color:#171719 !important}'
+        +id+' table td.r.num,'+id+' table td.num.r{font-family:'+SERIF+' !important}'
+        +id+' input,'+id+' select,'+id+' textarea{border-radius:5px !important;border-color:#35353a !important;font-family:'+MONO+' !important}';
+    });
+    var st=document.createElement('style'); st.id='reglages-registre-mod'; st.textContent=css;
     document.head.appendChild(st);
   }catch(e){}
 })();
