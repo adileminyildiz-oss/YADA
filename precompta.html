@@ -11095,7 +11095,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v605';
+    b.textContent='YADA · v606';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -32673,6 +32673,37 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       +'#yada-so .so-tbl td.r.num{font-family:'+SERIF+' !important;font-size:13px !important}'
       +'#yada-so .so-mut{font-family:'+MONO+' !important;color:#8b8b90 !important}'
       +'#yada-so .so-open{background:#f2f2f3 !important;color:#0a0a0b !important;border-radius:5px !important;font-family:'+MONO+' !important}';
+    document.head.appendChild(st);
+  }catch(e){}
+})();
+</script>
+<script id="yada-addon-reglements-registre">
+/* v606 — MODULE SUIVI DES RÈGLEMENTS « Registre » (éditorial N&B). Le module
+   `reglements` (#yada-rg, déjà reconstruit : onglets Clients/Fournisseurs +
+   maître-détail tiers/factures non réglées + relances) porte DÉJÀ la palette N&B
+   du proto (panneaux #0b0b0c, filets #242427, gris #8b8b90, actifs inversés) ;
+   cet addon ajoute seulement la TYPOGRAPHIE éditoriale « Registre » : masthead
+   serif + eyebrow mono (::before), titres/chiffres en serif, libellés/onglets/
+   en-têtes en mono. 100% ADDITIF & CSS-ONLY : aucune ligne de logique/handler
+   touchée (regOpenGroups/regKPIDepuisEcritures/relances conservés). Injecté en
+   DERNIER → prime (spécificité égale + !important, source postérieure). */
+(function(){
+  if(typeof document==='undefined') return;
+  if(window.__reglementsRegistre) return; window.__reglementsRegistre=true;
+  try{ if(document.getElementById('reglements-registre-mod')) return;
+    var SERIF='Georgia,"Times New Roman",serif', MONO='ui-monospace,Menlo,Consolas,monospace';
+    var st=document.createElement('style'); st.id='reglements-registre-mod'; st.textContent=
+       '#yada-rg .rg-head{border-bottom:2px solid #f5f5f6 !important;padding:20px 4px 10px !important;align-items:flex-end !important}'
+      +'#yada-rg .rg-title{font-family:'+SERIF+' !important;font-weight:600 !important;font-size:26px !important;color:#fff !important;line-height:1.05}'
+      +'#yada-rg .rg-title::before{content:"YADA · SUIVI DES RÈGLEMENTS";display:block;font-family:'+MONO+';font-size:11px;font-weight:400;letter-spacing:.28em;color:#8b8b90;margin-bottom:6px}'
+      +'#yada-rg .rg-exo,#yada-rg .rg-sub,#yada-rg .rg-dsub,#yada-rg .rg-ts{font-family:'+MONO+' !important;color:#8b8b90 !important}'
+      +'#yada-rg .rg-close{border-radius:5px !important;border-color:#f5f5f6 !important}'
+      +'#yada-rg .rg-tab{font-family:'+MONO+' !important;letter-spacing:.03em}'
+      +'#yada-rg .rg-dh{font-family:'+SERIF+' !important;font-weight:600 !important;font-size:18px !important}'
+      +'#yada-rg .rg-amt{font-family:'+SERIF+' !important;font-weight:600 !important;font-size:14px !important}'
+      +'#yada-rg .rg-t th{font-family:'+MONO+' !important;color:#8b8b90 !important}'
+      +'#yada-rg .rg-t td.r.num{font-family:'+SERIF+' !important;font-size:13px !important}'
+      +'#yada-rg .rg-btn{font-family:'+MONO+' !important;border-radius:5px !important;letter-spacing:.03em}';
     document.head.appendChild(st);
   }catch(e){}
 })();
