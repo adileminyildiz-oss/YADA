@@ -13,7 +13,8 @@
     "verify:l0:local": "bash scripts/verify-l0-local.sh",
     "verify:l1": "bash scripts/verify-l1-local.sh",
     "verify:l2": "bash scripts/verify-l2-local.sh",
-    "verify:l3": "bash scripts/verify-l3-local.sh"
+    "verify:l3": "bash scripts/verify-l3-local.sh",
+    "verify:l4": "bash scripts/verify-l4-local.sh"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.4",

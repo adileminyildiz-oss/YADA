@@ -103,6 +103,29 @@ npm run verify:l3        # extraction (pure) + réception/doublon/fiche/coffre-f
 - **Fournisseur inconnu** → `fiches_tiers` (regroupe plusieurs pièces) → à la
   validation, crée le tiers (compte auxiliaire `401…`) et rattache ses pièces.
 
+## Lot L4 — Comptabilité, le moteur ✅
+
+Migration `0006` : chaîne `exercices → comptes → journaux → ecritures →
+ecriture_lignes → pieces_liees`. **L'invariant Σ débit = Σ crédit est garanti
+par la base** (contrainte différée `ecriture_equilibre`) : aucune écriture
+déséquilibrée ne peut être validée.
+
+**Critère de sortie** (plan) : *écriture équilibrée (auto + manuelle) ; lettrage ;
+éditions ; CA3 ; FEC ; clôture.*
+
+```bash
+npm run verify:l4
+```
+
+- **Le moteur** (`passerEcriture`) : point d'entrée unique, équilibre imposé au commit.
+- **Génération auto** : depuis une facture → **VTE** (client débité TTC, produits + TVA
+  collectée ventilée par taux) ; depuis une réception → **ACH** (fournisseur crédité
+  TTC, charge + TVA déductible).
+- **Lettrage** (facture ↔ règlement), **balance**, **grand-livre**, **CA3**
+  (collectée 4457x − déductible 4456x), **FEC** (export normé tabulé),
+  **clôture** (OD de résultat 6/7 → 120/129 + à-nouveaux → bilan d'ouverture N+1
+  équilibré).
+
 ## API
 
 | Méthode | Route                          | Rôle          | Effet |
@@ -134,12 +157,23 @@ npm run verify:l3        # extraction (pure) + réception/doublon/fiche/coffre-f
 | POST    | `/api/receptions/:rid/comptabiliser`          | admin/collab | 2e temps (écriture ACH → L4) |
 | POST    | `/api/receptions/:rid/refuser`                | admin/collab | écarte la pièce |
 | POST    | `/api/fiches-tiers/:fid/valider`              | admin/collab | crée le tiers + rattache les pièces |
+| POST    | `/api/entreprises/:id/compta/exercices`       | admin/collab | ouvre un exercice (+ plan & journaux) |
+| POST    | `/api/entreprises/:id/compta/ecritures`       | admin/collab | saisie manuelle (équilibre imposé) |
+| POST    | `/api/entreprises/:id/compta/facture/:fid`    | admin/collab | génère l'écriture VTE d'une facture |
+| POST    | `/api/entreprises/:id/compta/reception/:rid`  | admin/collab | génère l'écriture ACH d'une pièce reçue |
+| POST    | `/api/entreprises/:id/compta/lettrage`        | admin/collab | lettre des lignes d'un compte de tiers |
+| GET     | `/api/entreprises/:id/compta/balance/:exId`   | authentifié  | balance générale |
+| GET     | `/api/entreprises/:id/compta/grand-livre/:cpt`| authentifié  | grand-livre d'un compte |
+| GET     | `/api/entreprises/:id/compta/ca3/:exId`       | authentifié  | déclaration TVA (CA3) |
+| GET     | `/api/entreprises/:id/compta/fec/:exId`       | authentifié  | export FEC normé |
+| POST    | `/api/entreprises/:id/compta/cloture/:exId`   | admin/collab | clôture + à-nouveaux N+1 |
 | GET     | `/api/health`                  | public        | état + ping DB |
 
 ## Vérifier tout le socle construit
 
 ```bash
-npm run verify:l0:local && npm run verify:l1 && npm run verify:l2 && npm run verify:l3
+npm run verify:l0:local && npm run verify:l1 && npm run verify:l2 && \
+npm run verify:l3 && npm run verify:l4
 ```
 
 ## Sécurité

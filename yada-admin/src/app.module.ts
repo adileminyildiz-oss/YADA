@@ -7,6 +7,7 @@ import { TiersModule } from './tiers/tiers.module';
 import { SirenModule } from './siren/siren.module';
 import { FacturesModule } from './factures/factures.module';
 import { ReceptionModule } from './reception/reception.module';
+import { ComptaModule } from './compta/compta.module';
 import { HealthController } from './health/health.controller';
 
 @Module({
@@ -19,6 +20,7 @@ import { HealthController } from './health/health.controller';
     SirenModule,
     FacturesModule,
     ReceptionModule,
+    ComptaModule,
   ],
   controllers: [HealthController],
 })
