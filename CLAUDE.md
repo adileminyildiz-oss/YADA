@@ -36,7 +36,16 @@
 
 ---
 
-## 🟢 Dernière mise à jour — Reconstruction N&B : module SOCIÉTÉS (portefeuille) en « Registre » (éditorial) — v605
+## 🟢 Dernière mise à jour — Reconstruction N&B : module SUIVI DES RÈGLEMENTS en « Registre » (éditorial) — v606
+**Quoi :** poursuite de la reconstruction **module par module** (en autonomie). Le module **Suivi des règlements** (`reglements`, espace cabinet — déjà reconstruit : onglets Clients/Fournisseurs + maître-détail tiers ↔ factures non réglées (échéance, retard, alerte « Ne plus traiter ») + Relancer/Voir) portait **déjà la palette N&B** (panneaux `#0b0b0c`, filets `#242427`, gris `#8b8b90`, actifs inversés) ; cet addon ajoute la **typographie éditoriale « Registre »** : **bandeau-titre serif** + **eyebrow mono** (« YADA · SUIVI DES RÈGLEMENTS » via `::before`), **titres/chiffres en serif**, **libellés/onglets/en-têtes en mono**. Toute la mécanique reste intacte (`regOpenGroups`/`regKPIDepuisEcritures`/relances). L'**Espace Client** n'est pas touché.
+
+**Comment — nouvel addon `yada-addon-reglements-registre` (100% ADDITIF & CSS-ONLY, injecté en DERNIER) :** `<style id="reglements-registre-mod">` scopé **`#yada-rg`**. Masthead serif + eyebrow via `::before` sur `.rg-title` ; sous-titres/onglets/`.rg-ts` mono ; en-tête de détail (`.rg-dh`) serif ; montants (`.rg-amt`, `.rg-t td.r.num`) serif ; en-têtes de table (`.rg-t th`) mono ; boutons (`.rg-btn`) mono. `sw.js` yada-v201, badge v606, `version.json` 606.
+
+**Validé :** `node --check` (283 scripts inline, 0 erreur) + `node --check sw.js` OK + accolades CSS de l'addon (11/11) + **filet d'équilibre** (vente 1200=1200, achat 600=600 ✅) + **rendu Playwright** (`#yada-rg` présent, titre **serif**, eyebrow « YADA · SUIVI DES RÈGLEMENTS », **2 onglets**, style injecté ; **0 pageerror**). Badge → **v606**.
+
+---
+
+## 🟢 MAJ précédente — Reconstruction N&B : module SOCIÉTÉS (portefeuille) en « Registre » (éditorial) — v605
 **Quoi :** poursuite de la reconstruction **module par module** (en autonomie). Le module **Sociétés (portefeuille)** (`societe`, espace cabinet — déjà reconstruit : en-tête + Accéder à Qonto + 2 KPI + recherche + tableau du portefeuille) est **aligné sur le système éditorial « Registre »** : **bandeau-titre serif** + **eyebrow mono** (« YADA · SOCIÉTÉS — PORTEFEUILLE » via `::before`), **KPI/tableau `#0b0b0c`/`#121214`**, **filets `#242427`**, **gris `#8b8b90`**, **KPI libellés mono / valeurs serif**, **table en-têtes mono / montants serif**, **boutons (Qonto, Ouvrir) & recherche mono**. Toute la mécanique reste intacte (`factCountDossier`/`ouvrirDossierCabinet`/`accederQonto`). L'**Espace Client** n'est pas touché.
 
 **Comment — nouvel addon `yada-addon-societe-registre` (100% ADDITIF & CSS-ONLY, injecté en DERNIER) :** `<style id="societe-registre-mod">` scopé **`#yada-so`**, à spécificité égale + `!important` et source postérieure au style `yada-so-mod` → il prime. Masthead serif + eyebrow via `::before` sur `.so-title` ; KPI (`.so-kpi` re-filetés `#242427`, `.l` mono / `.v` serif) ; recherche (`.so-search`) + bouton Qonto (`.so-qonto`) + Ouvrir (`.so-open` inversé) mono ; table (`.so-tbl`) en-têtes mono `#121214` / montants serif. `sw.js` yada-v200, badge v605, `version.json` 605.
