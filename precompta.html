@@ -4207,6 +4207,7 @@ function render(){
   salarie:(typeof pageSalarie==='function'?pageSalarie:function(){return'<div class="mod-wrap"><div class="card"><h2>Salarié</h2></div></div>';}),
   rapport:(typeof pageRapport==='function'?pageRapport:function(){return'<div class="mod-wrap"><div class="card"><h2>Rapport</h2></div></div>';}),
   controles:(typeof pageControles==='function'?pageControles:function(){return'<div class="mod-wrap"><div class="card"><h2>Contrôles</h2></div></div>';}),
+  importbanque:(typeof pageImportBanque==='function'?pageImportBanque:function(){return'<div class="mod-wrap"><div class="card"><h2>Import bancaire</h2></div></div>';}),
   dossier:pageDossier, parametrage:pageParametrage, plancomptable:pagePlanComptable, infosociete:pageInfoSociete, coffre:pageCoffre
 })[current]();
   // compta/compteaux et dash/societe fournissent déjà leur propre conteneur plein cadre ; les autres sont enveloppés
@@ -11096,7 +11097,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v610';
+    b.textContent='YADA · v611';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -33053,6 +33054,350 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     +'html body:not(#_yz) #yada-ctl .ctl-t .mono,html body:not(#_yz) #yada-ctl .ctl-t .det,'
     +'html body:not(#_yz) #yada-ctl .ctl-t .ctl-more{font-family:ui-monospace,Menlo,Consolas,monospace!important}'
     +'@media(max-width:720px){#yada-ctl .ctl-kpis{grid-template-columns:repeat(2,1fr)}}';
+    document.head.appendChild(st);
+  }catch(e){}
+})();
+</script>
+<script id="yada-addon-import-banque">
+/* ═══ FONCTIONNALITÉ — MODULE IMPORT BANCAIRE (OFX / CSV → écritures BQ) ═══
+   Lecture 100% LOCALE d'un relevé bancaire (OFX/QFX ou CSV) : analyse des opérations,
+   rapprochement automatique avec les écritures déjà saisies (même montant, date proche,
+   ou même identifiant d'opération FITID déjà importé), proposition d'un compte de
+   contrepartie (tiers reconnu dans le libellé, puis mots-clés, sinon 471 compte d'attente),
+   puis génération des écritures de banque ÉQUILIBRÉES via posterBanque (512 en contrepartie).
+   Aucune donnée ne sort de l'appareil (logiciel interne, aucune propagation externe).
+   100% ADDITIF — design éditorial « Registre » N&B scopé #yada-ib. */
+(function(){
+  window.YADA_OK=(window.YADA_OK||[]);
+  if(window.YADA_OK.indexOf('importbanque')<0) window.YADA_OK.push('importbanque');
+  window.YADA_LBL=window.YADA_LBL||{}; if(!window.YADA_LBL.importbanque) window.YADA_LBL.importbanque='Import bancaire';
+
+  function e2(x){ return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+  function E(x){ return (typeof eur==='function')?eur(x):((+x||0).toFixed(2)+' €'); }
+  function C9(c){ return (typeof c9==='function')?c9(c):String(c==null?'':c); }
+  function R2(x){ return (typeof r2==='function')?r2(x):Math.round((+x||0)*100)/100; }
+  function frd(d){ d=String(d||''); var m=d.match(/^(\d{4})-(\d{2})-(\d{2})/); return m?(m[3]+'/'+m[2]+'/'+m[1].slice(2)):d; }
+  function libCompte(code){ var c=C9(code);
+    try{ if(typeof COMPTES!=='undefined'&&COMPTES){ if(COMPTES[c])return COMPTES[c]; var s6=c.slice(0,6),s3=c.slice(0,3); if(COMPTES[s6])return COMPTES[s6]; if(COMPTES[s3])return COMPTES[s3]; } }catch(e){}
+    try{ var p=(db.plan||[]).filter(function(x){return C9(x.code)===c;})[0]; if(p)return p.lib; }catch(e){}
+    return ''; }
+  function norm(s){ return String(s||'').toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^A-Z0-9 ]/g,' ').replace(/\s+/g,' ').trim(); }
+  function jours(a,b){ var d1=new Date(a+'T00:00:00'), d2=new Date(b+'T00:00:00'); return Math.abs((d1-d2)/86400000); }
+
+  var ST=(window.__ib=window.__ib||{nom:'',format:'',ops:[],msg:''});
+
+  /* ---------- lecture des dates ---------- */
+  function isoDate(v){
+    v=String(v||'').trim(); if(!v) return '';
+    var m=v.match(/^(\d{4})(\d{2})(\d{2})/);            if(m) return m[1]+'-'+m[2]+'-'+m[3];
+    m=v.match(/^(\d{4})-(\d{2})-(\d{2})/);              if(m) return m[1]+'-'+m[2]+'-'+m[3];
+    m=v.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})/);
+    if(m){ var y=m[3]; if(y.length===2) y=(+y>70?'19':'20')+y; return y+'-'+('0'+m[2]).slice(-2)+'-'+('0'+m[1]).slice(-2); }
+    return '';
+  }
+  function nbFr(v){
+    v=String(v==null?'':v).replace(/\s| |€/g,'').trim(); if(!v) return 0;
+    var neg=/^\(.*\)$/.test(v); if(neg) v=v.slice(1,-1);
+    if(v.indexOf(',')>=0 && v.indexOf('.')>=0){ v=(v.lastIndexOf(',')>v.lastIndexOf('.'))?v.replace(/\./g,'').replace(',','.'):v.replace(/,/g,''); }
+    else v=v.replace(',','.');
+    var n=parseFloat(v); if(isNaN(n)) return 0; return neg?-n:n;
+  }
+
+  /* ---------- OFX ---------- */
+  function parseOFX(t){
+    var ops=[], blocs=t.split(/<STMTTRN>/i).slice(1);
+    blocs.forEach(function(b){
+      function tag(n){ var m=b.match(new RegExp('<'+n+'>([^<\\r\\n]*)','i')); return m?m[1].trim():''; }
+      var d=isoDate(tag('DTPOSTED')||tag('DTUSER')), mt=nbFr(tag('TRNAMT'));
+      var lib=(tag('NAME')||tag('MEMO')||tag('PAYEE')||'Opération bancaire');
+      var me=tag('MEMO'); if(me && me!==lib) lib=lib+' — '+me;
+      if(d && mt) ops.push({date:d, lib:lib, montant:R2(mt), fitid:tag('FITID')});
+    });
+    return ops;
+  }
+
+  /* ---------- CSV ---------- */
+  function splitCsv(line,sep){
+    var out=[],cur='',q=false;
+    for(var i=0;i<line.length;i++){ var ch=line[i];
+      if(q){ if(ch==='"'){ if(line[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=ch; }
+      else if(ch==='"') q=true;
+      else if(ch===sep){ out.push(cur); cur=''; }
+      else cur+=ch; }
+    out.push(cur); return out.map(function(x){return x.trim();});
+  }
+  function parseCSV(t){
+    var lignes=t.split(/\r?\n/).filter(function(l){return l.trim();});
+    if(!lignes.length) return [];
+    var seps=[';','\t',','], sep=seps[0], best=0;
+    seps.forEach(function(s){ var n=splitCsv(lignes[0],s).length; if(n>best){best=n;sep=s;} });
+    var head=splitCsv(lignes[0],sep).map(norm), start=1;
+    function find(rx){ for(var i=0;i<head.length;i++) if(rx.test(head[i])) return i; return -1; }
+    var iD=find(/^DATE|DATE OPERATION|DATE COMPTABLE|DATE VALEUR/),
+        iL=find(/LIBELLE|INTITULE|DESCRIPTION|NATURE|MOTIF|OPERATION/),
+        iM=find(/^MONTANT|MONTANT EUR|AMOUNT|MONTANT OPERATION/),
+        iDeb=find(/^DEBIT/), iCre=find(/^CREDIT/);
+    if(iD<0){ /* pas d'en-tête reconnu : colonnes par position, tout le fichier est lu */
+      start=0; iD=0; iL=1; iM=2; iDeb=-1; iCre=-1;
+      if(!isoDate(splitCsv(lignes[0],sep)[0])) start=1;
+    }
+    var ops=[];
+    for(var i=start;i<lignes.length;i++){
+      var c=splitCsv(lignes[i],sep); if(!c.length) continue;
+      var d=isoDate(c[iD]||''); if(!d) continue;
+      var mt=0;
+      if(iM>=0) mt=nbFr(c[iM]);
+      else if(iDeb>=0||iCre>=0){ var de=iDeb>=0?Math.abs(nbFr(c[iDeb])):0, cr=iCre>=0?Math.abs(nbFr(c[iCre])):0; mt=cr-de; }
+      if(!mt) continue;
+      var lib=(iL>=0?(c[iL]||''):'')||'Opération bancaire';
+      ops.push({date:d, lib:lib, montant:R2(mt), fitid:''});
+    }
+    return ops;
+  }
+
+  /* ---------- proposition de contrepartie ---------- */
+  var KW=[
+    [/URSSAF/,'431000000'],[/RETRAITE|PREVOYANCE|PROBTP|PRO BTP|AGIRC|ARRCO|AG2R|MALAKOFF/,'437300000'],
+    [/DGFIP|TRESOR PUBLIC|IMPOT|IMPOTS|TVA/,'445510000'],
+    [/SALAIRE|SALAIRES|PAIE|VIR SAL|REMUNERATION/,'421000000'],
+    [/AGIOS|INTERET|INTERETS|ECHEANCE PRET|REMB PRET/,'661100000'],
+    [/FRAIS BANC|COMMISSION|COTISATION CARTE|FRAIS TENUE|FRAIS DE COMPTE/,'627000000'],
+    [/LOYER|BAIL|LOCATION LOCAL/,'613200000'],
+    [/EDF|ENGIE|ELECTRICITE|TOTALENERGIES|TOTAL ENERGIES|EAU|VEOLIA|SUEZ/,'606100000'],
+    [/CARBURANT|ESSENCE|GASOIL|STATION|AVIA|ESSO|BP /,'606000000'],
+    [/ASSURANCE|AXA|MAAF|ALLIANZ|GROUPAMA|MMA|GENERALI/,'616000000'],
+    [/ORANGE|SFR|BOUYGUES|FREE|TELECOM|INTERNET|POSTE|LA POSTE/,'626000000'],
+    [/PEAGE|SNCF|TAXI|HOTEL|RESTAURANT|VINCI AUTOROUTE/,'625100000'],
+    [/APPORT ASSOCIE|COMPTE COURANT ASSOCIE/,'455000000']
+  ];
+  function suggere(op){
+    var n=norm(op.lib);
+    /* 1) un tiers du dossier reconnu dans le libellé */
+    try{
+      var best=null;
+      (db.tiers||[]).forEach(function(t){
+        var aux=C9(t.compteAux||''); if(!/^(401|411)/.test(aux)) return;
+        var nt=norm(t.nom); if(nt.length<4) return;
+        if(n.indexOf(nt)>=0 && (!best||nt.length>norm(best.nom).length)) best=t;
+      });
+      if(best) return {compte:C9(best.compteAux), tiersId:best.id};
+    }catch(e){}
+    /* 2) mots-clés usuels */
+    for(var i=0;i<KW.length;i++) if(KW[i][0].test(n)) return {compte:KW[i][1], tiersId:null};
+    /* 3) compte d'attente */
+    return {compte:'471000000', tiersId:null};
+  }
+
+  /* ---------- rapprochement avec l'existant ---------- */
+  function mvt512(ec){ var s=0; (ec.lignes||[]).forEach(function(l){ if(C9(l.compte).indexOf('512')===0) s+=(+l.debit||0)-(+l.credit||0); }); return R2(s); }
+  function rapproche(op){
+    try{
+      if(op.fitid){ var deja=(db.banque||[]).filter(function(b){ return b.fitid && b.fitid===op.fitid; })[0];
+        if(deja) return {etat:'importee', note:'Déjà importée (identifiant '+op.fitid+')'}; }
+      var cands=(db.ecritures||[]).filter(function(ec){
+        if(!ec.date || jours(ec.date, op.date)>5) return false;
+        var m=mvt512(ec); if(!m) return false;
+        return Math.abs(m-op.montant)<0.01;
+      });
+      if(cands.length) return {etat:'rapprochee', note:'Rapprochée : '+frd(cands[0].date)+' · '+e2(cands[0].libelle||'')};
+    }catch(e){}
+    return {etat:'nouvelle', note:''};
+  }
+
+  /* ---------- lecture du fichier ---------- */
+  function decode(buf){
+    try{ return new TextDecoder('utf-8',{fatal:true}).decode(buf); }
+    catch(e){ try{ return new TextDecoder('windows-1252').decode(buf); }catch(e2){ return new TextDecoder().decode(buf); } }
+  }
+  window.ibPick=function(){ var i=document.getElementById('ib-file'); if(i) i.click(); };
+  window.ibDrop=function(ev){ ev.preventDefault(); var f=ev.dataTransfer&&ev.dataTransfer.files&&ev.dataTransfer.files[0]; if(f) ibFile(f); return false; };
+  window.ibOver=function(ev){ ev.preventDefault(); return false; };
+  window.ibFile=function(f){
+    if(!f) return;
+    var fr=new FileReader();
+    fr.onload=function(){
+      var txt=decode(fr.result), ofx=/<STMTTRN>/i.test(txt);
+      var ops=ofx?parseOFX(txt):parseCSV(txt);
+      ST.nom=f.name; ST.format=ofx?'OFX':'CSV';
+      ops.sort(function(a,b){ return a.date<b.date?-1:(a.date>b.date?1:0); });
+      ST.ops=ops.map(function(o){ var r=rapproche(o), s=suggere(o);
+        return {date:o.date, lib:o.lib, montant:o.montant, fitid:o.fitid||'', etat:r.etat, note:r.note,
+                compte:s.compte, tiersId:s.tiersId, ok:(r.etat==='nouvelle')}; });
+      ST.msg=ops.length?('Fichier '+ST.format+' lu : '+ops.length+' opération(s).'):'Aucune opération reconnue dans ce fichier.';
+      if(typeof render==='function') render();
+      if(typeof toast==='function') toast(ST.msg);
+    };
+    fr.readAsArrayBuffer(f);
+  };
+  window.ibSetCompte=function(i,v){ if(ST.ops[i]){ ST.ops[i].compte=C9(v); ST.ops[i].tiersId=null;
+    try{ var t=(db.tiers||[]).filter(function(x){return C9(x.compteAux||'')===C9(v);})[0]; if(t) ST.ops[i].tiersId=t.id; }catch(e){} } };
+  window.ibToggle=function(i,v){ if(ST.ops[i]) ST.ops[i].ok=!!v; ibMajCompteur(); };
+  window.ibToggleAll=function(v){ ST.ops.forEach(function(o){ o.ok=!!v; }); if(typeof render==='function') render(); };
+  function ibMajCompteur(){ var el=document.getElementById('ib-sel'); if(el) el.textContent=ST.ops.filter(function(o){return o.ok;}).length; };
+  window.ibReset=function(){ ST.nom=''; ST.format=''; ST.ops=[]; ST.msg=''; if(typeof render==='function') render(); };
+  window.ibFermer=function(){ try{current='compta';}catch(e){} if(typeof render==='function') render(); };
+
+  window.ibIntegrer=function(){
+    var sel=ST.ops.filter(function(o){return o.ok;});
+    if(!sel.length){ if(typeof toast==='function') toast('Aucune opération sélectionnée.'); return; }
+    var sans=sel.filter(function(o){ return !C9(o.compte)||C9(o.compte)==='000000000'; });
+    if(sans.length){ if(typeof toast==='function') toast('Renseignez un compte de contrepartie sur chaque opération.'); return; }
+    var n=0;
+    sel.forEach(function(o){
+      try{
+        var rec=posterBanque({ mois:o.date.slice(0,7), jour:+o.date.slice(8,10), compte:C9(o.compte),
+          libelle:o.lib, sens:(o.montant<0?'D':'C'), montant:Math.abs(o.montant),
+          suivi:'IMPORT '+(ST.format||'BQ'), tiersId:o.tiersId||null });
+        if(rec && o.fitid) rec.fitid=o.fitid;
+        n++;
+      }catch(e){}
+    });
+    try{
+      db.parametres=db.parametres||{};
+      db.parametres.importsBanque=(db.parametres.importsBanque||[]);
+      db.parametres.importsBanque.unshift({ id:(typeof uid==='function'?uid():String(Date.now())),
+        ts:new Date().toISOString(), nom:ST.nom, format:ST.format, lues:ST.ops.length, integrees:n });
+      db.parametres.importsBanque=db.parametres.importsBanque.slice(0,40);
+    }catch(e){}
+    if(typeof save==='function') save();
+    ST.ops=ST.ops.filter(function(o){ return !o.ok; });
+    ST.msg=n+' écriture(s) de banque générée(s) — journal BQ, contrepartie 512.';
+    if(typeof render==='function') render();
+    if(typeof toast==='function') toast(ST.msg);
+  };
+
+  /* ---------- rendu ---------- */
+  function optsCompte(sel){
+    var s=C9(sel||''), out='', vus={};
+    function opt(code,lib){ var c=C9(code); if(vus[c])return''; vus[c]=1;
+      return '<option value="'+e2(c)+'"'+(c===s?' selected':'')+'>'+e2(c)+' — '+e2(lib||libCompte(c)||'')+'</option>'; }
+    var tg='';
+    try{ (db.tiers||[]).slice().sort(function(a,b){return (a.nom||'')<(b.nom||'')?-1:1;}).forEach(function(t){
+      var aux=C9(t.compteAux||''); if(/^(401|411)/.test(aux)) tg+=opt(aux,t.nom); }); }catch(e){}
+    if(tg) out+='<optgroup label="Tiers du dossier">'+tg+'</optgroup>';
+    var usuels=[['471000000',''],['627000000',''],['661100000',''],['431000000',''],['437300000',''],['421000000',''],
+                ['445510000',''],['455000000',''],['613200000',''],['616000000',''],['626000000',''],['625100000',''],
+                ['606000000',''],['606100000',''],['706000000',''],['707000000','']];
+    var ug=''; usuels.forEach(function(u){ ug+=opt(u[0],u[1]); });
+    out+='<optgroup label="Comptes usuels">'+ug+'</optgroup>';
+    var pg='',n=0;
+    try{ (db.plan||[]).forEach(function(p){ var c=C9(p.code);
+      if(n<400 && /^[4567]/.test(c) && !vus[c]){ pg+=opt(c,p.lib); n++; } }); }catch(e){}
+    if(pg) out+='<optgroup label="Plan comptable">'+pg+'</optgroup>';
+    if(s && !vus[s]) out=opt(s,'')+out;
+    return out;
+  }
+  var ETLBL={nouvelle:'NOUVELLE', rapprochee:'RAPPROCHÉE', importee:'DÉJÀ IMPORTÉE'};
+  function tableau(){
+    if(!ST.ops.length) return '';
+    var r=ST.ops.map(function(o,i){
+      return '<tr class="ib-r '+e2(o.etat)+'">'
+        +'<td class="c"><input type="checkbox" class="ib-cb"'+(o.ok?' checked':'')+' onchange="ibToggle('+i+',this.checked)"></td>'
+        +'<td class="num">'+frd(o.date)+'</td>'
+        +'<td class="lib">'+e2(o.lib)+(o.note?('<span class="ib-note">'+e2(o.note)+'</span>'):'')+'</td>'
+        +'<td class="r num'+(o.montant<0?' out':'')+'">'+E(o.montant)+'</td>'
+        +'<td class="mono">'+(o.montant<0?'Décaissement':'Encaissement')+'</td>'
+        +'<td><select class="ib-sel-cpt" onchange="ibSetCompte('+i+',this.value)">'+optsCompte(o.compte)+'</select></td>'
+        +'<td><span class="ib-pill '+e2(o.etat)+'">'+e2(ETLBL[o.etat]||'')+'</span></td></tr>';
+    }).join('');
+    var nsel=ST.ops.filter(function(o){return o.ok;}).length;
+    return '<div class="ib-card"><div class="ib-cardh"><span class="ib-ttl">Opérations lues — '+e2(ST.nom)+'</span>'
+      +'<span class="ib-note">'+ST.ops.length+' opération(s) · <span id="ib-sel">'+nsel+'</span> sélectionnée(s)</span>'
+      +'<button class="ib-btn" onclick="ibToggleAll(true)">Tout cocher</button>'
+      +'<button class="ib-btn" onclick="ibToggleAll(false)">Tout décocher</button>'
+      +'<button class="ib-btn ib-pri" onclick="ibIntegrer()">Générer les écritures</button></div>'
+      +'<div class="ib-tblwrap"><table class="ib-t"><thead><tr><th class="c"></th><th>Date</th><th>Libellé du relevé</th>'
+      +'<th class="r">Montant</th><th>Sens</th><th>Contrepartie</th><th>État</th></tr></thead><tbody>'+r+'</tbody></table></div></div>';
+  }
+  function histo(){
+    var h=[]; try{ h=(db.parametres&&db.parametres.importsBanque)||[]; }catch(e){}
+    if(!h.length) return '';
+    var r=h.slice(0,12).map(function(x){ return '<tr><td class="num">'+frd(String(x.ts||'').slice(0,10))+'</td><td>'+e2(x.nom||'')
+      +'</td><td class="mono">'+e2(x.format||'')+'</td><td class="r num">'+(+x.lues||0)+'</td><td class="r num">'+(+x.integrees||0)+'</td></tr>'; }).join('');
+    return '<div class="ib-card"><div class="ib-cardh"><span class="ib-ttl">Historique des imports</span></div>'
+      +'<div class="ib-tblwrap"><table class="ib-t"><thead><tr><th>Date</th><th>Fichier</th><th>Format</th><th class="r">Lues</th><th class="r">Intégrées</th></tr></thead><tbody>'+r+'</tbody></table></div></div>';
+  }
+  function kpiBox(lbl,val){ return '<div class="ib-k"><div class="ib-kv">'+val+'</div><div class="ib-kl">'+e2(lbl)+'</div></div>'; }
+
+  window.pageImportBanque=function(){
+    var nv=ST.ops.filter(function(o){return o.etat==='nouvelle';}).length,
+        rp=ST.ops.filter(function(o){return o.etat==='rapprochee';}).length,
+        dj=ST.ops.filter(function(o){return o.etat==='importee';}).length;
+    return '<div id="yada-ib"><div class="ib-wrap">'
+      +'<div class="ib-head"><div class="ib-hl"><div class="ib-eyebrow">YADA · IMPORT BANCAIRE</div><div class="ib-title">Import du relevé bancaire</div></div>'
+        +'<span class="ib-exo">'+e2((db.societe&&db.societe.raison)||'')+' · Exercice '+((typeof exoYear==='function')?exoYear():'')+'</span>'
+        +(ST.ops.length?'<button class="ib-btn" onclick="ibReset()">Vider</button>':'')
+        +'<button class="ib-close" onclick="ibFermer()" title="Revenir à la Consultation" aria-label="Fermer">✕</button></div>'
+      +'<div class="ib-scroll">'
+        +'<div class="ib-kpis">'+kpiBox('Opérations lues',ST.ops.length)+kpiBox('Nouvelles',nv)+kpiBox('Déjà rapprochées',rp)+kpiBox('Déjà importées',dj)+'</div>'
+        +'<div class="ib-drop" ondragover="return ibOver(event)" ondrop="return ibDrop(event)" onclick="ibPick()">'
+          +'<div class="ib-dropt">Déposer le relevé bancaire ici</div>'
+          +'<div class="ib-note">Formats acceptés : OFX / QFX ou CSV (date · libellé · montant, ou colonnes débit / crédit). '
+          +'Lecture entièrement locale — aucune donnée ne quitte l\'appareil.</div>'
+          +'<input type="file" id="ib-file" accept=".ofx,.qfx,.csv,.txt" style="display:none" onchange="ibFile(this.files[0])">'
+          +'<button class="ib-btn ib-pri" onclick="event.stopPropagation();ibPick()">Choisir un fichier</button></div>'
+        +(ST.msg?('<div class="ib-note ib-msg">'+e2(ST.msg)+'</div>'):'')
+        +tableau()+histo()
+      +'</div></div></div>';
+  };
+
+  try{ var st=document.createElement('style'); st.id='importbanque-mod'; st.textContent=
+     '.mod-wrap:has(#yada-ib){padding:0!important;max-width:none!important}'
+    +'#yada-ib{font-family:Georgia,"Times New Roman",serif;color:#f5f5f6;background:#000;min-height:100dvh;display:flex;flex-direction:column}'
+    +'#yada-ib .ib-wrap{flex:1;display:flex;flex-direction:column;min-height:0;width:100%;max-width:1320px;margin:0 auto;padding:0 18px}'
+    +'#yada-ib .ib-head{display:flex;align-items:center;gap:14px;padding:16px 4px 13px;border-bottom:1px solid #242427}'
+    +'#yada-ib .ib-eyebrow{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10.5px;letter-spacing:.14em;color:#8b8b90}'
+    +'#yada-ib .ib-title{font-size:20px;font-weight:400;letter-spacing:.01em;margin-top:2px}'
+    +'#yada-ib .ib-exo{margin-left:auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;color:#8b8b90}'
+    +'#yada-ib .ib-btn{background:#121214;color:#f5f5f6;border:1px solid #35353a;border-radius:6px;padding:7px 13px;cursor:pointer;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px}'
+    +'#yada-ib .ib-btn:hover{background:#1a1a1c}'
+    +'#yada-ib .ib-btn.ib-pri{background:#f5f5f6;color:#000;border-color:#f5f5f6}'
+    +'#yada-ib .ib-btn.ib-pri:hover{background:#e2e2e4}'
+    +'#yada-ib .ib-close{width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:#000;color:#f5f5f6;border:1px solid #f5f5f6;border-radius:7px;cursor:pointer;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px}'
+    +'#yada-ib .ib-close:hover{background:#f5f5f6;color:#000}'
+    +'#yada-ib .ib-scroll{flex:1;overflow:auto;padding:16px 2px 40px;min-height:0}'
+    +'#yada-ib .ib-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}'
+    +'#yada-ib .ib-k{background:#0b0b0c;border:1px solid #242427;border-radius:8px;padding:14px 16px}'
+    +'#yada-ib .ib-kv{font-size:26px;font-weight:400;font-variant-numeric:tabular-nums}'
+    +'#yada-ib .ib-kl{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10.5px;letter-spacing:.06em;color:#8b8b90;margin-top:3px}'
+    +'#yada-ib .ib-drop{background:#0b0b0c;border:1px dashed #35353a;border-radius:8px;padding:26px 18px;text-align:center;cursor:pointer;margin-bottom:14px}'
+    +'#yada-ib .ib-drop:hover{border-color:#8b8b90;background:#0e0e10}'
+    +'#yada-ib .ib-dropt{font-size:16px;margin-bottom:6px}'
+    +'#yada-ib .ib-note{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;color:#8b8b90;line-height:1.55}'
+    +'#yada-ib .ib-drop .ib-btn{margin-top:12px}'
+    +'#yada-ib .ib-msg{margin:0 0 14px;padding:10px 14px;background:#0b0b0c;border:1px solid #242427;border-radius:8px}'
+    +'#yada-ib .ib-card{background:#0b0b0c;border:1px solid #242427;border-radius:8px;margin-bottom:12px}'
+    +'#yada-ib .ib-cardh{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid #242427}'
+    +'#yada-ib .ib-ttl{font-size:15px}'
+    +'#yada-ib .ib-cardh .ib-note{margin-right:auto}'
+    +'#yada-ib .ib-tblwrap{overflow-x:auto}'
+    +'#yada-ib .ib-t{width:100%;border-collapse:collapse;font-size:12.5px}'
+    +'#yada-ib .ib-t th{text-align:left;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;letter-spacing:.05em;font-weight:400;color:#8b8b90;background:#121214;padding:8px 12px;border-bottom:1px solid #242427;white-space:nowrap}'
+    +'#yada-ib .ib-t td{padding:7px 12px;border-bottom:1px solid #161618;vertical-align:middle}'
+    +'#yada-ib .ib-t tbody tr:hover td{background:rgba(255,255,255,.03)}'
+    +'#yada-ib .ib-t .num{font-variant-numeric:tabular-nums;white-space:nowrap}'
+    +'#yada-ib .ib-t .r{text-align:right}'
+    +'#yada-ib .ib-t .c{width:34px;text-align:center}'
+    +'#yada-ib .ib-t .mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;color:#8b8b90;white-space:nowrap}'
+    +'#yada-ib .ib-t .lib{min-width:260px}'
+    +'#yada-ib .ib-t .lib .ib-note{display:block;margin-top:2px}'
+    +'#yada-ib .ib-t td.out{color:#c8c8cc}'
+    +'#yada-ib .ib-t tr.importee td,#yada-ib .ib-t tr.rapprochee td{color:#8b8b90}'
+    +'#yada-ib .ib-sel-cpt{background:#121214;color:#f5f5f6;border:1px solid #35353a;border-radius:5px;padding:4px 6px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;max-width:230px}'
+    +'#yada-ib .ib-cb{accent-color:#f5f5f6;width:15px;height:15px;cursor:pointer}'
+    +'#yada-ib .ib-pill{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:9.5px;letter-spacing:.08em;padding:3px 9px;border-radius:20px;border:1px solid #35353a;color:#8b8b90;white-space:nowrap}'
+    +'#yada-ib .ib-pill.nouvelle{background:#f5f5f6;color:#000;border-color:#f5f5f6}'
+    +'#yada-ib .ib-pill.rapprochee{background:transparent;color:#f5f5f6;border-color:#8b8b90}'
+    +'#yada-ib .ib-pill.importee{background:#121214;color:#8b8b90;border-color:#35353a}'
+    /* Typographie « Registre » : préfixe html body:not(#_yz) (niveau id) + !important pour battre
+       la règle de police globale v560 ; serif sur la racine + descendants, mono repris par classe. */
+    +'html body:not(#_yz) #yada-ib,html body:not(#_yz) #yada-ib *{font-family:Georgia,"Times New Roman",serif!important}'
+    +'html body:not(#_yz) #yada-ib .ib-eyebrow,html body:not(#_yz) #yada-ib .ib-exo,'
+    +'html body:not(#_yz) #yada-ib .ib-btn,html body:not(#_yz) #yada-ib .ib-close,'
+    +'html body:not(#_yz) #yada-ib .ib-kl,html body:not(#_yz) #yada-ib .ib-note,'
+    +'html body:not(#_yz) #yada-ib .ib-pill,html body:not(#_yz) #yada-ib .ib-sel-cpt,'
+    +'html body:not(#_yz) #yada-ib .ib-t th,html body:not(#_yz) #yada-ib .ib-t .mono{font-family:ui-monospace,Menlo,Consolas,monospace!important}'
+    +'@media(max-width:720px){#yada-ib .ib-kpis{grid-template-columns:repeat(2,1fr)}}';
     document.head.appendChild(st);
   }catch(e){}
 })();
