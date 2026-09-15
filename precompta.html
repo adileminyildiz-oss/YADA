@@ -11097,7 +11097,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v619';
+    b.textContent='YADA · v620';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -34184,6 +34184,59 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
   }
   injectCSS();
   try{ var _r=window.render; if(typeof _r==='function'){ window.render=function(){ var v=_r.apply(this,arguments); injectCSS(); return v; }; } }catch(e){}
+})();
+</script>
+<script id="yada-addon-ecriture-separateur">
+/* v620 — Séparation des ÉCRITURES marquée par une LIGNE BLANCHE, un peu plus large
+   que le filet qui sépare les comptes (les lignes d'une même écriture).
+
+   Constat : dans la Consultation des comptes, le filet de fin d'écriture
+   (`sgj-ecr-end` / `lx-ecr-end`, posé en 2px bleu par addon101/addon110) était
+   ramené à `1px solid #16161a` par `consult-registre-mod` (v595, spécificité 1,2,4)
+   puis recoloré en `#242427` par `consult-lumiere-mod` (v618) → il devenait
+   STRICTEMENT identique au filet de ligne : plus aucune séparation visible entre
+   deux écritures.
+
+   Correctif : filet de fin d'écriture = 2px #f5f5f6 (blanc du Registre), contre
+   1px #242427 pour les lignes. Sélecteurs à spécificité (1,4,6) → ils battent la
+   couche v595/v618 (1,2,4) sans surenchère d'!important sur les lignes.
+   100% ADDITIF & CSS-ONLY. */
+(function(){
+  var W = '2px solid #f5f5f6';
+  var S = 'html body:not(#_yz) ';
+  /* prefixe a 2 ID : bat la couche globale `yada-addon-registre-unify` (v609),
+     qui pose `#main table td{border-color:#242427!important}` = specificite (2,1,4). */
+  var U = 'html body[data-theme="noir"]:not(#_yz) #main ';
+  function rule(sel){ return sel+'{border-bottom:'+W+'!important}'; }
+  var CSS = [
+    /* Consultation des comptes — grille par journal (sgJournalGrid) */
+    rule(S+'.sg-app table.sgj tbody tr.sgj-ecr-end td,'+
+         S+'.sg-app.yada-cregi table.sgj tbody tr.sgj-ecr-end td'),
+    rule(U+'.sg-app table.sgj tbody tr.sgj-ecr-end td,'+
+         U+'.sg-app.yada-cregi table.sgj tbody tr.sgj-ecr-end td'),
+    /* Grand-livre auxiliaire & lecture seule (table.lx) */
+    rule(S+'table.lx tbody tr.lx-ecr-end td,'+
+         S+'.lx-app table.lx tbody tr.lx-ecr-end td,'+
+         S+'#cl-overlay table.lx tbody tr.lx-ecr-end td'),
+    rule(U+'table.lx tbody tr.lx-ecr-end td,'+
+         U+'.lx-app table.lx tbody tr.lx-ecr-end td'),
+    /* Journal comptable (blocs .ecr empiles) */
+    'html body[data-page="journal"]:not(#_yz) #main .card .ecr + .ecr,'+
+    'html body[data-page="journal"]:not(#_yz) .card .ecr + .ecr{border-top:'+W+'!important}'
+  ].join('\n');
+  function inject(){
+    try{
+      if(document.getElementById('ecriture-separateur-mod')) return;
+      var st=document.createElement('style'); st.id='ecriture-separateur-mod';
+      st.textContent=CSS; document.head.appendChild(st);
+    }catch(e){}
+  }
+  inject();
+  try{
+    if(typeof window.render==='function'){
+      var _r=window.render; window.render=function(){ var v=_r.apply(this,arguments); inject(); return v; };
+    }
+  }catch(e){}
 })();
 </script>
 </body>
