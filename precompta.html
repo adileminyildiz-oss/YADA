@@ -11097,7 +11097,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v615';
+    b.textContent='YADA · v616';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -31598,6 +31598,134 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       +'</div></div>';
   }
 
+  /* ---- v616 : RAPPROCHEMENT DE TVA — vérification RÉEL (écritures) ↔ SAISIE (pièces / CA3) ---- */
+  /* Solde d'une famille de comptes sur le mois (toutes écritures, OD de TVA comprise). */
+  function soldeFam(m,pref,excl){
+    var dd=0,cc2=0;
+    (((typeof db!=='undefined'&&db)?db.ecritures:null)||[]).forEach(function(e){
+      if(String(e.date||'').slice(0,7)!==m) return;
+      (e.lignes||[]).forEach(function(l){ var cc=n9(l.compte);
+        if(cc.indexOf(pref)!==0) return; if(excl && cc.indexOf(excl)===0) return;
+        dd+=(+l.debit||0); cc2+=(+l.credit||0); }); });
+    try{ dd=r2(dd); cc2=r2(cc2); }catch(e){}
+    var sd=dd-cc2; try{ sd=r2(sd); }catch(e){}
+    return {debit:dd, credit:cc2, sd:sd, sc:(0-sd)};
+  }
+  var RAP_TOL=0.01;
+  var RAP_ST={ok:'concordant', ko:'écart', justif:'à justifier', na:'—'};
+  function rapL(lib,sub,reel,saisie,opt){
+    opt=opt||{};
+    var has=(reel!=null && saisie!=null);
+    var ec=null; if(has){ ec=reel-saisie; try{ ec=r2(ec); }catch(e){} }
+    var tol=(opt.tol==null?RAP_TOL:opt.tol);
+    var st=opt.st||(!has?'na':(Math.abs(ec)<=tol?'ok':(opt.justif?'justif':'ko')));
+    return {lib:lib, sub:sub||'', reel:reel, saisie:saisie, ec:ec, st:st};
+  }
+  /* Construit les groupes de contrôles + le décompte (partagé carte / barre latérale). */
+  function rapDonnees(m,d,ds,decl,poste){
+    var G=[], vHT=ventesHT(m);
+    var baseCol=d.baseCol||0, col=d.col||0, ded=d.ded||0;
+
+    /* 1 — Chiffre d'affaires et TVA collectée */
+    var g1=[];
+    g1.push(rapL('Base HT taxable','Σ ventes classe 7 (écritures) ↔ base HT des factures de vente',
+      vHT, baseCol, {tol:Math.max(1,baseCol*0.02), justif:true}));
+    g1.push(rapL('TVA collectée','crédits sur 4457x (écritures) ↔ TVA portée sur les factures de vente',
+      col, d.colFact||0, {justif:true}));
+    G.push({titre:'1 — Chiffre d\'affaires et TVA collectée', lignes:g1});
+
+    /* 2 — TVA collectée par taux : base × taux ↔ TVA saisie sur les pièces */
+    var g2=[];
+    [20,10,5.5].forEach(function(t){ var b=(d.collectee&&d.collectee[t])||{base:0,tva:0};
+      if((b.base||0)<=0) return; var th=b.base*t/100; try{ th=r2(th); }catch(e){}
+      g2.push(rapL('Taux '+String(t).replace('.',',')+' %','base '+money(b.base)+' × '+String(t).replace('.',',')+' % ↔ TVA portée sur les pièces', th, b.tva||0)); });
+    if((d.autreCol||0)>0)
+      g2.push(rapL('Autres ventes taxables','écritures sur 4457x sans facture rattachée (import FEC / saisie directe)',
+        d.autreCol, 0, {st:'justif'}));
+    if(!g2.length) g2.push(rapL('Aucune vente taxable','aucune base collectée sur le mois', 0, 0));
+    G.push({titre:'2 — TVA collectée par taux', lignes:g2});
+
+    /* 3 — TVA déductible */
+    var g3=[];
+    g3.push(rapL('TVA déductible','débits sur 4456x hors 44567 ↔ TVA portée sur les factures d\'achat',
+      ded, d.dedFact||0, {justif:true}));
+    g3.push(rapL('Ventilation de la déductible','total 4456x ↔ immobilisations '+money(ds.immo)+' + biens & services '+money(ds.bs),
+      ded, (function(){ var v=ds.immo+ds.bs; try{ v=r2(v); }catch(e){} return v; })()));
+    [20,10,5.5].forEach(function(t){ var b=(d.deductible&&d.deductible[t])||{base:0,tva:0};
+      if((b.base||0)<=0) return; var th=b.base*t/100; try{ th=r2(th); }catch(e){}
+      g3.push(rapL('Achats au taux '+String(t).replace('.',',')+' %','base '+money(b.base)+' × '+String(t).replace('.',',')+' % ↔ TVA portée sur les pièces', th, b.tva||0)); });
+    if((d.autreDed||0)>0)
+      g3.push(rapL('Autres achats déductibles','écritures sur 4456x sans facture rattachée (import FEC / saisie directe)',
+        d.autreDed, 0, {st:'justif'}));
+    G.push({titre:'3 — TVA déductible', lignes:g3});
+
+    /* 4 — Déclaration CA3 : montant comptabilisé ↔ montant déclaré */
+    var g4=[];
+    var dueReel=d.aDecaisser||0, crReel=d.credit||0;
+    g4.push(rapL('TVA nette due (ligne 28)','calculée sur les écritures ↔ montant déclaré',
+      dueReel, decl?(decl.aDecaisser||0):null, {st:decl?null:'na'}));
+    g4.push(rapL('Crédit de TVA à reporter (ligne 27)','calculé sur les écritures ↔ montant déclaré',
+      crReel, decl?(decl.credit||0):null, {st:decl?null:'na'}));
+    G.push({titre:'4 — Déclaration CA3'+(decl?('  ·  déposée le '+((typeof frDate==='function')?frDate(decl.date):decl.date)):'  ·  non déclarée'), lignes:g4});
+
+    /* 5 — Soldes des comptes de TVA après l'OD */
+    var g5=[];
+    if(!poste){
+      g5.push(rapL('Soldes des comptes de TVA','OD de TVA non générée — les comptes 4457x / 4456x ne sont pas encore soldés',
+        null, null, {st:'na'}));
+    } else {
+      var f57=soldeFam(m,'4457'), f56=soldeFam(m,'4456','44567'), f51=soldeFam(m,'44551'), f67=soldeFam(m,'44567');
+      g5.push(rapL('Compte 4457x — TVA collectée','solde après OD ↔ solde attendu (soldé)', f57.sc, 0));
+      g5.push(rapL('Comptes 4456x — TVA déductible','solde après OD ↔ solde attendu (soldé)', f56.sd, 0));
+      g5.push(rapL('Compte 445510000 — TVA à décaisser','solde créditeur ↔ TVA nette due du mois', f51.sc, dueReel));
+      g5.push(rapL('Compte 445670000 — crédit à reporter','solde débiteur ↔ crédit du mois', f67.sd, crReel));
+    }
+    G.push({titre:'5 — Soldes des comptes de TVA après l\'OD', lignes:g5});
+
+    var nb=0, ok=0, ko=0, tot=0;
+    G.forEach(function(g){ g.lignes.forEach(function(l){ if(l.st==='na') return; nb++;
+      if(l.st==='ok') ok++; else if(l.st==='ko'){ ko++; tot+=Math.abs(l.ec||0); } }); });
+    try{ tot=r2(tot); }catch(e){}
+    return {groupes:G, nb:nb, ok:ok, ko:ko, total:tot};
+  }
+  /* Tableau de rapprochement (carte de la colonne principale) */
+  function rapprochement(m,d,ds,decl,poste){
+    var R=rapDonnees(m,d,ds,decl,poste), rows='';
+    R.groupes.forEach(function(g){
+      rows+='<tr class="tvrap-grp"><td colspan="5">'+esc(g.titre)+'</td></tr>';
+      g.lignes.forEach(function(l){
+        rows+='<tr><td class="tvrap-lib">'+esc(l.lib)+(l.sub?('<small class="tvrap-sub">'+esc(l.sub)+'</small>'):'')+'</td>'
+          +'<td class="r tvrap-n">'+(l.reel==null?'—':money(l.reel))+'</td>'
+          +'<td class="r tvrap-n">'+(l.saisie==null?'—':money(l.saisie))+'</td>'
+          +'<td class="r tvrap-n">'+(l.ec==null?'—':money(l.ec))+'</td>'
+          +'<td><span class="tvrap-st tvrap-'+l.st+'">'+esc(RAP_ST[l.st]||'—')+'</span></td></tr>'; });
+    });
+    var verdict = R.ko ? (R.ko+' écart'+(R.ko>1?'s':'')+' à vérifier') : 'aucun écart — rapprochement concordant';
+    return '<section class="tvar-rap"><h2>Rapprochement de TVA</h2>'
+      +'<div class="tvar-cap">vérification entre le RÉEL (écritures comptables) et la SAISIE (pièces &amp; déclaration) — '+esc(mLong(m))+'</div>'
+      +'<div class="tvrap-kpis">'
+      +'<div class="tvrap-k"><span class="tvrap-kl">Contrôles</span><b class="tvrap-kv">'+R.nb+'</b></div>'
+      +'<div class="tvrap-k"><span class="tvrap-kl">Concordants</span><b class="tvrap-kv">'+R.ok+'</b></div>'
+      +'<div class="tvrap-k"><span class="tvrap-kl">Écarts</span><b class="tvrap-kv">'+R.ko+'</b></div>'
+      +'<div class="tvrap-k"><span class="tvrap-kl">Écart total</span><b class="tvrap-kv">'+money(R.total)+'</b></div>'
+      +'</div>'
+      +'<div class="tvrap-verdict">'+esc(verdict)+'</div>'
+      +'<div class="tvrap-wrap"><table class="tvrap-t"><thead><tr><th>Contrôle</th><th class="r">Réel — écritures</th>'
+      +'<th class="r">Saisie — pièces / CA3</th><th class="r">Écart</th><th>État</th></tr></thead>'
+      +'<tbody>'+rows+'</tbody></table></div>'
+      +'<p class="tvrap-note">Un écart signale une saisie à corriger (montant de TVA, taux, base) ou une écriture à justifier. Les lignes « à justifier » proviennent d\'écritures sans facture rattachée (import FEC, saisie directe) ou de ventes exonérées.</p>'
+      +'</section>';
+  }
+  /* Barre latérale — synthèse du rapprochement */
+  function sideRap(m,d,ds,decl,poste){
+    var R=rapDonnees(m,d,ds,decl,poste);
+    var b='<div class="tvas-kv"><span>Contrôles</span><b>'+R.nb+'</b></div>'
+      +'<div class="tvas-kv"><span>Concordants</span><b>'+R.ok+'</b></div>'
+      +'<div class="tvas-kv"><span>Écarts</span><b>'+R.ko+'</b></div>'
+      +'<div class="tvas-kv net"><span>Écart total</span><b class="num">'+money(R.total)+'</b></div>';
+    return sideSec('Rapprochement', b);
+  }
+
   /* ---- v615 : barre latérale du module (navigation + synthèse) ---- */
   function sideSec(t,body){
     return '<section class="tvas-sec"><h3 class="tvas-h">'+esc(t)+'</h3>'+body+'</section>';
@@ -31693,6 +31821,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
         +'</span><span class="tvas-mst">'+esc(st.t)+'</span></button>'; }).join('')+'</div>'));
     /* Barre latérale — Synthèse du mois sélectionné */
     side.push(sideSynthese(m,d,ds,poste,decl,ech,neant,neantVal,futur));
+    if(!futur && !neant) side.push(sideRap(m,d,ds,decl,poste));
 
     /* ---- Légère assistance : indique l'étape suivante ---- */
     var msg, actBtn='';
@@ -31757,7 +31886,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     out.push(f.join(''));
 
     /* Contrôle des montants + écriture OD (part maquette C), hors mois futur */
-    if(!futur){ out.push(controle(m,d,ds)); out.push(odTable(m)); }
+    if(!futur){ out.push(controle(m,d,ds)); out.push(rapprochement(m,d,ds,decl,poste)); out.push(odTable(m)); }
 
     /* Actions complètes (état-aware) */
     var acts=[];
@@ -31959,6 +32088,38 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       +'html body:not(#_yz) #yada-tvar .tvar-ln.total .tvar-cad,html body:not(#_yz) #yada-tvar .tvar-ln.total .tvar-lib,html body:not(#_yz) #yada-tvar .tvar-ln.total .tvar-val{color:#0a0a0b!important}'
       +'html body:not(#_yz) #yada-tvar .tvar-sp.on .tvar-n,html body:not(#_yz) #yada-tvar .tvar-sp.on .tvar-tt{color:#0a0a0b!important}'
       +'html body:not(#_yz) #yada-tvar .tvar-tag.done{color:#0a0a0b!important}'
+      /* v616 — tableau de rapprochement de TVA (réel ↔ saisie) */
+      +'#yada-tvar .tvar-rap{border:1px solid #242427;border-radius:6px;padding:14px 16px 12px;margin-top:20px;background:#0b0b0c}'
+      +'#yada-tvar .tvar-rap h2{font-family:Georgia,"Times New Roman",serif;font-weight:600;font-size:16px;margin:0 0 2px;color:#fff}'
+      +'#yada-tvar .tvrap-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:4px 0 10px}'
+      +'#yada-tvar .tvrap-k{border:1px solid #242427;border-radius:5px;padding:9px 11px;background:#000}'
+      +'#yada-tvar .tvrap-kl{display:block;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#616166}'
+      +'#yada-tvar .tvrap-kv{display:block;font-family:Georgia,"Times New Roman",serif;font-size:19px;color:#fff;margin-top:3px;font-variant-numeric:tabular-nums}'
+      +'#yada-tvar .tvrap-verdict{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10.5px;letter-spacing:.04em;color:#8b8b90;border-top:1px solid #171719;border-bottom:1px solid #171719;padding:8px 0;margin-bottom:10px}'
+      +'#yada-tvar .tvrap-wrap{overflow-x:auto}'
+      +'#yada-tvar .tvrap-t{width:100%;border-collapse:collapse;min-width:640px}'
+      +'#yada-tvar .tvrap-t th{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;text-align:left;color:#8b8b90;background:#121214;border:1px solid #242427;padding:8px 10px}'
+      +'#yada-tvar .tvrap-t th.r,#yada-tvar .tvrap-t td.r{text-align:right}'
+      +'#yada-tvar .tvrap-t td{border:1px solid #242427;padding:9px 10px;vertical-align:top;font-size:12.5px;color:#f5f5f6}'
+      +'#yada-tvar .tvrap-t tr.tvrap-grp td{background:#121214;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#8b8b90}'
+      +'#yada-tvar .tvrap-lib{max-width:340px}'
+      +'#yada-tvar .tvrap-sub{display:block;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:9.5px;line-height:1.5;color:#616166;margin-top:3px}'
+      +'#yada-tvar .tvrap-n{font-family:Georgia,"Times New Roman",serif;font-size:14px;color:#fff;font-variant-numeric:tabular-nums;white-space:nowrap}'
+      +'#yada-tvar .tvrap-st{display:inline-block;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:999px;border:1px solid #35353a;background:#0b0b0c;color:#8b8b90;white-space:nowrap}'
+      +'#yada-tvar .tvrap-st.tvrap-ko{background:#f5f5f6;color:#0a0a0b;border-color:#f5f5f6}'
+      +'#yada-tvar .tvrap-st.tvrap-justif{border-color:#616166;color:#f5f5f6}'
+      +'#yada-tvar .tvrap-st.tvrap-na{border-color:#242427;color:#616166}'
+      +'#yada-tvar .tvrap-note{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:9.5px;line-height:1.7;color:#616166;margin:10px 0 0}'
+      /* v616 — encre forcée (bat la couche globale qui repeint span/small) */
+      +'html body:not(#_yz) #yada-tvar .tvrap-kl,html body:not(#_yz) #yada-tvar .tvrap-sub,html body:not(#_yz) #yada-tvar .tvrap-note,html body:not(#_yz) #yada-tvar .tvrap-verdict,html body:not(#_yz) #yada-tvar .tvrap-t tr.tvrap-grp td,html body:not(#_yz) #yada-tvar .tvrap-t th{font-family:ui-monospace,Menlo,Consolas,monospace!important;font-weight:400!important;font-style:normal!important;text-decoration:none!important;color:#8b8b90!important}'
+      +'html body:not(#_yz) #yada-tvar .tvrap-kl,html body:not(#_yz) #yada-tvar .tvrap-sub,html body:not(#_yz) #yada-tvar .tvrap-note{color:#616166!important}'
+      +'html body:not(#_yz) #yada-tvar .tvrap-kv,html body:not(#_yz) #yada-tvar td.tvrap-n{font-family:Georgia,"Times New Roman",serif!important;font-weight:400!important;color:#fff!important}'
+      +'html body:not(#_yz) #yada-tvar .tvrap-t td{color:#f5f5f6!important}'
+      +'html body:not(#_yz) #yada-tvar .tvrap-st{font-family:ui-monospace,Menlo,Consolas,monospace!important;font-weight:400!important;color:#8b8b90!important;background:#0b0b0c!important}'
+      +'html body:not(#_yz) #yada-tvar .tvrap-st.tvrap-ko{background:#f5f5f6!important;color:#0a0a0b!important}'
+      +'html body:not(#_yz) #yada-tvar .tvrap-st.tvrap-justif{color:#f5f5f6!important;background:#0b0b0c!important}'
+      +'html body:not(#_yz) #yada-tvar .tvrap-st.tvrap-na{color:#616166!important}'
+      +'@media(max-width:820px){#yada-tvar .tvrap-kpis{grid-template-columns:repeat(2,1fr)}}'
       +'@media(max-width:980px){#yada-tvar .tvar-shell{grid-template-columns:1fr;gap:16px}#yada-tvar .tvar-side{position:static}#yada-tvar .tvas-mois{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr))}#yada-tvar .tvas-m{flex-direction:column;align-items:flex-start;gap:2px;border-right:1px solid #171719}}'
       +'@media(max-width:820px){#yada-tvar .tvar-mast{flex-direction:column;align-items:flex-start}#yada-tvar .tvar-h1{text-align:left}#yada-tvar .tvar-meta{text-align:left}#yada-tvar .tvar-ln{grid-template-columns:30px 1fr 104px}#yada-tvar .tvar-ln.total .tvar-val{font-size:20px}#yada-tvar .tvar-od-r{grid-template-columns:70px 1fr 72px 72px;font-size:11px}#yada-tvar .tvar-sp .tvar-tt{display:none}}';
     document.head.appendChild(st);
