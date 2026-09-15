@@ -11097,7 +11097,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v618';
+    b.textContent='YADA · v619';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -34123,6 +34123,63 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
   function injectCSS(){
     if(document.getElementById('consult-lumiere-mod')) return;
     var st=document.createElement('style'); st.id='consult-lumiere-mod'; st.textContent=CSS;
+    (document.head||document.documentElement).appendChild(st);
+  }
+  injectCSS();
+  try{ var _r=window.render; if(typeof _r==='function'){ window.render=function(){ var v=_r.apply(this,arguments); injectCSS(); return v; }; } }catch(e){}
+})();
+</script>
+<script id="yada-addon-registre-hierarchie">
+/* v619 — CONSULTATION DES COMPTES + MODULE DÉCLARATION : hiérarchie de lecture remise
+   d'aplomb. Deux points relevés en v617/v618 et corrigés ici.
+
+   1) EN-TÊTES DE COLONNES PLUS CLAIRS QUE LA DONNÉE. Dans la Consultation, les `thead th`
+      étaient rendus en #f5f5f6 (0,914 de luminance) alors que le libellé des lignes est à
+      #f2f2f3 (0,889) : l'en-tête attirait l'œil davantage que l'écriture qu'il annonce.
+      Cause : `html body[data-theme="noir"]:not(#_yz) #main table thead th{color:…!important}`
+      (yada-addon-registre-unify, v609) = spécificité (2,1,5), qui l'emportait sur la règle
+      du module (1,2,4). On repasse l'en-tête en #a8a9ad — 8,38:1 sur #121214, donc bien
+      au-dessus du seuil AAA pour du petit texte — avec un sélecteur à (2,3,5) qui bat la
+      couche globale. L'en-tête redevient subordonné à la donnée, sans perte de lisibilité.
+
+   2) TEXTES EN GRAS RÉSIDUELS. Règle permanente de l'utilisateur : aucun texte en gras,
+      italique ou souligné. Neuf éléments hérités des v594/v595 restaient en poids 600 —
+      Consultation : bandeau-titre, mois actif, journal actif, total du pied ; Déclaration :
+      titre du module, numéro d'étape, bandeau CA3, lignes de sous-total / total, titres de
+      carte. Tous repassent en 400. Aucune hiérarchie n'est perdue : chacun de ces éléments
+      porte DÉJÀ un autre signal (serif contre mono, taille, pastille inversée fond clair /
+      texte noir), le gras était redondant.
+      EXCEPTION conservée : le lien impots.gouv.fr reste souligné (voulu depuis la v613 —
+      c'est ce qui le fait reconnaître comme un lien).
+
+   100% ADDITIF & CSS-ONLY, injecté en DERNIER. Aucune logique touchée, aucune couleur
+   ajoutée, aucune écriture modifiée. Portée limitée aux deux modules concernés. */
+(function(){
+  if(typeof window==='undefined') return;
+  if(window.__registreHierarchie) return; window.__registreHierarchie=true;
+
+  var C = 'html body:not(#_yz) .sg-app.yada-cregi ';      /* Consultation */
+  var U = 'html body[data-theme="noir"]:not(#_yz) #main .sg-app.yada-cregi '; /* bat la couche v609 */
+  var T = 'html body:not(#_yz) #yada-tvar ';               /* module Déclaration */
+
+  var CSS = [
+    /* 1) en-têtes de colonnes subordonnés à la donnée (8,38:1, très lisibles) */
+    U+"thead th{color:#a8a9ad!important}",
+    U+"table thead th{color:#a8a9ad!important}",
+    /* 2) plus aucun texte en gras — Consultation */
+    C+".sg-title{font-weight:400!important}",
+    C+".sg-peritem.on,"+C+".sg-jrnitem.on{font-weight:400!important}",
+    C+".sg-status b{font-weight:400!important}",
+    C+".sg-tab.on{font-weight:400!important}",
+    /* 2) plus aucun texte en gras — module Déclaration (lien souligné conservé) */
+    T+".tvar-h1,"+T+".tvar-t,"+T+".tvar-n,"+T+".tvar-lib,"+T+"h2,"+T+"h3{font-weight:400!important}",
+    T+".tvar-ln.sub .tvar-lib,"+T+".tvar-ln.total .tvar-lib{font-weight:400!important}",
+    T+".tvas-h,"+T+".tvas-kv b,"+T+".tvrap-kv,"+T+".tvrap-t th{font-weight:400!important}"
+  ].join("\n");
+
+  function injectCSS(){
+    if(document.getElementById('registre-hierarchie-mod')) return;
+    var st=document.createElement('style'); st.id='registre-hierarchie-mod'; st.textContent=CSS;
     (document.head||document.documentElement).appendChild(st);
   }
   injectCSS();
