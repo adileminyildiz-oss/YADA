@@ -11095,7 +11095,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v608';
+    b.textContent='YADA · v609';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -26625,7 +26625,9 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
 (function(){
   window.yadaDownloadFile=async function(){
     var html=null;
-    try{ var res=await fetch(location.href,{cache:'no-store'}); if(res&&res.ok) html=await res.text(); }catch(e){}
+    /* en http(s) on récupère le fichier servi (le plus frais) ; en file:// le fetch
+       est bloqué par CORS (erreur console inutile) → on utilise directement le DOM. */
+    if(location.protocol!=='file:'){ try{ var res=await fetch(location.href,{cache:'no-store'}); if(res&&res.ok) html=await res.text(); }catch(e){} }
     if(!html){ try{ html='<!doctype html>\n'+document.documentElement.outerHTML; }catch(e){} }
     if(!html){ if(window.toast)toast('Téléchargement impossible ici'); return; }
     try{
@@ -32805,6 +32807,97 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       +both('textarea','background:#000 !important;border-radius:5px !important;border-color:#35353a !important;font-family:'+MONO+' !important;color:#f5f5f6 !important');
     var st=document.createElement('style'); st.id='rhpil-registre-mod'; st.textContent=css;
     document.head.appendChild(st);
+  }catch(e){}
+})();
+</script>
+
+<script id="yada-addon-registre-unify">
+/* ÉTAPE 2 — Unification « Registre » N&B : force la palette noir & blanc sur les
+   PRIMITIVES qui laissent encore fuir les couleurs de l'ancienne version
+   (bordures de table bleues, champs de formulaire bleutés, grille « État
+   d'avancement », TH résiduels). 100% CSS additif, injecté en DERNIER dans
+   <body> → prime à spécificité égale sur le thème « nuit bleue » de base.
+   Protège les éditions papier (.doc-page) et ne touche pas aux couleurs
+   fonctionnelles (pastilles RDV par salarié). */
+(function(){
+  if(window.__registreUnify) return; window.__registreUnify=true;
+  try{
+    var MONO='ui-monospace,Menlo,Consolas,"SFMono-Regular",monospace';
+    var BG='#000', PANEL='#0b0b0c', HEAD='#121214', FILET='#242427', MUTED='#8b8b90', INK='#f5f5f6', FIELD='#35353a';
+    /* Préfixe à spécificité SUPÉRIEURE : le :not(#_yz) apporte un niveau d'ID
+       (id inexistant) → bat la couche « nuit bleue » v518 (0,4,2) et la règle
+       de police v560 (1,0,3) partout, modules ET surfaces hors module. */
+    var S='html body[data-theme="noir"]:not(#_yz) ';
+    var T=S; /* alias */
+    var css=''
+    /* ===== Fond & primitives globales : fin des cartes/halos bleus ===== */
+    + 'html body[data-theme="noir"]:not(#_yz){background:'+BG+' !important}'
+    + S+'.card,'+S+'.kpi,'+S+'.cp-k,'+S+'.cf-org,'+S+'.kv2{background:'+PANEL+' !important;border:1px solid '+FILET+' !important;box-shadow:none !important;color:'+INK+' !important}'
+    + S+'.kpi-ic{background:'+HEAD+' !important;color:'+INK+' !important;border-color:'+FIELD+' !important}'
+    + S+'.hint,'+S+'.lbl,'+S+'.sub{color:'+MUTED+' !important}'
+    /* --- Tables (chrome) : filets N&B sur TOUS les éléments de table --- */
+    + T+'#main table,'+T+'#main table tr,'+T+'#main table thead,'+T+'#main table tbody,'+T+'#main table tfoot,'+T+'#main table th,'+T+'#main table td{border-color:'+FILET+' !important}'
+    + T+'#main table thead th{background:'+HEAD+' !important;color:'+INK+' !important;border-color:'+FILET+' !important}'
+    + T+'#main table tbody tr:hover td{background:rgba(255,255,255,.03) !important}'
+    /* sous-titres et pastilles de statut résiduels */
+    + T+'#main .sub{color:'+MUTED+' !important}'
+    + T+'#main .todo,'+T+'#main .wip,'+T+'#main .badge-blue,'+T+'#main .tag-blue{background:'+HEAD+' !important;color:'+INK+' !important;border-color:'+FIELD+' !important}'
+    /* éditions papier : titres/société en encre noire (pas de bleu marine) */
+    + S+'#main .doc-page .doc-h1,'+S+'#main .doc-page .doc-soc,'+S+'#main .doc-page h1,'+S+'#main .doc-page h2{color:#111418 !important}'
+    /* protéger les éditions papier (feuille blanche / encre noire) */
+    + S+'#main .doc-page table th,'+S+'#main .doc-page table td{border-color:#d9d9de !important;background:transparent !important;color:#111418 !important}'
+    + S+'#main .doc-page table thead th{background:#f2f3f5 !important;color:#111418 !important}'
+    /* --- Champs de formulaire (chrome) --- */
+    + T+'#main input:not([type=checkbox]):not([type=radio]):not([type=range]),'+T+'#main select,'+T+'#main textarea{background:'+BG+' !important;color:'+INK+' !important;border:1px solid '+FIELD+' !important;border-radius:5px !important}'
+    + T+'#main label{color:'+MUTED+' !important}'
+    + T+'#main input[type=checkbox],'+T+'#main input[type=radio]{accent-color:'+INK+' !important}'
+    + S+'#main .doc-page input,'+S+'#main .doc-page select,'+S+'#main .doc-page textarea{background:#fff !important;color:#111418 !important;border-color:#c9c9cf !important}'
+    /* --- Grille « État d'avancement » (Pilotage) --- */
+    + T+'.ea-tbl{color:'+INK+' !important;font-family:'+MONO+' !important}'
+    + T+'.ea-tbl th,'+T+'.ea-tbl td{border-color:'+FILET+' !important}'
+    + T+'.ea-tbl thead th,'+T+'.ea-tbl thead .ea-fix{background:'+HEAD+' !important;color:'+INK+' !important}'
+    + T+'.ea-mois{color:'+MUTED+' !important}'
+    + T+'.ea-c{background:'+PANEL+' !important}'
+    + T+'.ea-c:hover{background:'+HEAD+' !important}'
+    + T+'.ea-c.on{background:'+INK+' !important}'
+    + T+'.ea-c.on::after{color:'+BG+' !important}'
+    + T+'.ea-chk{accent-color:'+INK+' !important}'
+    + T+'.ea-badge{background:'+HEAD+' !important;border:1px solid '+FIELD+' !important;color:'+INK+' !important}'
+    + T+'.ea-grp,'+T+'.ea-g0{background:'+HEAD+' !important;border-left:2px solid '+MUTED+' !important}'
+    + T+'.ea-leg{color:'+MUTED+' !important}'
+    + T+'.ea-card>summary::before{color:'+MUTED+' !important}'
+    /* --- Boutons génériques bleutés résiduels (chrome) --- */
+    + T+'#main .btn{background:'+HEAD+' !important;border-color:'+FIELD+' !important}'
+    + T+'#main .btn:hover{background:#1a1a1c !important}'
+    /* --- Pastilles de statut bleutées + fond de journal lié (chrome) --- */
+    + T+'#main .rev,'+T+'#main .ok,'+T+'#main .wip,'+T+'#main .dstat-chip{background:'+HEAD+' !important;color:'+INK+' !important;border-color:'+FIELD+' !important}'
+    + T+'#main .ecr-h{background:'+HEAD+' !important}'
+    /* --- Éditions papier : encre noire (fin du bleu marine des balances) --- */
+    + S+'#main .doc-page .doc-res,'+S+'#main .doc-page .doc-res span,'+S+'#main .doc-page span,'+S+'#main .doc-page .doc-title{color:#111418 !important}'
+    + S+'#main .doc-page .doc-res{background:#eef0f2 !important}'
+    + T+'.ea-scroll{background:'+PANEL+' !important;border-color:'+FILET+' !important}'
+    /* ================= HORS MODULE (chrome global) ================= */
+    /* Barre latérale — bouton « Outils » */
+    + T+'.sf-toggle,'+T+'.sf-ic{background:'+HEAD+' !important;color:'+INK+' !important;border-color:'+FIELD+' !important}'
+    + T+'.sf-ic svg{stroke:'+INK+' !important;color:'+INK+' !important}'
+    /* Espace Client — champs N&B (cartes/KPI/libellés déjà couverts globalement) */
+    + S+'input:not([type=checkbox]):not([type=radio]):not([type=range]),'+S+'select,'+S+'textarea{background:'+BG+' !important;color:'+INK+' !important;border-color:'+FIELD+' !important;border-radius:5px !important}'
+    /* Espace Client — en-têtes de colonne, zone de dépôt, tags, paragraphes bleutés */
+    + S+'.cli-col-h{color:'+INK+' !important;border-color:'+FILET+' !important}'
+    + S+'.ged-drop{border-color:'+FIELD+' !important;background:'+PANEL+' !important;color:'+MUTED+' !important}'
+    + S+'.tag{background:'+HEAD+' !important;color:'+INK+' !important;border-color:'+FIELD+' !important}'
+    + S+'.cli-col p,'+S+'.ec-tile p,'+S+'.cli-col-h+p{color:'+MUTED+' !important}'
+    /* Notifications (toasts) — badge N&B (le glyphe ✓/!/i porte le sens) */
+    + T+'.tn-badge{background:'+HEAD+' !important;color:'+INK+' !important;border:1px solid '+FIELD+' !important}'
+    /* Alertes & confirmations CLIQUABLES — N&B, rouge « danger » conservé */
+    + T+'.ya-card{background:'+PANEL+' !important;border-color:'+FILET+' !important}'
+    + T+'.ya-h{border-color:'+FILET+' !important}'
+    + T+'.ya-dot{background:'+INK+' !important;color:'+BG+' !important}'
+    + T+'.ya-btn:not(.ya-danger){background:'+HEAD+' !important;color:'+INK+' !important;border:1px solid '+FIELD+' !important}'
+    + T+'.ya-btn:focus{outline-color:'+MUTED+' !important}'
+    ;
+    var st=document.createElement('style'); st.id='registre-unify-mod'; st.textContent=css;
+    document.body.appendChild(st);
   }catch(e){}
 })();
 </script>
