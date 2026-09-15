@@ -36,7 +36,33 @@
 
 ---
 
-## 🟢 Dernière mise à jour — Séparation des ÉCRITURES marquée par une ligne BLANCHE plus large que le filet des comptes — v620
+## 🟢 Dernière mise à jour — PAGE DE SAISIE : colonnage revu + CELLULES à la place des BULLES (le champ prend tout le carreau) — v621
+**Quoi :** dans la **page de saisie** (éditeur d'écritures `.ec-sage` — ouvert au double-clic sur un compte, par le clic droit d'un journal, ou par « Saisir une opération »), **la version actuelle est conservée** et trois points sont repris :
+1. **Colonnage rééquilibré** — la donnée comptable respire, le libellé cesse d'absorber toute la largeur : **Compte 112 → 148 px** (un compte auxiliaire fait 9 caractères), **Débit/Crédit 114 → 128**, **Solde 112 → 132**, **Pièce 122 → 112**, **Date 96 → 92**, **Jnl 42 → 44**, **marqueur 22 → 20**, **L 26 → 28** ; le **Libellé** (seule colonne souple) passe de **517 → 446 px**.
+2. **Des CELLULES à la place des BULLES** — chaque champ était un **encadré noir arrondi** (`border-radius:5px`, bord `#35353a`, fond `#000`) **flottant à l'intérieur** de la cellule. Le champ **remplit désormais tout le carreau**, de filet à filet : mesuré **446×23 px de cellule pour 445×22 px de champ** (la différence est le filet lui-même). Chaque cellule est **délimitée sur ses quatre côtés** (`border-right:1px #242427`, comme la grille Registre) → la saisie devient un vrai tableau à carreaux.
+3. **Écriture rapprochée des côtés** — l'écart texte ↔ bord de cellule passe de **10 px à 3 px** (il cumulait 4 px de cellule + 1 px de bord de champ + 5 px de champ). La **hauteur de ligne est inchangée : 23 px avant comme après**. La **pièce en lecture seule** des lignes 2 et suivantes (`.ec-ro`), qui était retraitée de 5 px contre 3 px pour le champ de la 1re ligne, est **alignée au pixel près** — la colonne ne paraît plus décalée.
+Le **marquage de la cellule en saisie** passe d'un halo bleu (`rgba(30,144,255,.14)`) à un **filet blanc INTÉRIEUR** (`inset 0 0 0 1px #f5f5f6`) : carré, épousant le carreau, et achromatique.
+
+**Comment — nouvel addon `yada-addon-saisie-carreaux` (100% ADDITIF & CSS-ONLY, injecté en DERNIER) :** `<style id="saisie-carreaux-mod">`, ré-injecté après chaque `ecRender` **et** chaque `render` (idempotent par l'id). **Point technique :** les couches de l'éditeur (`ec-editor`, `ec-editor-fix`, `ec-noir-mod`, `ec-epure-mod`, `ec-tableur-mod`) posent bien un champ plat via `.ec-sage .ec-i` = spécificité **(0,2,0)** — mais la couche globale **`yada-addon-registre-unify` (v609)** pose `html body[data-theme="noir"]:not(#_yz) input:not([type=checkbox]):not([type=radio]):not([type=range]){background:#000!important;border-color:#35353a!important;border-radius:5px!important}` = **(1,4,3)**, qui l'écrase → **d'où le retour des bulles**. Le correctif utilise le préfixe **`html body:not(#_yz) #ec-overlay `** = **(2,x,x)** (DEUX ID : `:not(#_yz)` + `#ec-overlay`), qui la bat sur le nombre d'ID. Le remplissage du carreau passe par `width:calc(100% + 2·PX)` + `margin:-PY -PX` (le champ déborde exactement sur le padding de la cellule) + son propre `padding:PY PX` (l'écriture revient à 3 px des côtés) — **aucune dépendance à `height:100%`** ni à `:has()`. `sw.js` yada-v216, badge v621, `version.json` 621.
+
+**Validé :** `node --check` (**294 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades de l'addon (22/22) + balises `</head>`/`</body>`/`</html>` inchangées (3/5/3) + **filet d'équilibre** (`YADA_CHROME=… node tests/equilibre-ecritures.mjs` : vente 1200=1200, achat 600=600 ✅) + **mesures Playwright avant / après** :
+
+| Mesure | Avant | Après |
+| --- | --- | --- |
+| Champ dans la cellule | encadré `5px` arrondi, bord `#35353a` | **plat, rayon 0, sans bord** |
+| Surface du champ | 510×22 dans un carreau 518×23 | **445×22 dans un carreau 446×23** (= plein carreau) |
+| Écriture ↔ côté | **10 px** | **3 px** |
+| Hauteur de ligne | 23 px | **23 px** (inchangée) |
+| Colonne Compte | 112 px | **148 px** |
+| Colonne Libellé | 517 px | **446 px** |
+
++ **la saisie fonctionne toujours** (frappe réelle dans le libellé → enregistré ; **Entrée** → champ suivant `ec-i ec-num`) + **aucun débordement horizontal** (scrollWidth = clientWidth = 1278) + **aller-retour sur les 23 modules : 0 problème** (invariant v614 préservé) + **chroma 500 → 402** (la modification **retire** 98 éléments chromatiques — les filets bleutés `rgba(120,165,235,.16)` des en-têtes passent au `#242427` du Registre — et **n'en introduit aucun**) + **0 requête sortante**, **0 pageerror**, **0 console.error**. Badge → **v621**.
+
+**Constaté et NON corrigé (hors périmètre — « garde la version actuelle ») :** l'éditeur conserve son **habillage bleu nuit** hérité de `ec-noir-mod` (v91) — en-têtes `rgb(12,26,46)`, libellés `rgb(188,212,245)`, ligne du compte consulté teintée `rgba(30,144,255,.18)` — soit les **402 éléments chromatiques** restants. C'est la seule surface de l'application encore hors palette « Registre » N&B ; l'aligner supposerait la refonte d'habillage qui n'a pas été retenue.
+
+---
+
+## 🟢 MAJ précédente — Séparation des ÉCRITURES marquée par une ligne BLANCHE plus large que le filet des comptes — v620
 **Quoi :** dans l'affichage des écritures des comptes, **la séparation entre deux écritures est désormais marquée par une ligne BLANCHE, un peu plus large que le filet qui sépare les comptes** (les lignes d'une même écriture). Mesure avant correctif : le filet de fin d'écriture était rendu **`1px solid #242427`** — c'est-à-dire **STRICTEMENT identique** au filet de ligne (`1px #242427`) → **plus aucune séparation visible** entre deux écritures. Après : **fin d'écriture `2px #f5f5f6` (blanc)** contre **ligne de compte `1px #242427`**.
 
 **Pourquoi il avait disparu :** le filet de fin d'écriture (`sgj-ecr-end` / `lx-ecr-end`, posé en **2px bleu `#1e90ff`** par `yada-addon101` (0,4,4) et `yada-addon110` (0,3,4)) était écrasé en deux temps par la reconstruction « Registre » : (1) `consult-registre-mod` (**v595**, `html body:not(#_yz) .sg-app.yada-cregi tbody td{border-bottom:1px solid #16161a!important}` = **(1,2,4)**) le ramenait à **1px** — la largeur était perdue ; (2) `consult-lumiere-mod` (**v618**) le recolorait en `#242427` — la couleur était perdue à son tour. Le filet d'écriture et le filet de ligne se confondaient donc exactement.
