@@ -11097,7 +11097,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v613';
+    b.textContent='YADA · v614';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -33733,6 +33733,69 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     +'@media(max-width:720px){#yada-rc .rc-kpis{grid-template-columns:repeat(2,1fr)}#yada-rc .rc-form{grid-template-columns:1fr}}';
     document.head.appendChild(st);
   }catch(e){}
+})();
+</script>
+<script id="yada-addon-sortie-module">
+/* Sortie de module — filet de navigation (100% ADDITIF).
+   La barre latérale est masquée dans les modules (v383) et le menu « Modules »
+   ne vit que dans la Consultation : un module sans bouton de retour piège
+   l'utilisateur. Cet addon ajoute un ✕ « Revenir à la Consultation » aux
+   modules qui n'en ont pas, au style Registre des ✕ existants. */
+(function(){
+  'use strict';
+  function dejaUneSortie(main){
+    try{
+      var n=main.querySelectorAll('[onclick],[title]');
+      for(var i=0;i<n.length;i++){
+        var oc=n[i].getAttribute('onclick')||'', t=n[i].getAttribute('title')||'';
+        if(/Fermer\(\)|current\s*=\s*[\'"]compta[\'"]/.test(oc)) return true;
+        if(/Revenir . la Consultation/i.test(t)) return true;
+      }
+    }catch(e){}
+    return false;
+  }
+  function bandeau(main){
+    var h1=main.querySelector('h1'); if(!h1) return null;
+    var n=h1;
+    for(var i=0;i<4 && n && n!==main;i++){
+      var c=' '+(n.className||'')+' ';
+      if(/\bpage-head\b/.test(c) || /-mast\b/.test(c)) return n;
+      n=n.parentElement;
+    }
+    return h1.parentElement||null;
+  }
+  window.yadaRetourConsultation=function(){
+    try{ window.__homeView=false; }catch(e){}
+    try{ current='compta'; render(); }catch(e){}
+  };
+  function ensure(){
+    try{
+      if(typeof current==='undefined' || current==='compta') return;
+      var ok=(window.YADA_OK||[]); if(ok.indexOf(current)<0) return;
+      var main=document.querySelector('main'); if(!main) return;
+      if(main.querySelector('#yada-sortie')) return;
+      if(dejaUneSortie(main)) return;
+      var head=bandeau(main); if(!head) return;
+      var b=document.createElement('button');
+      b.id='yada-sortie'; b.className='yada-sortie-btn'; b.type='button';
+      b.textContent='\u2715';
+      b.title='Revenir \u00e0 la Consultation';
+      b.setAttribute('aria-label','Revenir \u00e0 la Consultation');
+      b.onclick=function(ev){ try{ ev.stopPropagation(); }catch(e){} window.yadaRetourConsultation(); };
+      head.classList.add('yada-sortie-host');
+      /* on réserve la place du bouton pour ne recouvrir aucun contenu du bandeau */
+      try{ head.style.paddingRight='46px'; }catch(e){}
+      head.appendChild(b);
+    }catch(e){}
+  }
+  try{ if(typeof window.render==='function'){ var _r=window.render; window.render=function(){ var x=_r.apply(this,arguments); try{ ensure(); }catch(e){} return x; }; } }catch(e){}
+  try{ setInterval(ensure, 900); }catch(e){}
+  try{ var st=document.createElement('style'); st.id='yada-sortie-mod'; st.textContent=
+     '.yada-sortie-host{position:relative}'
+    +'.yada-sortie-btn{position:absolute;top:0;right:0;z-index:5;width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:#000;color:#f5f5f6;border:1px solid #f5f5f6;border-radius:7px;cursor:pointer;font-size:14px;line-height:1;padding:0}'
+    +'.yada-sortie-btn:hover{background:#f5f5f6;color:#000}'
+    +'html body:not(#_yz) .yada-sortie-btn{font-family:ui-monospace,Menlo,Consolas,monospace!important;font-weight:400!important;font-style:normal!important;text-decoration:none!important}';
+    (document.head||document.documentElement).appendChild(st); }catch(e){}
 })();
 </script>
 </body>
