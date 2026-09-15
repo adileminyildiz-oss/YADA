@@ -11097,7 +11097,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v614';
+    b.textContent='YADA · v615';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -31598,6 +31598,37 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       +'</div></div>';
   }
 
+  /* ---- v615 : barre latérale du module (navigation + synthèse) ---- */
+  function sideSec(t,body){
+    return '<section class="tvas-sec"><h3 class="tvas-h">'+esc(t)+'</h3>'+body+'</section>';
+  }
+  function sideSynthese(m,d,ds,poste,decl,ech,neant,neantVal,futur){
+    var col=d.col||0, ded=d.ded||0, du=d.aDecaisser||0, cr=d.credit||0;
+    var etat = futur ? 'à venir'
+      : (neantVal ? 'Néant validé' : (neant ? 'Néant' : (decl ? 'déclarée' : (poste ? 'OD générée' : 'à faire'))));
+    var b='<div class="tvas-kv"><span>Mois</span><b>'+esc(mLong(m))+'</b></div>'
+      +'<div class="tvas-kv"><span>Collectée</span><b class="num">'+money(col)+'</b></div>'
+      +'<div class="tvas-kv"><span>Déductible</span><b class="num">'+money(ded)+'</b></div>'
+      +'<div class="tvas-kv net"><span>'+(du>0?'TVA nette due':'Crédit à reporter')+'</span><b class="num">'+money(du>0?du:cr)+'</b></div>'
+      +'<div class="tvas-kv"><span>Immobilisations</span><b class="num">'+money(ds.immo)+'</b></div>'
+      +'<div class="tvas-kv"><span>Biens &amp; services</span><b class="num">'+money(ds.bs)+'</b></div>'
+      +'<div class="tvas-kv"><span>Échéance</span><b>'+esc(ech)+'</b></div>'
+      +'<div class="tvas-kv"><span>État</span><b>'+esc(etat)+'</b></div>';
+    return sideSec('Synthèse du mois', b);
+  }
+  /* tvaSetMois() écrit un `let` de portée module ; tvarBody lit window.tvaMoisSel.
+     On synchronise les deux pour que le clic sur une période change bien le mois. */
+  window.tvarSetMois=function(m){
+    try{ window.tvaMoisSel=m; }catch(e){}
+    try{ if(typeof tvaSetMois==='function'){ tvaSetMois(m); return; } }catch(e){}
+    try{ if(typeof render==='function') render(); }catch(e){}
+  };
+  function tvarShell(mast, side, main){
+    return '<div id="yada-tvar">'+mast
+      +'<div class="tvar-shell"><div class="tvar-side">'+side+'</div>'
+      +'<div class="tvar-main">'+main+'</div></div></div>';
+  }
+
   function tvarBody(){
     var s=((typeof db!=='undefined'&&db)?db.societe:null)||{};
     if(!s.tvaRegime) s.tvaRegime='CA3';
@@ -31613,30 +31644,33 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     var nom=s.raison||s.dossierNom||'Dossier';
     var regLbl=regime==='CA3'?'Régime réel normal (CA3)':(regime==='CA12'?'Réel simplifié (CA12)':'Franchise en base');
     var exoY=String(s.exoDebut||'').slice(0,4)||'';
-    var out=[];
-    out.push('<header class="tvar-mast"><span class="tvar-brand">YADA</span>'
+    var out=[], side=[];
+    var mast='<header class="tvar-mast"><span class="tvar-brand">YADA</span>'
       +'<h1 class="tvar-h1">TVA &amp; Déclaration</h1>'
-      +'<span class="tvar-meta">'+esc(nom)+'<br>'+esc(regLbl)+(exoY?(' · exercice '+exoY):'')+'</span></header>');
+      +'<span class="tvar-meta">'+esc(nom)+'<br>'+esc(regLbl)+(exoY?(' · exercice '+exoY):'')+'</span></header>';
 
-    /* Onglets de régime : CA3 (mensuelle) · CA12 (annuelle) · Franchise */
-    out.push('<div class="tvar-tabs">'
+    /* Barre latérale — Régime : CA3 (mensuelle) · CA12 (annuelle) · Franchise */
+    side.push(sideSec('Régime','<div class="tvas-list">'
       +['CA3','CA12','franchise'].map(function(r){ var lb=r==='CA3'?'CA3 — mensuelle':(r==='CA12'?'CA12 — annuelle':'Franchise en base');
-        return '<button class="tvar-tab'+(regime===r?' on':'')+'" onclick="tvaSetRegime(\''+r+'\')">'+lb+'</button>'; }).join('')
-      +'</div>');
+        return '<button class="tvas-it'+(regime===r?' on':'')+'" onclick="tvaSetRegime(\''+r+'\')">'+lb+'</button>'; }).join('')
+      +'</div>'));
 
     if(regime==='franchise'){
       out.push('<div class="tvar-note">Franchise en base : aucune TVA collectée ni déductible, pas de déclaration périodique. Les factures portent la mention « TVA non applicable, article 293 B du CGI ».</div>');
-      return '<div id="yada-tvar">'+out.join('')+'</div>';
+      return tvarShell(mast, side.join(''), out.join(''));
     }
     if(regime==='CA12'){
-      return '<div id="yada-tvar">'+out.join('')+tvarCA12(mois)+'</div>';
+      side.push(sideSec('Exercice','<div class="tvas-kv"><span>Exercice</span><b>'+esc(exoY||'—')+'</b></div>'
+        +'<div class="tvas-kv"><span>Mois couverts</span><b>'+mois.length+'</b></div>'
+        +'<div class="tvas-kv"><span>Dépôt</span><b>2ᵉ jour ouvré suivant le 1ᵉʳ mai</b></div>'));
+      return tvarShell(mast, side.join(''), out.join('')+tvarCA12(mois));
     }
 
     /* Année (si plusieurs années disponibles) */
     try{ if(typeof tvaAnneesDispo==='function'){ var ys=tvaAnneesDispo();
       if(ys.length>1){ var cur=(typeof tvaAnneeActive==='function')?tvaAnneeActive():(window.tvaAnneeSel||exoY);
-        out.push('<div class="tvar-years">'+ys.map(function(y){
-          return '<button class="tvar-pill'+(y===cur?' on':'')+'" onclick="tvaSetAnnee(\''+y+'\')">'+y+(y===exoY?' · exercice':'')+'</button>'; }).join('')+'</div>'); } } }catch(e){}
+        side.push(sideSec('Année','<div class="tvas-list">'+ys.map(function(y){
+          return '<button class="tvas-it'+(y===cur?' on':'')+'" onclick="tvaSetAnnee(\''+y+'\')">'+y+(y===exoY?' · exercice':'')+'</button>'; }).join('')+'</div>')); } } }catch(e){}
 
     /* Données du mois */
     var d={}; try{ d=(typeof tvaDetailMois==='function')?tvaDetailMois(m):{}; }catch(e){ d={col:0,ded:0,baseCol:0,collectee:{},autreCol:0,reportCredit:0,aDecaisser:0,credit:0}; }
@@ -31652,10 +31686,13 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     /* Stepper (mix A+C) : Période → Contrôle → Écriture OD → Déclarer */
     out.push(stepper(poste, !!decl));
 
-    /* Barre des mois (étape « Période ») */
-    out.push('<div class="tvar-months">'+mois.map(function(x){ var st=moisEtat(x,m);
-      return '<button class="tvar-m '+st.cls+'" onclick="tvaSetMois(\''+x+'\')">'+esc(mCourt(x))
-        +'<span class="tvar-st">'+esc(st.t)+'</span></button>'; }).join('')+'</div>');
+    /* Barre latérale — Périodes (étape « Période ») */
+    side.push(sideSec('Périodes','<div class="tvas-mois">'+mois.map(function(x){ var st=moisEtat(x,m);
+      var cls=String(st.cls||'').split(/\s+/).filter(Boolean).map(function(c){return 'tvs-'+c;}).join(' ');
+      return '<button class="tvas-m '+cls+'" onclick="tvarSetMois(\''+x+'\')"><span class="tvas-ml">'+esc(mCourt(x))
+        +'</span><span class="tvas-mst">'+esc(st.t)+'</span></button>'; }).join('')+'</div>'));
+    /* Barre latérale — Synthèse du mois sélectionné */
+    side.push(sideSynthese(m,d,ds,poste,decl,ech,neant,neantVal,futur));
 
     /* ---- Légère assistance : indique l'étape suivante ---- */
     var msg, actBtn='';
@@ -31671,7 +31708,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
         +(decl.aDecaisser>0?('à payer '+money(decl.aDecaisser)):('crédit '+money(decl.credit||0)))+'. Reste à télépayer sur impots.gouv.fr.';
       actBtn='<button class="tvar-btn" onclick="tvaImprimerDeclaration(\''+m+'\')">Imprimer</button>'; }
     var prochain=''; try{ if(typeof tvaProchainADeclarer==='function'){ var nx=tvaProchainADeclarer();
-      if(nx && nx!==m) prochain='<button class="tvar-jump" onclick="tvaSetMois(\''+nx+'\')">Prochain mois à déclarer : '+esc(mLong(nx))+' →</button>'; } }catch(e){}
+      if(nx && nx!==m) prochain='<button class="tvar-jump" onclick="tvarSetMois(\''+nx+'\')">Prochain mois à déclarer : '+esc(mLong(nx))+' →</button>'; } }catch(e){}
     out.push('<section class="tvar-assist"><div class="tvar-assist-h">Assistance</div>'
       +'<p class="tvar-assist-p">'+esc(msg)+'</p>'
       +'<div class="tvar-assist-a">'+actBtn+prochain+'</div></section>');
@@ -31683,7 +31720,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
         +(neantVal?'Ce mois a été validé en Néant.':'Utilisez « Valider en Néant » ci-dessus.')+'</div></div>');
       out.push(suiviAnnuel(mois,m));
       out.push('<p class="tvar-foot">Collectée sur tous les comptes 4457x · déductible sur 4456x (hors 44567) — calculée sur les écritures du mois. À télédéclarer sur impots.gouv.fr. Estimation à valider par un expert-comptable.</p>');
-      return '<div id="yada-tvar">'+out.join('')+'</div>';
+      return tvarShell(mast, side.join(''), out.join(''));
     }
 
     /* ---- Formulaire CA3 (cadres A/B/C/D) ---- */
@@ -31741,7 +31778,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     /* Suivi annuel */
     out.push(suiviAnnuel(mois,m));
     out.push('<p class="tvar-foot">Collectée sur tous les comptes 4457x · déductible sur 4456x (hors 44567) — calculée sur les écritures du mois. Montant à télédéclarer et télépayer sur impots.gouv.fr. Estimation à valider par un expert-comptable.</p>');
-    return '<div id="yada-tvar">'+out.join('')+'</div>';
+    return tvarShell(mast, side.join(''), out.join(''));
   }
 
   /* Onglet CA12 (annuelle) — reconstruit en style Registre */
@@ -31795,7 +31832,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
 
   try{ if(!document.getElementById('tva-registre-mod')){
     var st=document.createElement('style'); st.id='tva-registre-mod'; st.textContent=
-      '#yada-tvar{max-width:940px;margin:0 auto;padding:6px 20px 60px;color:#f5f5f6;font-family:Tahoma,"Segoe UI",Geneva,Verdana,sans-serif}'
+      '#yada-tvar{max-width:1180px;margin:0 auto;padding:6px 20px 60px;color:#f5f5f6;font-family:Tahoma,"Segoe UI",Geneva,Verdana,sans-serif}'
       +'#yada-tvar .tvar-mast{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;padding-bottom:10px;border-bottom:2px solid #f5f5f6}'
       +'#yada-tvar .tvar-brand{font-family:ui-monospace,Menlo,Consolas,monospace;letter-spacing:.32em;font-size:13px;color:#f5f5f6}'
       +'#yada-tvar .tvar-h1{flex:1;text-align:center;margin:0;font-family:Georgia,"Times New Roman",serif;font-weight:600;font-size:25px;color:#fff}'
@@ -31856,7 +31893,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       +'#yada-tvar .tvar-ln.sub{background:#121214}#yada-tvar .tvar-ln.sub .tvar-lib{font-weight:600}'
       +'#yada-tvar .tvar-ln.total{background:#f5f5f6;padding:14px 18px}'
       +'#yada-tvar .tvar-ln.total .tvar-cad{color:#0a0a0b;opacity:.55}#yada-tvar .tvar-ln.total .tvar-lib{color:#0a0a0b;font-family:Georgia,"Times New Roman",serif;font-weight:600;font-size:16px}'
-      +'#yada-tvar .tvar-ln.total .tvar-val{color:#0a0a0b;font-size:24px;font-weight:700}'
+      +'#yada-tvar .tvar-ln.total .tvar-val{color:#0a0a0b;font-size:24px;font-weight:400}'
       +'#yada-tvar .tvar-cta{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:18px}'
       +'#yada-tvar .tvar-btn{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;letter-spacing:.04em;text-transform:uppercase;padding:11px 18px;border:1px solid #f5f5f6;background:#000;color:#f5f5f6;border-radius:5px;cursor:pointer}'
       +'#yada-tvar .tvar-btn.pri{background:#f5f5f6;color:#0a0a0b}'
@@ -31877,6 +31914,52 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       +'#yada-tvar .tvar-tag.neant{border-style:dashed;color:#616166}'
       +'#yada-tvar .tvar-note,#yada-tvar .tvar-empty{color:#8b8b90;padding:16px 18px;font-size:12.5px;line-height:1.6}'
       +'#yada-tvar .tvar-foot{margin-top:26px;padding-top:14px;border-top:1px solid #242427;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10.5px;color:#616166;line-height:1.7}'
+      +'#yada-tvar .tvar-shell{display:grid;grid-template-columns:238px 1fr;gap:22px;align-items:start;margin-top:18px}'
+      +'#yada-tvar .tvar-side{position:sticky;top:12px;display:flex;flex-direction:column;gap:14px}'
+      +'#yada-tvar .tvar-main{min-width:0}'
+      +'#yada-tvar .tvar-main>*:first-child{margin-top:0}'
+      +'#yada-tvar .tvas-sec{border:1px solid #35353a;border-radius:6px;background:#0b0b0c;overflow:hidden}'
+      +'#yada-tvar .tvas-h{margin:0;padding:9px 12px;background:#121214;border-bottom:1px solid #242427;font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:400;font-size:9px;letter-spacing:.11em;text-transform:uppercase;color:#8b8b90}'
+      +'#yada-tvar .tvas-list{display:flex;flex-direction:column}'
+      +'#yada-tvar .tvas-it{display:block;width:100%;box-sizing:border-box;text-align:left;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;padding:9px 12px;border:0;border-bottom:1px solid #171719;background:#0b0b0c;color:#8b8b90;cursor:pointer}'
+      +'#yada-tvar .tvas-it:last-child{border-bottom:0}'
+      +'#yada-tvar .tvas-it:hover{color:#f5f5f6}'
+      +'#yada-tvar .tvas-it.on{background:#f5f5f6;color:#0a0a0b}'
+      +'#yada-tvar .tvas-mois{display:flex;flex-direction:column}'
+      +'#yada-tvar .tvas-m{display:flex;align-items:baseline;justify-content:space-between;gap:8px;width:100%;box-sizing:border-box;text-align:left;padding:8px 12px;border:0;border-bottom:1px solid #171719;background:#0b0b0c;cursor:pointer}'
+      +'#yada-tvar .tvas-m:last-child{border-bottom:0}'
+      +'#yada-tvar .tvas-m:hover{background:#121214}'
+      +'#yada-tvar .tvas-ml{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;color:#f5f5f6}'
+      +'#yada-tvar .tvas-mst{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:8.5px;letter-spacing:.06em;text-transform:uppercase;color:#616166;white-space:nowrap}'
+      +'#yada-tvar .tvas-m.tvs-todo .tvas-ml{color:#8b8b90}'
+      +'#yada-tvar .tvas-m.tvs-neant .tvas-ml{color:#616166}'
+      +'#yada-tvar .tvas-m.tvs-done .tvas-mst{color:#8b8b90}'
+      +'#yada-tvar .tvas-m.tvs-on{background:#f5f5f6}'
+      +'#yada-tvar .tvas-m.tvs-on .tvas-ml,#yada-tvar .tvas-m.tvs-on .tvas-mst{color:#0a0a0b}'
+      +'#yada-tvar .tvas-kv{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:8px 12px;border-bottom:1px solid #171719}'
+      +'#yada-tvar .tvas-kv:last-child{border-bottom:0}'
+      +'#yada-tvar .tvas-kv span{flex:0 0 auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:#616166}'
+      +'#yada-tvar .tvas-kv b{min-width:0;font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:400;font-size:11px;color:#f5f5f6;text-align:right;overflow-wrap:anywhere}'
+      +'#yada-tvar .tvas-kv b.num{font-family:Georgia,"Times New Roman",serif;font-size:14px;color:#fff;font-variant-numeric:tabular-nums}'
+      +'#yada-tvar .tvas-kv.net{background:#121214}'
+      +'#yada-tvar .tvas-kv.net b.num{font-size:16px}'
+      +'html body:not(#_yz) #yada-tvar .tvas-h,html body:not(#_yz) #yada-tvar .tvas-it,html body:not(#_yz) #yada-tvar .tvas-ml,html body:not(#_yz) #yada-tvar .tvas-mst,html body:not(#_yz) #yada-tvar .tvas-kv span,html body:not(#_yz) #yada-tvar .tvas-kv b{font-family:ui-monospace,Menlo,Consolas,monospace!important;font-weight:400!important;font-style:normal!important;text-decoration:none!important}'
+      +'html body:not(#_yz) #yada-tvar .tvas-kv b.num{font-family:Georgia,"Times New Roman",serif!important;font-weight:400!important}'
+      +'html body:not(#_yz) #yada-tvar .tvas-ml{color:#f5f5f6!important}'
+      +'html body:not(#_yz) #yada-tvar .tvas-mst{color:#616166!important}'
+      +'html body:not(#_yz) #yada-tvar .tvas-m.tvs-todo .tvas-ml{color:#8b8b90!important}'
+      +'html body:not(#_yz) #yada-tvar .tvas-m.tvs-neant .tvas-ml{color:#616166!important}'
+      +'html body:not(#_yz) #yada-tvar .tvas-m.tvs-done .tvas-mst{color:#8b8b90!important}'
+      +'html body:not(#_yz) #yada-tvar .tvas-m.tvs-on .tvas-ml,html body:not(#_yz) #yada-tvar .tvas-m.tvs-on .tvas-mst{color:#0a0a0b!important}'
+      +'html body:not(#_yz) #yada-tvar .tvas-kv span{color:#616166!important}'
+      +'html body:not(#_yz) #yada-tvar .tvas-kv b{color:#f5f5f6!important}'
+      +'html body:not(#_yz) #yada-tvar .tvas-kv b.num{color:#fff!important}'
+      +'html body:not(#_yz) #yada-tvar .tvas-h{color:#8b8b90!important}'
+      +'html body:not(#_yz) #yada-tvar .tvar-head .tvar-t,html body:not(#_yz) #yada-tvar .tvar-head .tvar-p{color:#0a0a0b!important}'
+      +'html body:not(#_yz) #yada-tvar .tvar-ln.total .tvar-cad,html body:not(#_yz) #yada-tvar .tvar-ln.total .tvar-lib,html body:not(#_yz) #yada-tvar .tvar-ln.total .tvar-val{color:#0a0a0b!important}'
+      +'html body:not(#_yz) #yada-tvar .tvar-sp.on .tvar-n,html body:not(#_yz) #yada-tvar .tvar-sp.on .tvar-tt{color:#0a0a0b!important}'
+      +'html body:not(#_yz) #yada-tvar .tvar-tag.done{color:#0a0a0b!important}'
+      +'@media(max-width:980px){#yada-tvar .tvar-shell{grid-template-columns:1fr;gap:16px}#yada-tvar .tvar-side{position:static}#yada-tvar .tvas-mois{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr))}#yada-tvar .tvas-m{flex-direction:column;align-items:flex-start;gap:2px;border-right:1px solid #171719}}'
       +'@media(max-width:820px){#yada-tvar .tvar-mast{flex-direction:column;align-items:flex-start}#yada-tvar .tvar-h1{text-align:left}#yada-tvar .tvar-meta{text-align:left}#yada-tvar .tvar-ln{grid-template-columns:30px 1fr 104px}#yada-tvar .tvar-ln.total .tvar-val{font-size:20px}#yada-tvar .tvar-od-r{grid-template-columns:70px 1fr 72px 72px;font-size:11px}#yada-tvar .tvar-sp .tvar-tt{display:none}}';
     document.head.appendChild(st);
   }}catch(e){}
