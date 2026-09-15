@@ -4208,6 +4208,7 @@ function render(){
   rapport:(typeof pageRapport==='function'?pageRapport:function(){return'<div class="mod-wrap"><div class="card"><h2>Rapport</h2></div></div>';}),
   controles:(typeof pageControles==='function'?pageControles:function(){return'<div class="mod-wrap"><div class="card"><h2>Contrôles</h2></div></div>';}),
   importbanque:(typeof pageImportBanque==='function'?pageImportBanque:function(){return'<div class="mod-wrap"><div class="card"><h2>Import bancaire</h2></div></div>';}),
+  recurrentes:(typeof pageRecurrentes==='function'?pageRecurrentes:function(){return'<div class="mod-wrap"><div class="card"><h2>Écritures récurrentes</h2></div></div>';}),
   dossier:pageDossier, parametrage:pageParametrage, plancomptable:pagePlanComptable, infosociete:pageInfoSociete, coffre:pageCoffre
 })[current]();
   // compta/compteaux et dash/societe fournissent déjà leur propre conteneur plein cadre ; les autres sont enveloppés
@@ -11097,7 +11098,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v611';
+    b.textContent='YADA · v612';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -33398,6 +33399,331 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     +'html body:not(#_yz) #yada-ib .ib-pill,html body:not(#_yz) #yada-ib .ib-sel-cpt,'
     +'html body:not(#_yz) #yada-ib .ib-t th,html body:not(#_yz) #yada-ib .ib-t .mono{font-family:ui-monospace,Menlo,Consolas,monospace!important}'
     +'@media(max-width:720px){#yada-ib .ib-kpis{grid-template-columns:repeat(2,1fr)}}';
+    document.head.appendChild(st);
+  }catch(e){}
+})();
+</script>
+<script id="yada-addon-recurrentes">
+/* ═══ FONCTIONNALITÉ — MODULE ÉCRITURES RÉCURRENTES (modèles + échéancier) ═══
+   Définition de MODÈLES d'écritures qui reviennent à date fixe (loyer, abonnements,
+   dotations, redevances, prélèvements…) : journal, périodicité (mensuelle /
+   trimestrielle / annuelle), jour d'écriture, période de validité et lignes
+   comptables. Le module dresse l'ÉCHÉANCIER de l'exercice et génère les écritures
+   ÉQUILIBRÉES via posterOD, avec anti-doublon (une échéance déjà générée est
+   marquée et ne peut pas être postée deux fois).
+   Aucune propagation externe — tout reste sur l'appareil (logiciel interne).
+   100% ADDITIF — design éditorial « Registre » N&B scopé #yada-rc. */
+(function(){
+  window.YADA_OK=(window.YADA_OK||[]);
+  if(window.YADA_OK.indexOf('recurrentes')<0) window.YADA_OK.push('recurrentes');
+  window.YADA_LBL=window.YADA_LBL||{}; if(!window.YADA_LBL.recurrentes) window.YADA_LBL.recurrentes='Écritures récurrentes';
+
+  function e2(x){ return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+  function E(x){ return (typeof eur==='function')?eur(x):((+x||0).toFixed(2)+' €'); }
+  function C9(c){ return (typeof c9==='function')?c9(c):String(c==null?'':c); }
+  function R2(x){ return (typeof r2==='function')?r2(x):Math.round((+x||0)*100)/100; }
+  function UID(){ return (typeof uid==='function')?uid():('r'+Date.now()+Math.random().toString(36).slice(2,7)); }
+  function frd(d){ d=String(d||''); var m=d.match(/^(\d{4})-(\d{2})-(\d{2})/); return m?(m[3]+'/'+m[2]+'/'+m[1].slice(2)):d; }
+  function SAVE(){ try{ if(typeof save==='function') save(); }catch(e){} }
+  function RENDER(){ try{ if(typeof render==='function') render(); }catch(e){} }
+  function TOAST(m){ try{ if(typeof toast==='function') toast(m); }catch(e){} }
+  function libCompte(code){ var c=C9(code);
+    try{ if(typeof COMPTES!=='undefined'&&COMPTES){ if(COMPTES[c])return COMPTES[c]; var s6=c.slice(0,6),s3=c.slice(0,3); if(COMPTES[s6])return COMPTES[s6]; if(COMPTES[s3])return COMPTES[s3]; } }catch(e){}
+    try{ var p=(db.plan||[]).filter(function(x){return C9(x.code)===c;})[0]; if(p)return p.lib; }catch(e){}
+    return ''; }
+
+  var MOIS=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  function moisLbl(p){ var m=String(p||'').split('-'); return (MOIS[(+m[1]||1)-1]||'')+' '+(m[0]||''); }
+  function dernierJour(p){ var a=String(p||'').split('-'); return new Date(+a[0],+a[1],0).getDate(); }
+  function anneeExo(){ try{ return (typeof exoYear==='function')?exoYear():'2026'; }catch(e){ return '2026'; } }
+
+  /* ---------- données ---------- */
+  function liste(){
+    try{ db.parametres=db.parametres||{}; if(!Array.isArray(db.parametres.recurrentes)) db.parametres.recurrentes=[];
+      return db.parametres.recurrentes; }catch(e){ return []; }
+  }
+  function modele(id){ return liste().filter(function(m){return m.id===id;})[0]||null; }
+  function selId(){ var L=liste(); var s=window.__rcSel; if(s&&modele(s)) return s; return L.length?L[0].id:''; }
+
+  /* ---------- échéancier ---------- */
+  function echeances(m){
+    if(!m) return [];
+    var y=anneeExo(), out=[], dep=String(m.debut||'')||null, fin=String(m.fin||'')||null;
+    var moisDep=dep?(+dep.split('-')[1]||1):1;
+    for(var i=1;i<=12;i++){
+      var p=y+'-'+('0'+i).slice(-2);
+      if(dep && p<dep) continue;
+      if(fin && p>fin) continue;
+      if(m.periodicite==='trimestrielle'){ if(((i-moisDep)%3+3)%3!==0) continue; }
+      else if(m.periodicite==='annuelle'){ if(i!==moisDep) continue; }
+      out.push(p);
+    }
+    return out;
+  }
+  function totaux(m){
+    var d=0,c=0; ((m&&m.lignes)||[]).forEach(function(l){ d+=(+l.debit||0); c+=(+l.credit||0); });
+    return {debit:R2(d), credit:R2(c), ok:(Math.abs(d-c)<0.005 && d>0)};
+  }
+  function ecrDe(id,per){
+    try{ return (db.ecritures||[]).filter(function(e){ return e.recId===id && e.recPer===per; })[0]||null; }catch(e){ return null; }
+  }
+  function dateDe(m,per){ var j=Math.min(Math.max(+m.jour||1,1),dernierJour(per)); return per+'-'+('0'+j).slice(-2); }
+
+  /* ---------- actions ---------- */
+  window.rcSel=function(id){ window.__rcSel=id; RENDER(); };
+  window.rcNouveau=function(){
+    var L=liste(); var m={ id:UID(), libelle:'Nouvelle écriture récurrente', journal:'OD', periodicite:'mensuelle',
+      jour:1, debut:anneeExo()+'-01', fin:'', actif:true,
+      lignes:[{compte:'',lib:'',debit:0,credit:0},{compte:'',lib:'',debit:0,credit:0}] };
+    L.push(m); window.__rcSel=m.id; SAVE(); RENDER();
+  };
+  window.rcDupliquer=function(){
+    var m=modele(selId()); if(!m) return;
+    var cp=JSON.parse(JSON.stringify(m)); cp.id=UID(); cp.libelle=(m.libelle||'')+' (copie)';
+    liste().push(cp); window.__rcSel=cp.id; SAVE(); RENDER(); TOAST('Modèle dupliqué');
+  };
+  window.rcSupprimer=function(){
+    var m=modele(selId()); if(!m) return;
+    var n=(db.ecritures||[]).filter(function(e){return e.recId===m.id;}).length;
+    var msg='Supprimer le modèle « '+(m.libelle||'')+' » ?'+(n?(' Les '+n+' écriture(s) déjà générée(s) sont conservées.'):'');
+    function go(){ var L=liste(); var i=L.map(function(x){return x.id;}).indexOf(m.id); if(i>=0) L.splice(i,1);
+      window.__rcSel=''; SAVE(); RENDER(); TOAST('Modèle supprimé'); }
+    if(typeof yadaConfirm==='function') yadaConfirm(msg,go); else if(confirm(msg)) go();
+  };
+  window.rcSet=function(f,v){
+    var m=modele(selId()); if(!m) return;
+    if(f==='jour') v=Math.min(Math.max(parseInt(v,10)||1,1),31);
+    if(f==='actif') v=!!v;
+    m[f]=v; SAVE(); RENDER();
+  };
+  window.rcLigneAdd=function(){ var m=modele(selId()); if(!m) return; m.lignes=m.lignes||[]; m.lignes.push({compte:'',lib:'',debit:0,credit:0}); SAVE(); RENDER(); };
+  window.rcLigneDel=function(i){ var m=modele(selId()); if(!m||!m.lignes) return; m.lignes.splice(i,1); SAVE(); RENDER(); };
+  window.rcLigneSet=function(i,f,v){
+    var m=modele(selId()); if(!m||!m.lignes||!m.lignes[i]) return; var l=m.lignes[i];
+    if(f==='debit'||f==='credit'){ var n=R2(parseFloat(String(v).replace(',','.'))||0); l[f]=n; if(n>0) l[f==='debit'?'credit':'debit']=0; }
+    else if(f==='compte'){ l.compte=C9(v); if(!l.lib) l.lib=libCompte(l.compte); }
+    else l[f]=v;
+    SAVE(); RENDER();
+  };
+
+  window.rcGenerer=function(per,silencieux){
+    var m=modele(selId()); if(!m) return false;
+    if(ecrDe(m.id,per)){ if(!silencieux) TOAST('Échéance déjà générée'); return false; }
+    var t=totaux(m);
+    if(!t.ok){ if(!silencieux) TOAST('Modèle non équilibré — débit ≠ crédit'); return false; }
+    var L=(m.lignes||[]).filter(function(l){ return C9(l.compte) && ((+l.debit||0)>0 || (+l.credit||0)>0); })
+      .map(function(l){ return {compte:C9(l.compte), lib:l.lib||libCompte(l.compte)||C9(l.compte), debit:R2(+l.debit||0), credit:R2(+l.credit||0)}; });
+    if(L.length<2){ if(!silencieux) TOAST('Au moins deux lignes mouvementées sont nécessaires'); return false; }
+    var ecr=null;
+    try{ ecr=posterOD({ date:dateDe(m,per), libelle:(m.libelle||'Écriture récurrente')+' '+moisLbl(per),
+      lignes:L, journal:m.journal||'OD' }); }catch(e){ ecr=null; }
+    if(!ecr){ if(!silencieux) TOAST('Génération impossible'); return false; }
+    ecr.recId=m.id; ecr.recPer=per; SAVE();
+    if(!silencieux){ RENDER(); TOAST('Écriture générée — '+moisLbl(per)); }
+    return true;
+  };
+  window.rcGenererToutes=function(){
+    var m=modele(selId()); if(!m) return;
+    var n=0; echeances(m).forEach(function(p){ if(!ecrDe(m.id,p) && window.rcGenerer(p,true)) n++; });
+    RENDER(); TOAST(n?(n+' écriture(s) générée(s)'):'Aucune échéance à générer');
+  };
+  window.rcSupprimerEcr=function(per){
+    var m=modele(selId()); if(!m) return; var ecr=ecrDe(m.id,per); if(!ecr) return;
+    function go(){
+      try{ db.ecritures=(db.ecritures||[]).filter(function(x){return x.id!==ecr.id;});
+        db.odiv=(db.odiv||[]).filter(function(o){return o.ecritureId!==ecr.id;}); }catch(e){}
+      SAVE(); RENDER(); TOAST('Écriture supprimée');
+    }
+    var msg='Supprimer l’écriture générée de '+moisLbl(per)+' ?';
+    if(typeof yadaConfirm==='function') yadaConfirm(msg,go); else if(confirm(msg)) go();
+  };
+  window.rcFermer=function(){ try{ current='compta'; RENDER(); }catch(e){} };
+
+  /* ---------- rendu ---------- */
+  function datalistCptes(){
+    var out='',n=0,vus={};
+    try{ (db.plan||[]).forEach(function(p){ var c=C9(p.code); if(n<500 && !vus[c]){ vus[c]=1; out+='<option value="'+e2(c)+'">'+e2(p.lib||'')+'</option>'; n++; } }); }catch(e){}
+    if(!n){ try{ Object.keys(COMPTES||{}).slice(0,400).forEach(function(k){ out+='<option value="'+e2(C9(k))+'">'+e2(COMPTES[k])+'</option>'; }); }catch(e){} }
+    return '<datalist id="rc-cptes">'+out+'</datalist>';
+  }
+  function optJournaux(sel){
+    var J=[]; try{ J=(db.journaux||[]).map(function(j){ return [j.jrn||j.code, (j.code||'')+' — '+(j.libelle||'')]; }); }catch(e){}
+    if(!J.length) J=[['OD','OD — OPERATIONS DIVERSES']];
+    return J.map(function(j){ return '<option value="'+e2(j[0])+'"'+(j[0]===sel?' selected':'')+'>'+e2(j[1])+'</option>'; }).join('');
+  }
+  function kpiBox(lbl,val){ return '<div class="rc-k"><div class="rc-kv">'+val+'</div><div class="rc-kl">'+e2(lbl)+'</div></div>'; }
+
+  function rail(){
+    var L=liste(), s=selId();
+    var items=L.map(function(m){
+      var ech=echeances(m), faites=ech.filter(function(p){return !!ecrDe(m.id,p);}).length;
+      return '<button class="rc-li'+(m.id===s?' on':'')+'" onclick="rcSel(\''+e2(m.id)+'\')">'
+        +'<span class="rc-li-t">'+e2(m.libelle||'(sans libellé)')+'</span>'
+        +'<span class="rc-li-m">'+e2(m.periodicite||'mensuelle')+' · '+faites+'/'+ech.length+' générée(s)'+(m.actif===false?' · suspendu':'')+'</span></button>';
+    }).join('');
+    return '<div class="rc-rail"><div class="rc-railh"><span class="rc-ttl">Modèles</span>'
+      +'<button class="rc-btn rc-pri" onclick="rcNouveau()">＋ Nouveau</button></div>'
+      +'<div class="rc-lis">'+(items||'<div class="rc-note rc-empty">Aucun modèle. Créez-en un pour dresser l’échéancier.</div>')+'</div></div>';
+  }
+
+  function fiche(){
+    var m=modele(selId());
+    if(!m) return '<div class="rc-card"><div class="rc-cardh"><span class="rc-ttl">Aucun modèle sélectionné</span></div>'
+      +'<div class="rc-pad"><div class="rc-note">Un modèle décrit une écriture qui revient à date fixe : loyer, abonnement, '
+      +'redevance, dotation… Définissez son journal, sa périodicité et ses lignes, puis générez les échéances de l’exercice.</div></div></div>';
+
+    var t=totaux(m);
+    var lg=(m.lignes||[]).map(function(l,i){
+      return '<tr><td><input class="rc-in rc-cpt" list="rc-cptes" value="'+e2(l.compte||'')+'" placeholder="Compte" onchange="rcLigneSet('+i+',\'compte\',this.value)"></td>'
+        +'<td><input class="rc-in" value="'+e2(l.lib||'')+'" placeholder="'+e2(libCompte(l.compte)||'Libellé de ligne')+'" onchange="rcLigneSet('+i+',\'lib\',this.value)"></td>'
+        +'<td class="r"><input class="rc-in r num" value="'+((+l.debit||0)?(+l.debit).toFixed(2):'')+'" placeholder="0,00" onchange="rcLigneSet('+i+',\'debit\',this.value)"></td>'
+        +'<td class="r"><input class="rc-in r num" value="'+((+l.credit||0)?(+l.credit).toFixed(2):'')+'" placeholder="0,00" onchange="rcLigneSet('+i+',\'credit\',this.value)"></td>'
+        +'<td class="c"><button class="rc-x" onclick="rcLigneDel('+i+')" title="Retirer la ligne" aria-label="Retirer">✕</button></td></tr>';
+    }).join('');
+
+    return '<div class="rc-card"><div class="rc-cardh">'
+      +'<input class="rc-in rc-titre" value="'+e2(m.libelle||'')+'" onchange="rcSet(\'libelle\',this.value)">'
+      +'<button class="rc-btn" onclick="rcDupliquer()">Dupliquer</button>'
+      +'<button class="rc-btn" onclick="rcSupprimer()">Supprimer</button></div>'
+      +'<div class="rc-pad"><div class="rc-form">'
+        +'<label class="rc-f"><span class="rc-fl">Journal</span><select class="rc-in" onchange="rcSet(\'journal\',this.value)">'+optJournaux(m.journal||'OD')+'</select></label>'
+        +'<label class="rc-f"><span class="rc-fl">Périodicité</span><select class="rc-in" onchange="rcSet(\'periodicite\',this.value)">'
+          +['mensuelle','trimestrielle','annuelle'].map(function(p){ return '<option value="'+p+'"'+((m.periodicite||'mensuelle')===p?' selected':'')+'>'+p+'</option>'; }).join('')
+        +'</select></label>'
+        +'<label class="rc-f"><span class="rc-fl">Jour d’écriture</span><input class="rc-in num" type="number" min="1" max="31" value="'+(+m.jour||1)+'" onchange="rcSet(\'jour\',this.value)"></label>'
+        +'<label class="rc-f"><span class="rc-fl">Début</span><input class="rc-in num" type="month" value="'+e2(m.debut||'')+'" onchange="rcSet(\'debut\',this.value)"></label>'
+        +'<label class="rc-f"><span class="rc-fl">Fin (facultatif)</span><input class="rc-in num" type="month" value="'+e2(m.fin||'')+'" onchange="rcSet(\'fin\',this.value)"></label>'
+        +'<label class="rc-f rc-chk"><input type="checkbox" class="rc-cb"'+(m.actif===false?'':' checked')+' onchange="rcSet(\'actif\',this.checked)"><span class="rc-fl">Modèle actif</span></label>'
+      +'</div>'
+      +'<div class="rc-tblwrap"><table class="rc-t"><thead><tr><th>Compte</th><th>Libellé</th><th class="r">Débit</th><th class="r">Crédit</th><th class="c"></th></tr></thead>'
+      +'<tbody>'+(lg||'<tr><td colspan="5" class="rc-note">Aucune ligne.</td></tr>')+'</tbody>'
+      +'<tfoot><tr><td colspan="2" class="mono">Total</td><td class="r num">'+E(t.debit)+'</td><td class="r num">'+E(t.credit)+'</td><td></td></tr></tfoot></table></div>'
+      +'<div class="rc-actions"><button class="rc-btn" onclick="rcLigneAdd()">＋ Ajouter une ligne</button>'
+      +'<span class="rc-pill '+(t.ok?'rc-eq':'rc-neq')+'">'+(t.ok?'ÉQUILIBRÉ':'NON ÉQUILIBRÉ')+'</span></div>'
+      +'</div></div>';
+  }
+
+  function echeancier(){
+    var m=modele(selId()); if(!m) return '';
+    var t=totaux(m), ech=echeances(m);
+    var r=ech.map(function(p){
+      var ecr=ecrDe(m.id,p), fait=!!ecr;
+      return '<tr class="'+(fait?'rc-fait':'')+'"><td class="mono">'+e2(moisLbl(p))+'</td>'
+        +'<td class="num">'+frd(dateDe(m,p))+'</td>'
+        +'<td class="mono">'+e2(m.journal||'OD')+'</td>'
+        +'<td>'+e2((m.libelle||'')+' '+moisLbl(p))+'</td>'
+        +'<td class="r num">'+E(t.debit)+'</td>'
+        +'<td><span class="rc-pill '+(fait?'rc-done':'rc-due')+'">'+(fait?'GÉNÉRÉE':'À GÉNÉRER')+'</span></td>'
+        +'<td class="r">'+(fait
+            ?'<button class="rc-btn" onclick="rcSupprimerEcr(\''+e2(p)+'\')">Retirer</button>'
+            :'<button class="rc-btn rc-pri" onclick="rcGenerer(\''+e2(p)+'\')">Générer</button>')+'</td></tr>';
+    }).join('');
+    var reste=ech.filter(function(p){return !ecrDe(m.id,p);}).length;
+    return '<div class="rc-card"><div class="rc-cardh"><span class="rc-ttl">Échéancier '+e2(anneeExo())+'</span>'
+      +'<span class="rc-note">'+ech.length+' échéance(s) · '+reste+' restante(s)</span>'
+      +(reste&&t.ok?'<button class="rc-btn rc-pri" onclick="rcGenererToutes()">Générer toutes les échéances</button>':'')+'</div>'
+      +'<div class="rc-tblwrap"><table class="rc-t"><thead><tr><th>Période</th><th>Date</th><th>Journal</th><th>Libellé</th>'
+      +'<th class="r">Montant</th><th>État</th><th class="r"></th></tr></thead><tbody>'
+      +(r||'<tr><td colspan="7" class="rc-note">Aucune échéance sur l’exercice — vérifiez la période de validité.</td></tr>')
+      +'</tbody></table></div></div>';
+  }
+
+  window.pageRecurrentes=function(){
+    var L=liste(), actifs=L.filter(function(m){return m.actif!==false;}).length, tot=0, fait=0;
+    L.forEach(function(m){ var ech=echeances(m); tot+=ech.length; ech.forEach(function(p){ if(ecrDe(m.id,p)) fait++; }); });
+    return '<div id="yada-rc"><div class="rc-wrap">'
+      +'<div class="rc-head"><div class="rc-hl"><div class="rc-eyebrow">YADA · ÉCRITURES RÉCURRENTES</div>'
+        +'<div class="rc-title">Modèles &amp; échéancier</div></div>'
+        +'<span class="rc-exo">'+e2((db.societe&&db.societe.raison)||'')+' · Exercice '+e2(anneeExo())+'</span>'
+        +'<button class="rc-close" onclick="rcFermer()" title="Revenir à la Consultation" aria-label="Fermer">✕</button></div>'
+      +'<div class="rc-scroll">'
+        +'<div class="rc-kpis">'+kpiBox('Modèles actifs',actifs)+kpiBox('Échéances de l’exercice',tot)
+          +kpiBox('Déjà générées',fait)+kpiBox('Restant à générer',Math.max(tot-fait,0))+'</div>'
+        +'<div class="rc-body">'+rail()+'<div class="rc-main">'+fiche()+echeancier()+'</div></div>'
+        +datalistCptes()
+      +'</div></div></div>';
+  };
+
+  try{ var st=document.createElement('style'); st.id='recurrentes-mod'; st.textContent=
+     '.mod-wrap:has(#yada-rc){padding:0!important;max-width:none!important}'
+    +'#yada-rc{font-family:Georgia,"Times New Roman",serif;color:#f5f5f6;background:#000;min-height:100dvh;display:flex;flex-direction:column}'
+    +'#yada-rc .rc-wrap{flex:1;display:flex;flex-direction:column;min-height:0;width:100%;max-width:1380px;margin:0 auto;padding:0 18px}'
+    +'#yada-rc .rc-head{display:flex;align-items:center;gap:14px;padding:16px 4px 13px;border-bottom:1px solid #242427}'
+    +'#yada-rc .rc-eyebrow{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10.5px;letter-spacing:.14em;color:#8b8b90}'
+    +'#yada-rc .rc-title{font-size:20px;font-weight:400;letter-spacing:.01em;margin-top:2px}'
+    +'#yada-rc .rc-exo{margin-left:auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;color:#8b8b90}'
+    +'#yada-rc .rc-btn{background:#121214;color:#f5f5f6;border:1px solid #35353a;border-radius:6px;padding:6px 12px;cursor:pointer;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px}'
+    +'#yada-rc .rc-btn:hover{background:#1a1a1c}'
+    +'#yada-rc .rc-btn.rc-pri{background:#f5f5f6;color:#000;border-color:#f5f5f6}'
+    +'#yada-rc .rc-btn.rc-pri:hover{background:#e2e2e4}'
+    +'#yada-rc .rc-close{width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:#000;color:#f5f5f6;border:1px solid #f5f5f6;border-radius:7px;cursor:pointer;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px}'
+    +'#yada-rc .rc-close:hover{background:#f5f5f6;color:#000}'
+    +'#yada-rc .rc-scroll{flex:1;overflow:auto;padding:16px 2px 40px;min-height:0}'
+    +'#yada-rc .rc-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}'
+    +'#yada-rc .rc-k{background:#0b0b0c;border:1px solid #242427;border-radius:8px;padding:14px 16px}'
+    +'#yada-rc .rc-kv{font-size:26px;font-weight:400;font-variant-numeric:tabular-nums}'
+    +'#yada-rc .rc-kl{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10.5px;letter-spacing:.06em;color:#8b8b90;margin-top:3px}'
+    +'#yada-rc .rc-body{display:grid;grid-template-columns:290px 1fr;gap:12px;align-items:start}'
+    +'#yada-rc .rc-rail{background:#0b0b0c;border:1px solid #242427;border-radius:8px;overflow:hidden}'
+    +'#yada-rc .rc-railh{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid #242427}'
+    +'#yada-rc .rc-railh .rc-btn{margin-left:auto}'
+    +'#yada-rc .rc-ttl{font-size:15px}'
+    +'#yada-rc .rc-lis{display:flex;flex-direction:column}'
+    +'#yada-rc .rc-li{display:block;width:100%;text-align:left;background:transparent;border:0;border-bottom:1px solid #161618;padding:11px 14px;cursor:pointer;color:#f5f5f6}'
+    +'#yada-rc .rc-li:hover{background:rgba(255,255,255,.035)}'
+    +'#yada-rc .rc-li.on{background:#f5f5f6;color:#000}'
+    +'#yada-rc .rc-li-t{display:block;font-size:13.5px}'
+    +'#yada-rc .rc-li-m{display:block;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;letter-spacing:.04em;color:#8b8b90;margin-top:3px}'
+    +'#yada-rc .rc-li.on .rc-li-t{color:#000!important}'
+    +'#yada-rc .rc-li.on .rc-li-m{color:#3a3a3e!important}'
+    +'#yada-rc .rc-main{display:flex;flex-direction:column;gap:12px;min-width:0}'
+    +'#yada-rc .rc-card{background:#0b0b0c;border:1px solid #242427;border-radius:8px}'
+    +'#yada-rc .rc-cardh{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid #242427}'
+    +'#yada-rc .rc-cardh .rc-note{margin-right:auto}'
+    +'#yada-rc .rc-pad{padding:14px 16px}'
+    +'#yada-rc .rc-note{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;color:#8b8b90;line-height:1.55}'
+    +'#yada-rc .rc-empty{padding:14px}'
+    +'#yada-rc .rc-form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:14px}'
+    +'#yada-rc .rc-f{display:flex;flex-direction:column;gap:4px;min-width:0}'
+    +'#yada-rc .rc-fl{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;letter-spacing:.06em;color:#8b8b90}'
+    +'#yada-rc .rc-chk{flex-direction:row;align-items:center;gap:8px}'
+    +'#yada-rc .rc-in{background:#121214;color:#f5f5f6;border:1px solid #35353a;border-radius:5px;padding:6px 8px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;width:100%;box-sizing:border-box}'
+    +'#yada-rc .rc-in:focus{outline:none;border-color:#8b8b90}'
+    +'#yada-rc .rc-titre{flex:1;min-width:200px;font-size:14px}'
+    +'#yada-rc .rc-in.num{font-variant-numeric:tabular-nums}'
+    +'#yada-rc .rc-in.r{text-align:right}'
+    +'#yada-rc .rc-cb{accent-color:#f5f5f6;width:15px;height:15px;cursor:pointer}'
+    +'#yada-rc .rc-tblwrap{overflow-x:auto}'
+    +'#yada-rc .rc-t{width:100%;border-collapse:collapse;font-size:12.5px}'
+    +'#yada-rc .rc-t th{text-align:left;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;letter-spacing:.05em;font-weight:400;color:#8b8b90;background:#121214;padding:8px 12px;border-bottom:1px solid #242427;white-space:nowrap}'
+    +'#yada-rc .rc-t td{padding:6px 12px;border-bottom:1px solid #161618;vertical-align:middle}'
+    +'#yada-rc .rc-t tbody tr:hover td{background:rgba(255,255,255,.03)}'
+    +'#yada-rc .rc-t tfoot td{padding:8px 12px;border-top:1px solid #242427;font-variant-numeric:tabular-nums}'
+    +'#yada-rc .rc-t .num{font-variant-numeric:tabular-nums;white-space:nowrap}'
+    +'#yada-rc .rc-t .r{text-align:right}'
+    +'#yada-rc .rc-t .c{width:38px;text-align:center}'
+    +'#yada-rc .rc-t .mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;color:#8b8b90;white-space:nowrap}'
+    +'#yada-rc .rc-t tr.rc-fait td{color:#8b8b90}'
+    +'#yada-rc .rc-t .rc-cpt{max-width:140px}'
+    +'#yada-rc .rc-x{background:transparent;border:1px solid #35353a;border-radius:5px;color:#8b8b90;width:24px;height:24px;cursor:pointer;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px}'
+    +'#yada-rc .rc-x:hover{border-color:#f5f5f6;color:#f5f5f6}'
+    +'#yada-rc .rc-actions{display:flex;align-items:center;gap:12px;padding-top:12px}'
+    +'#yada-rc .rc-pill{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:9.5px;letter-spacing:.08em;padding:3px 9px;border-radius:20px;border:1px solid #35353a;color:#8b8b90;white-space:nowrap}'
+    +'#yada-rc .rc-pill.rc-eq,#yada-rc .rc-pill.rc-due{background:#f5f5f6!important;color:#000!important;border-color:#f5f5f6!important}'
+    +'#yada-rc .rc-pill.rc-neq{background:transparent!important;color:#f5f5f6!important;border-color:#8b8b90!important}'
+    +'#yada-rc .rc-pill.rc-done{background:#121214!important;color:#8b8b90!important;border-color:#35353a!important}'
+    /* Typographie « Registre » : préfixe html body:not(#_yz) (niveau id) + !important pour battre
+       la règle de police globale v560 ; serif sur la racine + descendants, mono repris par classe. */
+    +'html body:not(#_yz) #yada-rc,html body:not(#_yz) #yada-rc *{font-family:Georgia,"Times New Roman",serif!important}'
+    +'html body:not(#_yz) #yada-rc .rc-eyebrow,html body:not(#_yz) #yada-rc .rc-exo,'
+    +'html body:not(#_yz) #yada-rc .rc-btn,html body:not(#_yz) #yada-rc .rc-close,'
+    +'html body:not(#_yz) #yada-rc .rc-kl,html body:not(#_yz) #yada-rc .rc-note,'
+    +'html body:not(#_yz) #yada-rc .rc-pill,html body:not(#_yz) #yada-rc .rc-in,'
+    +'html body:not(#_yz) #yada-rc .rc-fl,html body:not(#_yz) #yada-rc .rc-li-m,'
+    +'html body:not(#_yz) #yada-rc .rc-x,'
+    +'html body:not(#_yz) #yada-rc .rc-t th,html body:not(#_yz) #yada-rc .rc-t .mono{font-family:ui-monospace,Menlo,Consolas,monospace!important}'
+    +'@media(max-width:980px){#yada-rc .rc-body{grid-template-columns:1fr}#yada-rc .rc-form{grid-template-columns:repeat(2,minmax(0,1fr))}}'
+    +'@media(max-width:720px){#yada-rc .rc-kpis{grid-template-columns:repeat(2,1fr)}#yada-rc .rc-form{grid-template-columns:1fr}}';
     document.head.appendChild(st);
   }catch(e){}
 })();
