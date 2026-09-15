@@ -11097,7 +11097,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v620';
+    b.textContent='YADA · v621';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -34233,6 +34233,94 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
   }
   inject();
   try{
+    if(typeof window.render==='function'){
+      var _r=window.render; window.render=function(){ var v=_r.apply(this,arguments); inject(); return v; };
+    }
+  }catch(e){}
+})();
+</script>
+<script id="yada-addon-saisie-carreaux">
+/* ============================================================
+   PAGE DE SAISIE (éditeur d'écritures .ec-sage) — COLONNAGE + CELLULES
+   Demande : garder la version actuelle, mais
+     1) revoir le COLONNAGE (largeurs de colonnes rééquilibrées) ;
+     2) la partie SAISIE doit être LIBRE : des CELLULES à la place des BULLES —
+        le champ occupe tout le CARREAU de sa cellule (plus d'encadré arrondi
+        flottant à l'intérieur) ;
+     3) RÉDUIRE l'écart entre l'écriture et les côtés de la cellule
+        (10 px → 3 px à gauche/droite).
+   Mesure avant correctif : td padding 0 4px + champ border 1px #35353a
+   + border-radius 5px + padding 1px 5px  →  bulle noire arrondie insérée dans
+   la cellule, écriture à 10 px du bord.
+   Point technique : la couche globale « yada-addon-registre-unify » (v609) pose
+     html body[data-theme="noir"]:not(#_yz) input…{background:#000!important;
+     border-color:#35353a!important;border-radius:5px!important}
+   soit une spécificité (1,4,3) — elle écrase « .ec-sage .ec-i » (0,2,0) des
+   couches de l'éditeur, d'où le retour des bulles. On la bat avec le préfixe
+     html body:not(#_yz) #ec-overlay …  → DEUX ID, soit (2,x,x).
+   100% ADDITIF & CSS-ONLY — aucune logique de saisie modifiée
+   (clavier, contrepartie banque, clic droit, lettrage, garde de solde intacts).
+   ============================================================ */
+(function(){
+  var U = 'html body:not(#_yz) #ec-overlay ';                       /* (2,x,x) — bat la couche v609 */
+  var LIGNE = '#242427';        /* filet du carreau, identique à la grille Registre */
+  var PX = 3;                   /* écart écriture ↔ côtés de la cellule (était 10) */
+  var PY = 2;                   /* écart vertical : resserré aussi, la hauteur de ligne d'origine est conservée */
+
+  /* --- 1. COLONNAGE : la donnée comptable respire, le libellé cesse de tout absorber --- */
+  var COLS = { 'cw-m':20, 'cw-dt':92, 'cw-j':44, 'cw-pc':112, 'cw-cp':148,
+               'cw-db':128, 'cw-cr':128, 'cw-sd':132, 'cw-l':28 };
+  var colonnage = Object.keys(COLS).map(function(k){
+    return U+'.ec-sage col.'+k+'{width:'+COLS[k]+'px!important}';
+  }).join('');
+  /* cw-lb (libellé) reste la colonne souple : elle prend ce qui reste. */
+
+  var CSS = colonnage
+    /* --- 2. LE CARREAU : chaque cellule est délimitée sur ses quatre côtés --- */
+    + U+'.ec-sage .ec-table tbody tr.ec-r td{'
+      + 'padding:'+PY+'px '+PX+'px!important;'
+      + 'border-right:1px solid '+LIGNE+'!important}'
+    + U+'.ec-sage .ec-table tbody tr.ec-r td:last-child{border-right:0!important}'
+    + U+'.ec-sage .ec-table thead th{border-right:1px solid '+LIGNE+'!important;padding:5px '+PX+'px!important}'
+    + U+'.ec-sage .ec-table thead th:last-child{border-right:0!important}'
+
+    /* --- 3. FIN DES BULLES : le champ REMPLIT le carreau, écriture près des côtés ---
+       width:calc(100% + 2·PX) + margin négatif = le champ déborde exactement sur le
+       padding de la cellule → sa surface = le carreau entier ; son propre padding
+       remet l'écriture à PX des côtés. */
+    + U+'.ec-sage .ec-table tbody tr.ec-r input.ec-i{'
+      + 'display:block!important;'
+      + 'width:calc(100% + '+(PX*2)+'px)!important;'
+      + 'height:auto!important;min-height:0!important;'
+      + 'margin:-'+PY+'px -'+PX+'px!important;'
+      + 'padding:'+PY+'px '+PX+'px!important;'
+      + 'border:0!important;border-radius:0!important;'
+      + 'background:transparent!important;box-shadow:none!important;outline:0!important}'
+    /* pièce en lecture seule (lignes 2 et suivantes) : aligné au pixel près sur
+       le champ de la 1re ligne, sinon la colonne paraît décalée */
+    + U+'.ec-sage .ec-table tbody tr.ec-r .ec-ro{'
+      + 'display:block!important;padding:'+PY+'px '+PX+'px!important;margin:-'+PY+'px -'+PX+'px!important}'
+    /* survol : le carreau s'éclaire, sans jamais redevenir une bulle */
+    + U+'.ec-sage .ec-table tbody tr.ec-r input.ec-i:hover{'
+      + 'background:#141417!important;border:0!important;border-radius:0!important;box-shadow:none!important}'
+    /* saisie en cours : le carreau entier est marqué (filet blanc INTÉRIEUR, donc carré) */
+    + U+'.ec-sage .ec-table tbody tr.ec-r input.ec-i:focus{'
+      + 'background:#1c1c20!important;border:0!important;border-radius:0!important;'
+      + 'box-shadow:inset 0 0 0 1px #f5f5f6!important;outline:0!important}';
+
+  function inject(){
+    try{
+      if(document.getElementById('saisie-carreaux-mod')) return;
+      var st=document.createElement('style'); st.id='saisie-carreaux-mod';
+      st.textContent=CSS; document.head.appendChild(st);
+    }catch(e){}
+  }
+  inject();
+  /* ré-injection après chaque rendu de l'éditeur (idempotent par l'id) */
+  try{
+    if(typeof window.ecRender==='function'){
+      var _e=window.ecRender; window.ecRender=function(){ var v=_e.apply(this,arguments); inject(); return v; };
+    }
     if(typeof window.render==='function'){
       var _r=window.render; window.render=function(){ var v=_r.apply(this,arguments); inject(); return v; };
     }
