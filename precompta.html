@@ -11,10 +11,9 @@
 <meta name="apple-mobile-web-app-title" content="YADA">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<!-- Aucune police distante : YADA est un logiciel interne, aucune requête ne sort à l'ouverture.
+     Les polices réellement rendues sont celles du système (Tahoma, Georgia, ui-monospace, Segoe UI)
+     et l'IBM Plex Sans embarquée en data-URI plus bas. -->
 <style>
   :root{
     --paper:#f6f2e9; --paper-2:#efe9db; --card:#fffdf8; --ink:#1c2a33; --ink-soft:#475862;
@@ -11098,7 +11097,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v612';
+    b.textContent='YADA · v613';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -12727,6 +12726,7 @@ ${lignes}
     if(navigator.onLine===false) return;
     if(autoScheduled) return;                            /* mise à jour déjà programmée */
     checking=true; lastCheck=now;
+    if(location.protocol==='file:'){ checking=false; return; }   /* fichier local : pas de version distante à lire */
     var url=location.href.split('#')[0].split('?')[0];
     fetch(url, {cache:'no-store'}).then(function(r){ return r.ok ? r.text() : Promise.reject(); })
       .then(function(html){
@@ -15507,6 +15507,7 @@ ${lignes}
   }
   function checkVersion(){
     if(reloaded || !navigator.onLine) return;
+    if(location.protocol==='file:') return;   /* fichier local : aucun version.json à interroger */
     try{
       fetch('version.json?cb='+Date.now(), {cache:'no-store'})
         .then(function(r){ return r.ok? r.json() : null; })
@@ -32898,6 +32899,12 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     + T+'.ya-dot{background:'+INK+' !important;color:'+BG+' !important}'
     + T+'.ya-btn:not(.ya-danger){background:'+HEAD+' !important;color:'+INK+' !important;border:1px solid '+FIELD+' !important}'
     + T+'.ya-btn:focus{outline-color:'+MUTED+' !important}'
+    /* Liens — la couche « nuit bleue » v518 force encore tous les <a> en bleu Crystal ;
+       on les ramène à l'encre du Registre (soulignés, donc toujours reconnaissables),
+       hors éditions papier et hors boutons déguisés en liens. */
+    + T+'a:not(.btn):not(.doc-page a){color:'+INK+' !important}'
+    + T+'a:not(.btn):not(.doc-page a):hover{color:'+INK+' !important;text-decoration:underline !important}'
+    + T+'.rg-link,'+T+'.linkname{color:'+INK+' !important}'
     ;
     var st=document.createElement('style'); st.id='registre-unify-mod'; st.textContent=css;
     document.body.appendChild(st);
