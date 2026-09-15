@@ -36,7 +36,25 @@
 
 ---
 
-## 🟢 Dernière mise à jour — Consultation & Déclaration : en-têtes remis EN RETRAIT de la donnée + plus aucun texte en gras — v619
+## 🟢 Dernière mise à jour — Séparation des ÉCRITURES marquée par une ligne BLANCHE plus large que le filet des comptes — v620
+**Quoi :** dans l'affichage des écritures des comptes, **la séparation entre deux écritures est désormais marquée par une ligne BLANCHE, un peu plus large que le filet qui sépare les comptes** (les lignes d'une même écriture). Mesure avant correctif : le filet de fin d'écriture était rendu **`1px solid #242427`** — c'est-à-dire **STRICTEMENT identique** au filet de ligne (`1px #242427`) → **plus aucune séparation visible** entre deux écritures. Après : **fin d'écriture `2px #f5f5f6` (blanc)** contre **ligne de compte `1px #242427`**.
+
+**Pourquoi il avait disparu :** le filet de fin d'écriture (`sgj-ecr-end` / `lx-ecr-end`, posé en **2px bleu `#1e90ff`** par `yada-addon101` (0,4,4) et `yada-addon110` (0,3,4)) était écrasé en deux temps par la reconstruction « Registre » : (1) `consult-registre-mod` (**v595**, `html body:not(#_yz) .sg-app.yada-cregi tbody td{border-bottom:1px solid #16161a!important}` = **(1,2,4)**) le ramenait à **1px** — la largeur était perdue ; (2) `consult-lumiere-mod` (**v618**) le recolorait en `#242427` — la couleur était perdue à son tour. Le filet d'écriture et le filet de ligne se confondaient donc exactement.
+
+**Comment — nouvel addon `yada-addon-ecriture-separateur` (100% ADDITIF & CSS-ONLY, injecté en DERNIER) :** `<style id="ecriture-separateur-mod">`, ré-injecté après chaque `render` (idempotent par l'id). **Point technique :** un premier essai à `html body:not(#_yz) .sg-app.yada-cregi table.sgj tbody tr.sgj-ecr-end td` = **(1,4,6)** a bien récupéré la **largeur** (2px) mais **pas la couleur** — parce que la couche globale `yada-addon-registre-unify` (v609) pose `html body[data-theme="noir"]:not(#_yz) #main table td{border-color:#242427!important}` = **(2,1,4)**, qui l'emporte sur le nombre d'**ID** (même piège qu'en v619 sur les `thead th`). Le correctif double donc chaque règle d'une variante préfixée **`html body[data-theme="noir"]:not(#_yz) #main `** → **(2,3,6)/(2,4,6)**, qui bat la couche v609 sans surenchère d'`!important` sur les lignes de compte. Couvre : la **grille par journal** de la Consultation (`table.sgj tr.sgj-ecr-end`), le **grand-livre auxiliaire & lecture seule** (`table.lx tr.lx-ecr-end`, `.lx-app`, `#cl-overlay`) et le **Journal comptable** (blocs `.ecr + .ecr`, dont le liseré bleu `#1e90ff` hérité de la v205 repasse lui aussi en blanc). `sw.js` yada-v215, badge v620, `version.json` 620.
+
+**Validé :** `node --check` (**293 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014, addon 12/12) + balises `</head>`/`</body>`/`</html>` inchangées (3/5/3, identiques à HEAD) + **filet d'équilibre** (`node tests/equilibre-ecritures.mjs` : vente 1200=1200, achat 600=600 ✅) + **mesure Playwright avant / après** (dossier d'essai, journal VTE 2026-03, **3 écritures × 3 lignes**) :
+
+| Filet | Avant | Après |
+| --- | --- | --- |
+| **Fin d'écriture** (`sgj-ecr-end`) | `1px rgb(36,36,39)` | **`2px rgb(245,245,246)`** |
+| **Ligne de compte** | `1px rgb(36,36,39)` | `1px rgb(36,36,39)` (inchangé) |
+
++ **3/3 fins d'écriture** rendues en blanc 2px et **6/6 lignes de compte** en filet sombre 1px + **chroma identique avant / après** (35 éléments hérités, **aucune couleur introduite** — `#f5f5f6` est achromatique ; le résiduel porte sur des `border-top-color` invisibles de `.sg-title`/`.sg-menu`/`.sg-dd`) + **aucun défilement horizontal** + **aller-retour sur les 23 modules : 0 problème** (invariant v614 préservé) + **0 requête sortante**, **0 pageerror**, **0 console.error**. Badge → **v620**.
+
+---
+
+## 🟢 MAJ précédente — Consultation & Déclaration : en-têtes remis EN RETRAIT de la donnée + plus aucun texte en gras — v619
 **Quoi :** les deux points relevés en v617/v618 sont corrigés.
 1. **En-têtes de colonnes plus clairs que la donnée** — dans la **Consultation des comptes**, les `thead th` étaient rendus en `#f5f5f6` (luminance 0,914) alors que le libellé des lignes est à `#f2f2f3` (0,889) : **l'en-tête attirait l'œil davantage que l'écriture qu'il annonce**. Ils repassent en **`#a8a9ad`** → la hiérarchie devient **en-tête 7,97:1 < n° de compte 16,85 < libellé 18,77 < montant 21**, et l'en-tête reste **au-dessus du seuil AAA** pour du petit texte (aucune perte de lisibilité, la luminosité gagnée en v618 sur la donnée est intacte — mois sans écriture toujours à 5,90).
 2. **Textes en gras résiduels** — règle permanente de l'utilisateur : **aucun texte en gras, italique ou souligné**. **9 éléments** hérités des v594/v595 restaient en **poids 600** et repassent en **400** : **Consultation** (bandeau-titre, mois actif, journal actif, total du pied) et **Déclaration** (titre du module, numéro d'étape, bandeau CA3, lignes de sous-total / total, titres de carte). **Aucune hiérarchie n'est perdue** : chacun portait **déjà** un autre signal (serif contre mono, taille, pastille inversée fond clair / texte noir) — le gras était redondant. **Exception conservée : le lien impots.gouv.fr reste souligné** (voulu depuis la v613 — c'est ce qui le fait reconnaître comme un lien).
