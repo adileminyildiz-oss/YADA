@@ -11097,7 +11097,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v621';
+    b.textContent='YADA · v622';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -34325,6 +34325,321 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       var _r=window.render; window.render=function(){ var v=_r.apply(this,arguments); inject(); return v; };
     }
   }catch(e){}
+})();
+</script>
+<script id="yada-addon-saisie-noir">
+/* ============================================================
+   PAGE DE SAISIE — NOIR UNI, AUCUNE COULEUR
+   Demande : « la couleur noir uni pour toute la page, aucune autre couleur parasite ».
+   Constat avant correctif : 303 signatures chromatiques sur #ec-overlay, toutes
+   héritées de l'habillage « bleu nuit » (yada-addon91 / ec-noir-mod, v91) —
+   bleu #1e90ff / #5ab0ff, cyan #2fe6ff, dégradés #0e2340→#0a1a30, verts
+   d'équilibre, oranges et rouges d'alerte.
+   La page entière passe aux jetons « Registre » N&B, strictement achromatiques :
+     fond #000 · panneaux #0b0b0c · en-têtes #121214 · filets #242427 / #35353a
+     gris #8b8b90 / #a8a9ad / #cfd0d3 · encre #e6e6e8 / #f2f2f3 / #f5f5f6 / #fff
+   AUCUNE distinction n'est perdue : ce que la couleur portait est repris par la
+   FORME — écriture soldée = filet BLANC PLEIN, non soldée = filet BLANC TIRETÉ
+   (le rouge de la v267 disparaît, l'avertissement reste lisible au trait et au texte).
+   Spécificité : préfixe « html body:not(#_yz) #ec-overlay » = DEUX ID (2,x,x),
+   qui bat la couche globale yada-addon-registre-unify (v609) à (1,4,3) et toutes
+   les couches de l'éditeur (.ec-sage … à (0,2,0)).
+   100% ADDITIF & CSS-ONLY — aucune logique de saisie modifiée.
+   ============================================================ */
+(function(){
+  var U  = 'html body:not(#_yz) #ec-overlay ';   /* l'éditeur */
+  var UO = 'html body:not(#_yz) #ec-overlay';    /* le voile lui-même */
+  var B  = 'html body:not(#_yz) ';               /* surfaces greffées sur <body> */
+
+  var BG='#000', PANEL='#0b0b0c', HEAD='#121214', LINE='#242427', LINE2='#35353a',
+      MUT='#8b8b90', MUT2='#a8a9ad', MUT3='#cfd0d3',
+      INK='#e6e6e8', INK2='#f2f2f3', INK3='#f5f5f6', MAX='#fff',
+      HOVER='#1c1c20', SEL='#1a1a1e';
+
+  var R = [];
+  function r(sel, css){ R.push(sel+'{'+css+'}'); }
+
+  /* ---------- le voile et la fenêtre ---------- */
+  r(UO, 'background:rgba(0,0,0,.72)!important');
+  r(U+'.ec-win', 'border:1px solid '+LINE+'!important;box-shadow:0 30px 80px rgba(0,0,0,.8)!important');
+  r(U+'.ec-sage', 'background:'+BG+'!important;background-image:none!important;color:'+INK+'!important');
+
+  /* ---------- barre de titre + contrôles de fenêtre ---------- */
+  r(U+'.ec-titlebar', 'background:'+HEAD+'!important;background-image:none!important;color:'+INK3+'!important;'
+                    + 'border-bottom:1px solid '+LINE+'!important');
+  r(U+'.ec-titlebar span,'+U+'.ec-titlebar b', 'color:'+INK3+'!important;-webkit-text-fill-color:'+INK3+'!important');
+  r(U+'.ec-winbtn i,'+U+'.wm-ctrls,'+U+'.wm-b',
+    'color:'+MUT3+'!important;-webkit-text-fill-color:'+MUT3+'!important;border-color:'+LINE2+'!important');
+  r(U+'.ec-winbtn i.x', 'color:'+INK3+'!important;-webkit-text-fill-color:'+INK3+'!important');
+  r(U+'.wm-resize', 'background-image:linear-gradient(135deg,transparent 40%,rgba(245,245,246,.45) 41%,transparent 60%)!important');
+
+  /* ---------- barres d'outils (menus, traitements, filtre, lettrage) ---------- */
+  r(U+'.ec-menubar,'+U+'.ec-trtbar,'+U+'.ec-filtbar,'+U+'.ec-toolbar,'+U+'.ec-letbar,'+U+'.ec-newbar',
+    'background:'+PANEL+'!important;background-image:none!important;'
+    + 'border-color:'+LINE+'!important;box-shadow:none!important');
+  /* barres décoratives masquées depuis la v91 : neutralisées pour ne laisser aucune teinte */
+  r(U+'.ec-menubar span,'+U+'.ec-toolbar span',
+    'color:'+MUT+'!important;-webkit-text-fill-color:'+MUT+'!important');
+  /* menu déroulant « Traitements » (invisible au repos, s'ouvre au clic) */
+  r(U+'.ec-trt-dd', 'background:'+PANEL+'!important;background-image:none!important;'
+                  + 'border:1px solid '+LINE2+'!important;box-shadow:0 14px 36px rgba(0,0,0,.7)!important');
+  r(U+'.ec-trt-dd button', 'background:transparent!important;background-image:none!important;'
+                         + 'color:'+INK3+'!important;-webkit-text-fill-color:'+INK3+'!important;border-color:'+LINE2+'!important');
+  r(U+'.ec-trt-dd button:hover', 'background:'+HOVER+'!important');
+  r(U+'.ec-flbl,'+U+'.ec-lhint,'+U+'.ec-newbar label',
+    'color:'+MUT+'!important;-webkit-text-fill-color:'+MUT+'!important');
+  r(U+'.ec-llbl,'+U+'.ec-newbar b', 'color:'+MUT3+'!important;-webkit-text-fill-color:'+MUT3+'!important');
+  /* boutons de barre : contour sobre, aucun aplat coloré */
+  r(U+'.ec-trt-btn,'+U+'.ec-flbtn,'+U+'.ec-lbtn,'+U+'.ec-bt,'+U+'.ec-newbar .ec-bt,'+U+'.ec-newbar select,'+U+'.ec-newbar input',
+    'background:'+BG+'!important;background-image:none!important;border:1px solid '+LINE2+'!important;'
+    + 'color:'+INK3+'!important;-webkit-text-fill-color:'+INK3+'!important;box-shadow:none!important');
+  r(U+'.ec-trt-btn:hover,'+U+'.ec-flbtn:hover,'+U+'.ec-lbtn:hover,'+U+'.ec-bt:hover',
+    'background:'+HOVER+'!important;filter:none!important');
+  r(U+'.ec-bt-solde,'+U+'.ec-newbar .ec-bt-solde',
+    'background:'+INK3+'!important;background-image:none!important;color:#000!important;'
+    + '-webkit-text-fill-color:#000!important;border-color:'+INK3+'!important');
+  r(U+'.ec-flinp', 'background:'+BG+'!important;border:1px solid '+LINE2+'!important;color:'+INK2+'!important');
+
+  /* ---------- grille ---------- */
+  r(U+'.ec-table,'+U+'.ec-table thead,'+U+'.ec-table tbody,'+U+'.ec-table tr',
+    'border-color:'+LINE+'!important');
+  r(U+'.ec-table thead th',
+    'background:'+HEAD+'!important;background-image:none!important;color:'+MUT2+'!important;'
+    + '-webkit-text-fill-color:'+MUT2+'!important;border-color:'+LINE+'!important');
+  r(U+'.ec-table tbody tr.ec-r td',
+    'border-color:'+LINE+'!important;color:'+INK+'!important;-webkit-text-fill-color:'+INK+'!important');
+  r(U+'.ec-table tbody tr.ec-r.ec-other td',
+    'background:transparent!important;color:'+MUT2+'!important;-webkit-text-fill-color:'+MUT2+'!important');
+  /* TOUTES LES LIGNES SONT IDENTIQUES : la ligne du compte consulté (.ec-mine)
+     ne se distingue plus par un fond ni par une encre plus claire — seule la
+     ligne SÉLECTIONNÉE (celle où l'on saisit) se démarque, plus bas. */
+  r(U+'.ec-table tbody tr.ec-r.ec-mine,'+U+'.ec-table tbody tr.ec-r.ec-other', 'background:transparent!important');
+  r(U+'.ec-table tbody tr.ec-r.ec-mine td,'+U+'.ec-table tbody tr.ec-r.ec-other td',
+    'background:transparent!important;color:'+INK+'!important;-webkit-text-fill-color:'+INK+'!important');
+  r(U+'.ec-table tbody tr.ec-r:hover td', 'background:'+HOVER+'!important');
+  /* colonnes autrefois bleues ou rouges */
+  r(U+'.ec-jrn,'+U+'.ec-lettre', 'color:'+MUT3+'!important;-webkit-text-fill-color:'+MUT3+'!important');
+  r(U+'.ec-solde', 'color:'+INK2+'!important;-webkit-text-fill-color:'+INK2+'!important');
+  r(U+'.ec-datetxt', 'color:'+MUT+'!important;-webkit-text-fill-color:'+MUT+'!important');
+  r(U+'.ec-r.ec-mine .ec-datetxt', 'color:'+MUT+'!important;-webkit-text-fill-color:'+MUT+'!important');
+  r(U+'.ec-ro', 'color:'+MUT2+'!important;-webkit-text-fill-color:'+MUT2+'!important');
+  r(U+'.ec-del', 'background:'+BG+'!important;color:'+MUT3+'!important;border-color:'+LINE2+'!important');
+  /* champs de saisie : plats, transparents (carreaux de la v621) */
+  r(U+'.ec-table tbody tr.ec-r input.ec-i',
+    'color:'+INK+'!important;-webkit-text-fill-color:'+INK+'!important');
+  r(U+'.ec-table tbody tr.ec-r.ec-mine input.ec-i',
+    'color:'+INK+'!important;-webkit-text-fill-color:'+INK+'!important');
+  /* sélection multi-lignes : un repère blanc, aucun aplat bleu */
+  r(U+'.ec-table tbody tr.ec-rowsel td', 'background:'+HOVER+'!important');
+  r(U+'.ec-table tbody tr.ec-rowsel td:first-child', 'box-shadow:inset 3px 0 0 '+INK3+'!important');
+  r(U+'.ec-table tbody tr.ec-lsel td', 'background:'+HOVER+'!important');
+  r(U+'.ec-table tbody tr.ec-lsel td:first-child', 'box-shadow:inset 3px 0 0 '+INK3+'!important');
+
+  /* ---------- séparation des écritures : la FORME remplace la couleur ----------
+     soldée = filet BLANC PLEIN ; non soldée = filet BLANC TIRETÉ (c'était bleu / rouge). */
+  r(U+'.ec-redrow td', 'background:transparent!important;border-color:'+LINE+'!important');
+  r(U+'.ec-redrow.is-ok .ec-soldee', 'border-top:2px solid '+INK3+'!important');
+  r(U+'.ec-redrow.is-ko .ec-soldee', 'border-top:2px dashed '+INK3+'!important');
+  /* bandeaux d'écriture (masqués depuis la v218, neutralisés par sécurité) */
+  r(U+'.ec-ecr-sep td', 'background:'+PANEL+'!important;background-image:none!important;border-color:'+LINE+'!important');
+  r(U+'.ec-ecr-badge', 'background:'+INK3+'!important;color:#000!important;-webkit-text-fill-color:#000!important;border-color:'+INK3+'!important');
+  r(U+'.ec-ecr-state,'+U+'.ec-ecr-state.ok,'+U+'.ec-ecr-state.ko,'+U+'.ec-ecr-piece,'+U+'.ec-ecr-meta',
+    'color:'+MUT2+'!important;-webkit-text-fill-color:'+MUT2+'!important');
+  /* mentions d'équilibre : blanches, la forme du filet porte la distinction */
+  r(U+'.ec-okk,'+U+'.ec-koo', 'color:'+INK3+'!important;-webkit-text-fill-color:'+INK3+'!important');
+  r(U+'.ec-act td', 'background:'+PANEL+'!important;border-color:'+LINE+'!important');
+
+  /* ---------- pieds : totaux, champs du tiers, état ---------- */
+  r(U+'.ec-totbar', 'background:'+HEAD+'!important;background-image:none!important;color:'+INK3+'!important;'
+                  + 'border-top:1px solid '+LINE+'!important');
+  r(U+'.ec-fields', 'background:'+PANEL+'!important;background-image:none!important;border-top:1px solid '+LINE+'!important');
+  r(U+'.ec-fields label', 'color:'+MUT+'!important;-webkit-text-fill-color:'+MUT+'!important');
+  r(U+'.ec-fields input', 'background:'+BG+'!important;border:1px solid '+LINE2+'!important;'
+                        + 'color:'+INK2+'!important;-webkit-text-fill-color:'+INK2+'!important');
+  r(U+'.ec-status', 'background:#08080a!important;background-image:none!important;color:'+MUT+'!important;'
+                  + 'border-top:1px solid '+LINE+'!important');
+  r(U+'.ec-status span', 'color:'+MUT+'!important;-webkit-text-fill-color:'+MUT+'!important');
+  r(U+'.ec-brand', 'color:'+MUT2+'!important;-webkit-text-fill-color:'+MUT2+'!important');
+  r(U+'.ec-dot', 'background:'+INK3+'!important');
+
+  /* panneau « compte sélectionné » (v294) */
+  r(U+'#ec-accinfo', 'background:'+PANEL+'!important;border:1px solid '+LINE+'!important;'
+                   + 'color:'+MUT2+'!important;-webkit-text-fill-color:'+MUT2+'!important');
+  r(U+'#ec-accinfo *', 'color:'+MUT2+'!important;-webkit-text-fill-color:'+MUT2+'!important;border-color:'+LINE+'!important');
+  r(U+'#ec-accinfo .eca-v', 'color:'+INK2+'!important;-webkit-text-fill-color:'+INK2+'!important');
+
+  /* ---------- surfaces greffées sur <body> (hors #ec-overlay) ---------- */
+  /* menu clic droit */
+  r(B+'#ec-ctx', 'background:'+PANEL+'!important;border:1px solid '+LINE2+'!important;'
+               + 'box-shadow:0 14px 36px rgba(0,0,0,.7)!important');
+  r(B+'#ec-ctx button', 'color:'+INK3+'!important;-webkit-text-fill-color:'+INK3+'!important;background:transparent!important');
+  r(B+'#ec-ctx button:hover', 'background:'+HOVER+'!important');
+  /* liste de comptes (autocomplétion) */
+  r(B+'#ec-sugg', 'background:'+BG+'!important;border:1px solid '+LINE2+'!important;'
+                + 'box-shadow:0 14px 36px rgba(0,0,0,.7)!important');
+  r(B+'#ec-sugg *', 'color:'+INK+'!important;-webkit-text-fill-color:'+INK+'!important;border-color:'+LINE+'!important');
+  r(B+'#ec-sugg .act,'+B+'#ec-sugg div:hover',
+    'background:'+INK3+'!important;color:#000!important;-webkit-text-fill-color:#000!important');
+  /* panneau « paramètres de saisie » */
+  r(B+'.ec-param-drawer', 'background:'+PANEL+'!important;border-left:1px solid '+LINE+'!important;'
+                        + 'color:'+INK+'!important;box-shadow:-14px 0 40px rgba(0,0,0,.7)!important');
+  r(B+'.ec-param-drawer *', 'border-color:'+LINE2+'!important;background-image:none!important');
+  r(B+'.ec-pd-h', 'background:'+HEAD+'!important;background-image:none!important;'
+                + 'color:'+INK3+'!important;-webkit-text-fill-color:'+INK3+'!important;border-bottom:1px solid '+LINE+'!important');
+  r(B+'.ec-pd-b,'+B+'.ec-pd-f', 'background:'+PANEL+'!important;background-image:none!important');
+  r(B+'.ec-pd-f', 'border-top:1px solid '+LINE+'!important');
+  r(B+'.ec-pd-row,'+B+'.ec-pd-main',
+    'color:'+MUT3+'!important;-webkit-text-fill-color:'+MUT3+'!important;background:transparent!important');
+  r(B+'.ec-pd-hint', 'color:'+MUT+'!important;-webkit-text-fill-color:'+MUT+'!important');
+  r(B+'.ec-pd-sep', 'background:'+LINE+'!important;border-color:'+LINE+'!important');
+  r(B+'.ec-param-drawer button,'+B+'.ec-pd-x,'+B+'.ec-pd-cancel',
+    'background:'+BG+'!important;background-image:none!important;'
+    + 'color:'+INK3+'!important;-webkit-text-fill-color:'+INK3+'!important;border:1px solid '+LINE2+'!important');
+  r(B+'.ec-pd-ok', 'background:'+INK3+'!important;background-image:none!important;'
+                 + 'color:#000!important;-webkit-text-fill-color:#000!important;border:1px solid '+INK3+'!important');
+  r(B+'.ec-param-drawer button:hover', 'background:'+HOVER+'!important;filter:none!important');
+  r(B+'.ec-pd-ok:hover', 'background:'+MAX+'!important;color:#000!important');
+  /* champs du tiroir, cases à cocher comprises : accent-color sinon Chromium
+     rend la coche en BLEU système dès qu'elle est cochée. */
+  r(B+'.ec-param-drawer input,'+B+'.ec-param-drawer select,'+B+'.ec-param-drawer textarea',
+    'background:'+BG+'!important;background-image:none!important;border-color:'+LINE2+'!important;'
+    + 'color:'+INK2+'!important;-webkit-text-fill-color:'+INK2+'!important;accent-color:'+INK3+'!important');
+  r(B+'.ec-param-drawer input[type="checkbox"],'+B+'.ec-param-drawer input[type="radio"]',
+    'accent-color:'+INK3+'!important;filter:grayscale(1)!important');
+  /* même garde sur l'éditeur lui-même */
+  r(U+'input,'+U+'select,'+U+'textarea', 'accent-color:'+INK3+'!important');
+  r(U+'input[type="checkbox"],'+U+'input[type="radio"]', 'accent-color:'+INK3+'!important;filter:grayscale(1)!important');
+  /* options des listes déroulantes (rendues par le système, encre bleutée héritée) */
+  r(U+'option,'+B+'.ec-param-drawer option',
+    'background:'+PANEL+'!important;color:'+INK2+'!important;-webkit-text-fill-color:'+INK2+'!important');
+
+  /* ---------- LES TOTAUX ALIGNÉS SOUS LEURS COLONNES ----------
+     Le pied affichait ses trois nombres dans des blocs de 140px, sans rapport
+     avec les colonnes de la grille (128 / 128 / 132) : rien ne tombait sous
+     son montant. On cale la barre de totaux sur le colonnage, et on réserve
+     la gouttière de défilement pour que l'alignement TIENNE, que la grille
+     déborde ou non. */
+  var W_DB=128, W_CR=128, W_SD=132, W_L=28;
+  r(U+'.ec-tablewrap', 'scrollbar-gutter:stable!important');
+  r(U+'.ec-tablewrap::-webkit-scrollbar-track', 'background:'+BG);
+  r(U+'.ec-tablewrap::-webkit-scrollbar-thumb', 'background:'+LINE2+';border:2px solid '+BG);
+  r(U+'.ec-totbar', 'padding:6px 0 6px 3px!important;gap:0!important');
+  /* À droite on réserve la colonne L (28px) + la GOUTTIÈRE de défilement, dont
+     la largeur dépend du système (15px ici) : elle est MESURÉE à l'exécution
+     et publiée dans --ec-sbw, sinon les totaux tombent à côté de leur colonne. */
+  r(U+'.ec-totbar::after',
+    'content:"";display:block;flex:0 0 calc('+W_L+'px + var(--ec-sbw,15px));width:calc('+W_L+'px + var(--ec-sbw,15px))');
+  r(U+'.ec-totlbl', 'flex:1 1 auto!important;min-width:0!important;padding-left:0!important');
+  r(U+'.ec-totn', 'padding-right:3px!important;padding-left:3px!important;flex:0 0 auto!important;box-sizing:border-box!important');
+  r(U+'.ec-totn:nth-last-of-type(3)', 'width:'+W_DB+'px!important');   /* Débit  */
+  r(U+'.ec-totn:nth-last-of-type(2)', 'width:'+W_CR+'px!important');   /* Crédit */
+  r(U+'.ec-totn:nth-last-of-type(1)', 'width:'+W_SD+'px!important');   /* Solde  */
+
+  /* ---------- DÉBIT ≠ CRÉDIT, SANS COULEUR ----------
+     La distinction passe par la FORME et la VALEUR, jamais par la teinte :
+     • un filet de séparation plus marqué entre les deux colonnes (le « pli »
+       du registre papier, #4a4a50 contre #242427 partout ailleurs) ;
+     • un fond très légèrement relevé côté CRÉDIT (#0a0a0c contre #000). */
+  var PLI='#4a4a50', CRED_BG='#0e0e10';
+  r(U+'.ec-table thead th:nth-child(8),'+U+'.ec-table tbody tr.ec-r td:nth-child(8)',
+    'border-left:1px solid '+PLI+'!important');
+  r(U+'.ec-table tbody tr.ec-r td:nth-child(8)', 'background:'+CRED_BG+'!important');
+  r(U+'.ec-table tbody tr.ec-r:hover td:nth-child(8)', 'background:#222226!important');
+  /* le pied reprend le même pli, au même endroit */
+  r(U+'.ec-totn:nth-last-of-type(2)', 'border-left:1px solid '+PLI+'!important;background:'+CRED_BG+'!important');
+  /* la colonne Solde se démarque des deux (c'est un cumul, pas un mouvement) */
+  r(U+'.ec-table thead th:nth-child(9),'+U+'.ec-table tbody tr.ec-r td:nth-child(9),'+U+'.ec-totn:nth-last-of-type(1)',
+    'border-left:1px solid '+PLI+'!important');
+
+  /* ---------- LA CASE EN SAISIE : UN SURLIGNAGE DU MONTANT ----------
+     Le repère de saisie n'encadre plus la cellule (filet blanc intérieur de la
+     v621) : le champ occupant exactement le carreau, son fond devient une
+     BANDE GRISÉE — un passage de surligneur sur le montant saisi.
+     L'encre reste CLAIRE : inverser le fond en blanc masquait ce qu'on tape.
+     Seule la case sélectionnée change ; le reste de la page est inchangé.
+     Sélecteur identique à celui de `saisie-carreaux` (v621) mais SOURCE
+     POSTÉRIEURE → il prime sans surenchère de spécificité. */
+  var SURL='#2e2e33';
+  r(U+'.ec-sage .ec-table tbody tr.ec-r input.ec-i:focus',
+    'background:'+SURL+'!important;color:'+MAX+'!important;-webkit-text-fill-color:'+MAX+'!important;'
+    + 'box-shadow:none!important;border:0!important;border-radius:0!important;outline:0!important;'
+    + 'caret-color:'+MAX+'!important');
+  /* sélection du texte : bande plus claire, l'encre reste claire elle aussi
+     (le champ se sélectionne tout seul à la navigation clavier — une sélection
+     inversée masquerait la valeur au moment précis où on la lit). */
+  r(U+'.ec-sage .ec-table tbody tr.ec-r input.ec-i::selection',
+    'background:#4a4a50;color:'+MAX);
+  /* le survol reste discret : il annonce la case, il ne la surligne pas */
+  r(U+'.ec-sage .ec-table tbody tr.ec-r input.ec-i:hover:not(:focus)',
+    'background:#141417!important;box-shadow:none!important');
+
+  /* ---------- LA LIGNE SÉLECTIONNÉE ----------
+     La ligne où se trouve la case en cours de saisie est la SEULE à se
+     distinguer : fond relevé + un repère blanc en tête de ligne. */
+  r(U+'.ec-table tbody tr.ec-r.ec-rowfocus td', 'background:#141417!important');
+  r(U+'.ec-table tbody tr.ec-r.ec-rowfocus td:nth-child(8)', 'background:#1a1a1e!important');
+  r(U+'.ec-table tbody tr.ec-r.ec-rowfocus td:first-child', 'box-shadow:inset 3px 0 0 '+INK3+'!important');
+
+  var CSS = R.join('\n');
+
+  function inject(){
+    try{
+      if(document.getElementById('saisie-noir-mod')) return;
+      var st=document.createElement('style'); st.id='saisie-noir-mod';
+      st.textContent=CSS; document.head.appendChild(st);
+    }catch(e){}
+  }
+  inject();
+
+  /* --- largeur RÉELLE de la gouttière de défilement (dépend du système) --- */
+  function mesureGouttiere(){
+    try{
+      var w=document.querySelector('#ec-overlay .ec-tablewrap'); if(!w) return;
+      /* la fenêtre est masquée au premier rendu (ecRender précède l'affichage) :
+         offsetWidth vaut alors 0 et la mesure serait fausse. */
+      if(!w.offsetWidth) return;
+      var g=w.offsetWidth - w.clientWidth;
+      if(g>=0 && g<40) document.documentElement.style.setProperty('--ec-sbw', g+'px');
+    }catch(e){}
+  }
+
+  /* --- marquage de la LIGNE sélectionnée (celle de la case en saisie) --- */
+  function marqueLigne(el){
+    try{
+      var ov=document.getElementById('ec-overlay'); if(!ov) return;
+      ov.querySelectorAll('tr.ec-rowfocus').forEach(function(t){ t.classList.remove('ec-rowfocus'); });
+      if(!el) return;
+      var tr=el.closest ? el.closest('tr.ec-r') : null;
+      if(tr && ov.contains(tr)) tr.classList.add('ec-rowfocus');
+    }catch(e){}
+  }
+  document.addEventListener('focusin', function(ev){
+    var ov=document.getElementById('ec-overlay');
+    if(!ov || !ov.contains(ev.target)) return;
+    marqueLigne(ev.target);
+  }, true);
+  document.addEventListener('focusout', function(ev){
+    /* le re-rendu de l'éditeur reprend le focus : on ne débalise qu'à la sortie réelle */
+    setTimeout(function(){
+      var a=document.activeElement, ov=document.getElementById('ec-overlay');
+      if(!ov || !a || !ov.contains(a)) marqueLigne(null);
+    }, 0);
+  }, true);
+
+  function apres(){ inject(); mesureGouttiere();
+    /* la fenêtre s'affiche juste après ecRender : on remesure une fois posée */
+    setTimeout(mesureGouttiere, 60); setTimeout(mesureGouttiere, 300);
+    try{ marqueLigne(document.activeElement); }catch(e){} }
+  try{
+    if(typeof window.ecRender==='function'){
+      var _e=window.ecRender; window.ecRender=function(){ var v=_e.apply(this,arguments); apres(); return v; };
+    }
+    if(typeof window.render==='function'){
+      var _r=window.render; window.render=function(){ var v=_r.apply(this,arguments); apres(); return v; };
+    }
+  }catch(e){}
+  window.addEventListener('resize', mesureGouttiere);
+  setTimeout(mesureGouttiere, 400);
 })();
 </script>
 </body>
