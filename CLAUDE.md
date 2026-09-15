@@ -36,7 +36,29 @@
 
 ---
 
-## 🟢 Dernière mise à jour — Module DÉCLARATION (TVA) : comptes utilisés affichés ENTRE PARENTHÈSES derrière les libellés — v617
+## 🟢 Dernière mise à jour — Consultation des comptes : LUMINOSITÉ des écritures augmentée (toute l'échelle de gris remontée d'un cran) — v618
+**Quoi :** dans la **Consultation des comptes** (module `compta`, « Analyse — Centre de Contrôle »), les **écritures des comptes sont rendues plus lumineuses**. Mesure préalable : les **lignes elles-mêmes** étaient déjà claires (libellé 16,9:1, montants 18,8:1) — ce qui était sombre, c'était **toute l'échelle de gris autour**, au point que les **mois sans écriture tombaient à 2,73:1** (sous le seuil de lisibilité WCAG AA). L'échelle **entière** est donc remontée d'un cran, **hiérarchie conservée** (les en-têtes restent plus discrets que la donnée, la donnée plus discrète que les montants) :
+
+| Élément | Avant | Après | Contraste |
+| --- | --- | --- | --- |
+| Mois / journaux **sans écriture** | `#55565a` | `#8b8b90` | **2,73 → 5,90** |
+| En-têtes, sens D/C, pied, eyebrow | `#8b8b90` | `#a8a9ad` | 5,80 → **8,38** |
+| Rail des périodes & journaux, barre de menus | `#a8a9ad` | `#cfd0d3` | 8,52 → **12,97** |
+| **Numéro de compte**, flèches d'exercice | `#cfd0d3` | `#e6e6e8` | 13,62 → **16,85** |
+| **Libellé des lignes d'écriture** | `#e6e6e8` | `#f2f2f3` | 16,85 → **18,77** |
+| **Montants**, titre, totaux, marque | `#f2f2f3` | `#ffffff` | 18,77 → **21** |
+
+Les **filets de grille** sont remontés eux aussi (`#16161a` → `#242427`, `#242427` → `#2e2e33`) et le **survol de ligne** devient visible (`#121214` → `#1c1c20`). Les **pastilles actives** (mois / journal / onglet sélectionné) passent de `#f2f2f3` à **`#fff`**. **Aucune couleur ajoutée** (N&B strict — chroma identique avant/après), **aucune logique touchée**, **aucune écriture modifiée**.
+
+**Comment — nouvel addon `yada-addon-consult-lumiere` (100% ADDITIF & CSS-ONLY, injecté en DERNIER) :** `<style id="consult-lumiere-mod">` scopé **`html body:not(#_yz) .sg-app.yada-cregi …`** — **même spécificité** que `consult-registre-mod` (v595) mais **source postérieure**, donc il prime sans surenchère de sélecteur ; ré-injecté après chaque `render` (idempotent par l'id). Les sélecteurs repris sont ceux de la v595 (fenêtre, masthead, `.sg-menu`, `.sg-left`/`.sg-col`/`.sg-colh`/`.sg-jrnh`, `.sg-peritem`/`.sg-jrnitem` (+ `.zero`, `.on`), `.sg-tabs`/`.sg-tab`, `thead th`, `tbody td`, `td:first-child`, `td.r`/`.sg-amt`, `.sg-sens`, `.sg-status`, `.sg-brand`) — un seul cran d'écart sur chacun. `sw.js` yada-v213, badge v618, `version.json` 618.
+
+**Validé :** `node --check` (**291 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (19388/19388) + balises `</head>`/`</body>`/`</html>` inchangées + **filet d'équilibre** (`node tests/equilibre-ecritures.mjs` : vente 1200=1200, achat 600=600 ✅) + **mesure de contraste Playwright avant / après** (dossier d'essai, 12 écritures sur 2026-03 : mois sans écriture **2,73 → 5,90**, journaux **8,52 → 12,97**, pied **5,80 → 8,38**, n° de compte **13,62 → 16,85**, libellé **16,85 → 18,77**, montants **18,77 → 21**) + **chroma identique avant / après** (mêmes 6 éléments hérités, aucune couleur introduite) + **aucun gras/italique/souligné ajouté** (les deux `font-weight:600` relevés sur les pastilles actives datent de la v595) + **aucun défilement horizontal** + **aller-retour sur les 23 modules : 0 problème** (invariant v614 préservé) + **0 requête sortante**, **0 pageerror**, **0 console.error**. Badge → **v618**.
+
+**Constaté et NON corrigé (hors périmètre, antérieur) :** les **en-têtes de colonnes** de la grille sont rendus en `#f5f5f6` (0,914) — donc **plus clairs que la donnée qu'ils annoncent** — parce qu'une règle globale (`#main table thead th{…!important}`, `yada-addon-registre-unify` v609) l'emporte sur celle du module. Le comportement est **identique avant et après** cette mise à jour ; le corriger consisterait à **assombrir** les en-têtes, soit l'inverse de la demande.
+
+---
+
+## 🟢 MAJ précédente — Module DÉCLARATION (TVA) : comptes utilisés affichés ENTRE PARENTHÈSES derrière les libellés — v617
 **Quoi :** dans le **module Déclaration** (`tva`), chaque libellé indique désormais **le ou les comptes qu'il utilise, entre parenthèses**, juste derrière le texte — on lit d'où vient le montant sans quitter la ligne. Couvre **tout le module** :
 - **Cadres CA3** — 01 Ventes, prestations de services **(classe 7)** · 08/09/9B Taux 20 / 10 / 5,5 % **(445710000 / 445712000 / 445713000**, dérivés de `tvaCompteVente`**)** · Autres ventes taxables **(4457x)** · 16 Total TVA collectée **(4457x)** · 19 Sur immobilisations **(44562x)** · 20 Sur autres biens et services **(4456x hors 44562 et 44567)** · 22 Crédit de TVA antérieur **(445670000)** · 23 Total TVA déductible **(4456x hors 44567)** · 28 TVA nette due **(445510000)** / 27 Crédit à reporter **(445670000)**.
 - **Contrôle des montants** — TVA collectée **(4457x)** · déductible biens & services **(4456x hors 44562 et 44567)** · déductible immobilisations **(44562x)** · Concordance des ventes **(classe 7)**.

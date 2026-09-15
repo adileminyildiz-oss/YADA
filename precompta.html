@@ -11097,7 +11097,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v617';
+    b.textContent='YADA · v618';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -34050,6 +34050,83 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     +'.yada-sortie-btn:hover{background:#f5f5f6;color:#000}'
     +'html body:not(#_yz) .yada-sortie-btn{font-family:ui-monospace,Menlo,Consolas,monospace!important;font-weight:400!important;font-style:normal!important;text-decoration:none!important}';
     (document.head||document.documentElement).appendChild(st); }catch(e){}
+})();
+</script>
+<script id="yada-addon-consult-lumiere">
+/* v618 — CONSULTATION DES COMPTES : luminosité des écritures augmentée.
+   Les lignes d'écriture étaient déjà claires (libellé 16,9:1, montants 18,8:1) mais
+   toute l'échelle de gris AUTOUR restait sombre — au point que les mois sans écriture
+   tombaient à 2,73:1 (sous le seuil de lisibilité). Cet addon remonte l'échelle
+   ENTIÈRE d'un cran, en gardant la hiérarchie du Registre (les en-têtes restent plus
+   discrets que la donnée, la donnée reste plus discrète que les montants) :
+     #55565a → #8b8b90   mois / journaux sans écriture      2,73 → 5,8
+     #8b8b90 → #a8a9ad   en-têtes, sens D/C, pied, eyebrow  5,8  → 8,5
+     #a8a9ad → #cfd0d3   rail des périodes & journaux, menu 8,5  → 13,6
+     #cfd0d3 → #e6e6e8   numéro de compte, flèches          13,6 → 16,9
+     #e6e6e8 → #f2f2f3   libellé des lignes                 16,9 → 18,8
+     #f2f2f3 → #ffffff   montants, titre, totaux, marque    18,8 → 21
+   Les filets de grille sont remontés eux aussi (#16161a → #242427, #242427 → #2e2e33)
+   et le survol de ligne est rendu visible. 100% ADDITIF & CSS-ONLY : injecté APRÈS
+   `consult-registre-mod` (v595) → à spécificité égale, la source la plus tardive prime.
+   Aucune ligne de logique touchée, aucune couleur introduite (N&B strict). */
+(function(){
+  if(typeof window==='undefined') return;
+  if(window.__consultLumiere) return; window.__consultLumiere=true;
+
+  var P = 'html body:not(#_yz) .sg-app.yada-cregi ';
+  var CSS = [
+    /* fenêtre & filets */
+    P+"{color:#f7f7f8!important;border-color:#2e2e33!important}",
+    P+".sg-title{color:#fff!important;border-bottom-color:#2e2e33!important}",
+    P+".sg-title::before{color:#a8a9ad!important}",
+    /* exercice + fenêtre */
+    P+".sg-exolbl{color:#a8a9ad!important}",
+    P+".sg-exoarr{border-color:#4a4b51!important;color:#e6e6e8!important}",
+    P+".sg-exoarr.sg-edlink{border-color:#4a4b51!important;color:#a8a9ad!important}",
+    P+".sg-win,"+P+".sg-wbtn{color:#a8a9ad!important}",
+    /* barre de menus */
+    P+".sg-menu{border-bottom-color:#2e2e33!important}",
+    P+".sg-menu>.mi,"+P+".sg-menu>span{color:#cfd0d3!important}",
+    P+".sg-menu>.mi:hover{background:#1c1c20!important;color:#fff!important}",
+    /* colonnes périodes / journaux */
+    P+".sg-left{border-right-color:#2e2e33!important}",
+    P+".sg-col{border-bottom-color:#2e2e33!important}",
+    P+".sg-colh,"+P+".sg-jrnh{color:#a8a9ad!important;border-bottom-color:#2e2e33!important}",
+    P+".sg-peritem,"+P+".sg-jrnitem{color:#cfd0d3!important;border-bottom-color:#242427!important}",
+    P+".sg-peritem:hover,"+P+".sg-jrnitem:hover{background:#1c1c20!important;color:#fff!important}",
+    P+".sg-peritem.on,"+P+".sg-jrnitem.on{background:#fff!important;color:#000!important}",
+    /* mois / journaux sans écriture : lisibles, mais toujours en retrait */
+    P+".sg-peritem.zero,"+P+".sg-jrnitem.zero{color:#8b8b90!important}",
+    P+".sg-peritem.zero.on,"+P+".sg-jrnitem.zero.on{color:#000!important}",
+    P+".sg-caret{color:#a8a9ad!important}",
+    P+".sg-mois-nav{border-bottom-color:#2e2e33!important}",
+    /* onglets de nature */
+    P+".sg-tabs{border-bottom-color:#2e2e33!important}",
+    P+".sg-tab{color:#a8a9ad!important;border-right-color:#2e2e33!important}",
+    P+".sg-tab:hover{color:#fff!important;background:#1c1c20!important}",
+    P+".sg-tab.on{background:#fff!important;color:#000!important;border-bottom-color:#fff!important}",
+    /* LES ÉCRITURES : en-têtes, lignes, comptes, montants */
+    P+"thead th{color:#a8a9ad!important;border-bottom-color:#2e2e33!important}",
+    P+"tbody td{color:#f2f2f3!important;border-bottom-color:#242427!important}",
+    P+"tbody tr:hover td{background:#1c1c20!important}",
+    P+"tbody tr.on td{background:#26262b!important}",
+    P+".sg-tier-code,"+P+"td:first-child{color:#e6e6e8!important}",
+    P+".sg-amt,"+P+"td.r,"+P+"td.sg-amt{color:#fff!important}",
+    P+".sg-sens{color:#a8a9ad!important}",
+    /* pied de fenêtre */
+    P+".sg-status{color:#a8a9ad!important;border-top-color:#2e2e33!important}",
+    P+".sg-status b{color:#fff!important}",
+    P+".sg-brand{color:#fff!important}",
+    P+".sg-tabnav{color:#a8a9ad!important}"
+  ].join("\n");
+
+  function injectCSS(){
+    if(document.getElementById('consult-lumiere-mod')) return;
+    var st=document.createElement('style'); st.id='consult-lumiere-mod'; st.textContent=CSS;
+    (document.head||document.documentElement).appendChild(st);
+  }
+  injectCSS();
+  try{ var _r=window.render; if(typeof _r==='function'){ window.render=function(){ var v=_r.apply(this,arguments); injectCSS(); return v; }; } }catch(e){}
 })();
 </script>
 </body>
