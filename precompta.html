@@ -11097,7 +11097,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v622';
+    b.textContent='YADA · v623';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -34640,6 +34640,378 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
   }catch(e){}
   window.addEventListener('resize', mesureGouttiere);
   setTimeout(mesureGouttiere, 400);
+})();
+</script>
+<script id="yada-addon-saisie-barre">
+/* ============================================================
+   PAGE DE SAISIE — BARRE DE MENUS (façon bande du haut de la Consultation)
+   Demande : une barre avec les fonctionnalités, comme la bande du haut de la
+   page de Consultation, mais SANS les mêmes entrées.
+   La Consultation propose : Fichier · Exercice · Journal · Compte · Balances ·
+   Paramètres · Utilitaires · Navigation · Modules · Aide.
+   La saisie propose SES PROPRES commandes, celles de l'éditeur d'écritures :
+     Écriture · Journal · Compte · Lettrage · Affichage · Traitements · Aide
+   Chaque entrée n'appelle QUE des fonctions DÉJÀ existantes de l'éditeur —
+   aucune logique comptable n'est écrite ici.
+   La barre remplace le bandeau « Traitements » isolé (masqué, son entrée est
+   reprise dans le menu Traitements) et l'ancienne barre décorative
+   `.ec-menubar` (masquée depuis la v91, jamais fonctionnelle).
+   100% ADDITIF — noir uni, mono, aucun gras.
+   ============================================================ */
+(function(){
+  var U = 'html body:not(#_yz) #ec-overlay ';
+  var BG='#000', PANEL='#0b0b0c', HEAD='#121214', LINE='#242427', LINE2='#35353a',
+      MUT='#8b8b90', MUT3='#cfd0d3', INK='#f5f5f6', HOVER='#1c1c20';
+
+  /* ---------- contexte : sur quelle écriture / ligne agit-on ? ---------- */
+  function ov(){ return document.getElementById('ec-overlay'); }
+  function courante(){
+    var o=ov(); if(!o) return null;
+    var tr=null, a=document.activeElement;
+    if(a && a.closest) tr=a.closest('tr.ec-r');
+    if(tr && !o.contains(tr)) tr=null;
+    if(!tr) tr=o.querySelector('tr.ec-rowfocus');
+    if(!tr){ var rows=o.querySelectorAll('tr.ec-r'); tr=rows.length?rows[rows.length-1]:null; }
+    if(!tr) return null;
+    var li=parseInt(tr.getAttribute('data-li'),10);
+    return { eid:tr.getAttribute('data-eid'), li:isNaN(li)?0:li, tr:tr };
+  }
+  function ecrCourante(){
+    var c=courante(); if(!c||!c.eid) return null;
+    try{ return (db.ecritures||[]).filter(function(e){ return e.id===c.eid; })[0]||null; }catch(e){ return null; }
+  }
+  function moisCourant(){
+    var e=ecrCourante();
+    try{ if(e && e.date && typeof ym==='function') return ym(e.date); }catch(_){}
+    return '';
+  }
+  function compteCourant(){
+    var c=courante();
+    if(c){ var i=c.tr.querySelector('input.ec-cpt'); if(i && i.value.trim()) return i.value.trim(); }
+    return window.ecCode||'';
+  }
+  function dire(m){ try{ if(typeof toast==='function') toast(m); }catch(e){} }
+  function nbSel(){ try{ return (typeof window.ecSelectedLineRefs==='function')?window.ecSelectedLineRefs().length:0; }catch(e){ return 0; } }
+
+  /* ---------- actions (toutes déléguées à l'existant) ---------- */
+  var A = {
+    nouvelle:   function(){ if(window.ecAjouterEcriture) window.ecAjouterEcriture(); else dire('Indisponible'); },
+    insLigne:   function(){ var c=courante(); if(!c) return dire('Aucune ligne'); if(window.ecInsertLine) window.ecInsertLine(c.eid,c.li); },
+    supLigne:   function(){
+      if(nbSel() && window.ecSupprimerLignesSelection) return window.ecSupprimerLignesSelection();
+      var c=courante(); if(!c) return dire('Aucune ligne'); if(typeof ecDelLine==='function') ecDelLine(c.eid,c.li); },
+    solder:     function(){ var c=courante(); if(!c) return dire('Aucune écriture'); if(typeof ecSolder==='function') ecSolder(c.eid); },
+    attente:    function(){ var c=courante(); if(!c) return dire('Aucune écriture'); if(typeof ecCompteAttente==='function') ecCompteAttente(c.eid); },
+    journal:    function(j){ var m=moisCourant();
+                  if(window.ouvrirJournalEditable) window.ouvrirJournalEditable(j, m); else dire('Indisponible'); },
+    operation:  function(){ if(window.ecNouvelleOperation) window.ecNouvelleOperation('OD'); else dire('Indisponible'); },
+    grandLivre: function(){ var c=compteCourant(); if(!c) return dire('Aucun compte sur la ligne');
+                  if(typeof ouvrirCompteLecture==='function') ouvrirCompteLecture(c); },
+    lettrer:    function(){ if(!nbSel() && !(window.ecSel||[]).length) return dire('Sélectionnez d\'abord les lignes à rapprocher');
+                  if(window.ecLettrerSel) window.ecLettrerSel(); },
+    delettrer:  function(){ if(window.ecDelettrerSel) window.ecDelettrerSel(); },
+    viderSel:   function(){ window.ecSel=[]; if(typeof ecRender==='function') ecRender(); dire('Sélection vidée'); },
+    filtrer:    function(){ var i=document.getElementById('ec-filtre-inp'); if(i){ i.focus(); i.select&&i.select(); } else dire('Filtre indisponible'); },
+    tri:        function(){ if(window.ecToggleSort) window.ecToggleSort(); },
+    plein:      function(){ if(window.wmToggle) window.wmToggle('ec'); else dire('Indisponible'); },
+    autreEcran: function(){ if(window.wmPop) window.wmPop('ec'); else dire('Indisponible'); },
+    parametres: function(){ if(window.ecOuvrirParamSaisie) window.ecOuvrirParamSaisie(); else dire('Indisponible'); },
+    aide:       function(){ aideModale(); }
+  };
+
+  function aideModale(){
+    var c=document.getElementById('modal-c'), m=document.getElementById('modal');
+    if(!c||!m) return dire('Entrée : champ suivant · ↓ ligne suivante · Tab : colonne · clic droit : insérer / supprimer');
+    var L=[['Entrée','Champ suivant ; en fin d\'écriture soldée, passe à une nouvelle écriture'],
+           ['Flèche bas / haut','Ligne suivante / précédente (ou choix du compte si la liste est ouverte)'],
+           ['Tab / Maj+Tab','Colonne suivante / précédente'],
+           ['Flèche droite / gauche','Champ suivant / précédent au bord du champ'],
+           ['Clic droit','Insérer une ligne · Supprimer la ligne ou la sélection'],
+           ['Glisser / Maj+clic','Sélectionner plusieurs lignes (puis Ctrl+C / Ctrl+V)'],
+           ['Échap','Annuler la sélection en cours']];
+    c.innerHTML='<div class="modal-h"><h3>Raccourcis de saisie</h3><button class="x" onclick="closeModal()">×</button></div>'
+      +'<div class="modal-b"><table style="width:100%;border-collapse:collapse;font-size:12.5px">'
+      + L.map(function(x){ return '<tr><td style="padding:7px 12px 7px 0;white-space:nowrap;font-family:ui-monospace,Menlo,Consolas,monospace;color:#a8a9ad;vertical-align:top">'
+          + x[0] + '</td><td style="padding:7px 0">' + x[1] + '</td></tr>'; }).join('')
+      +'</table></div>';
+    m.classList.add('show');
+    ecmClose();
+  }
+
+  /* ---------- structure de la barre ---------- */
+  function JRN(){
+    try{ if(db.journaux && db.journaux.length)
+      return db.journaux.map(function(j){ return [j.jrn||j.code, (j.code||'')+' — '+(j.libelle||'')]; });
+    }catch(e){}
+    return [['ACH','HA — ACHATS'],['VTE','VT — VENTES'],['BQ','BQ — BANQUE'],['OD','OD — OPERATIONS DIVERSES']];
+  }
+  function MENUS(){
+    return [
+      ['journal','Journal', [
+        ['Nouvelle écriture','nouvelle'], ['Insérer une ligne','insLigne'],
+        [nbSel()>1?('Supprimer les '+nbSel()+' lignes sélectionnées'):'Supprimer la ligne','supLigne'],
+        ['-'],
+        ['Solder l\'écriture','solder'], ['Solder en compte d\'attente 471','attente'],
+        ['-'], ['Saisir une opération…','operation'], ['-']
+      ].concat(JRN().map(function(j){ return [j[1],'journal:'+j[0]]; }))],
+      ['compte','Compte', [
+        ['Grand-livre du compte (lecture seule)','grandLivre']
+      ]],
+      ['lettrage','Lettrage', [
+        ['Lettrer la sélection','lettrer'], ['Délettrer la sélection','delettrer'],
+        ['-'], ['Vider la sélection','viderSel']
+      ]],
+      ['affichage','Affichage', [
+        ['Filtrer les lignes…','filtrer'], ['Inverser le tri','tri'],
+        ['-'], ['Plein écran / fenêtre','plein'], ['Propager sur un autre écran','autreEcran']
+      ]],
+      ['traitements','Traitements', [
+        ['Paramètres de saisie…','parametres']
+      ]],
+      ['aide','Aide', [
+        ['Raccourcis de saisie…','aide']
+      ]]
+    ];
+  }
+
+  function esc(t){ return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+
+  window.ecmClose=function(){
+    var o=ov(); if(!o) return;
+    o.querySelectorAll('.ecm-dd.open').forEach(function(d){ d.classList.remove('open'); });
+    o.querySelectorAll('.ecm-mi.on').forEach(function(x){ x.classList.remove('on'); });
+  };
+  window.ecmToggle=function(id, el){
+    var o=ov(); if(!o) return;
+    var d=o.querySelector('.ecm-dd[data-m="'+id+'"]');
+    var ouvert=d && d.classList.contains('open');
+    window.ecmClose();
+    if(d && !ouvert){ d.classList.add('open'); if(el) el.classList.add('on'); }
+  };
+  window.ecmAction=function(a){
+    window.ecmClose();
+    var p=String(a).split(':');
+    var f=A[p[0]]; if(typeof f==='function') f(p[1]);
+  };
+
+  function build(){
+    var o=ov(); if(!o) return;
+    var sage=o.querySelector('.ec-sage'); if(!sage) return;
+    if(sage.querySelector('.ecm-bar')) return;                 /* idempotent */
+    var tb=sage.querySelector('.ec-titlebar'); if(!tb) return;
+    var bar=document.createElement('div'); bar.className='ecm-bar';
+    bar.innerHTML = MENUS().map(function(m){
+      var items = m[2].map(function(it){
+        if(it[0]==='-') return '<div class="ecm-sep"></div>';
+        return '<button type="button" onclick="event.stopPropagation();ecmAction(\''+it[1]+'\')">'+esc(it[0])+'</button>';
+      }).join('');
+      return '<span class="ecm-mi" onclick="event.stopPropagation();ecmToggle(\''+m[0]+'\',this)">'+esc(m[1])
+           + '<div class="ecm-dd" data-m="'+m[0]+'">'+items+'</div></span>';
+    }).join('');
+    tb.insertAdjacentElement('afterend', bar);
+
+    /* ---------- REGROUPEMENT : les bandes Filtre et Lettrage entrent DANS la barre ----------
+       Elles occupaient chacune une ligne pleine largeur au-dessus de la grille ;
+       elles deviennent deux groupes alignés à droite de la même bande. Les
+       éléments sont DÉPLACÉS tels quels : leurs handlers voyagent avec eux,
+       aucune fonction n'est réécrite. */
+    var sp=document.createElement('span'); sp.className='ecm-spacer';
+    bar.appendChild(sp);
+    var lb=sage.querySelector('.ec-letbar'); if(lb) bar.appendChild(lb);
+    var fb=sage.querySelector('.ec-filtbar'); if(fb) bar.appendChild(fb);
+  }
+
+  /* fermeture au clic extérieur et à Échap */
+  document.addEventListener('click', function(ev){
+    var o=ov(); if(!o) return;
+    if(!ev.target.closest || !ev.target.closest('.ecm-bar')) window.ecmClose();
+  }, true);
+  document.addEventListener('keydown', function(ev){ if(ev.key==='Escape') window.ecmClose(); }, true);
+
+  /* ---------- habillage (noir uni, mono, aucun gras) ---------- */
+  var CSS = [
+    U+'.ecm-bar{display:flex;gap:0;align-items:stretch;background:'+HEAD+';border-bottom:1px solid '+LINE
+      +';font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;position:relative;z-index:30}',
+    U+'.ecm-mi{position:relative;padding:7px 13px;color:'+MUT3+';cursor:pointer;white-space:nowrap;'
+      +'border-right:1px solid '+LINE+';font-weight:400;letter-spacing:.04em}',
+    U+'.ecm-mi:hover{background:transparent;color:'+INK+'}',
+    U+'.ecm-mi.on{background:transparent;color:'+INK+'}',
+    U+'.ecm-mi.on::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:1px;background:'+INK+'}',
+    U+'.ecm-dd{display:none;position:absolute;left:-1px;top:100%;min-width:250px;background:'+PANEL
+      +';border:1px solid '+LINE2+';box-shadow:0 14px 36px rgba(0,0,0,.72);padding:4px;z-index:40}',
+    U+'.ecm-dd.open{display:block}',
+    U+'.ecm-dd button{display:block;width:100%;text-align:left;background:transparent;border:0;'
+      +'color:'+INK+';font:inherit;font-size:11.5px;padding:7px 11px;cursor:pointer;white-space:nowrap;'
+      +'letter-spacing:.02em;font-weight:400}',
+    U+'.ecm-dd button:hover{background:'+HOVER+'}',
+    U+'.ecm-sep{height:1px;background:'+LINE+';margin:4px 2px}',
+    /* le bandeau « Traitements » isolé est repris dans le menu : on le masque */
+    U+'.ec-trtbar{display:none!important}',
+    U+'.ec-menubar{display:none!important}',
+    U+'.ec-toolbar{display:none!important}',
+    /* --- les bandes Filtre / Lettrage, une fois DANS la barre --- */
+    U+'.ecm-bar{align-items:center}',
+    U+'.ecm-spacer{flex:1 1 auto;border-right:0}',
+    U+'.ecm-bar .ec-filtbar,'+U+'.ecm-bar .ec-letbar{'
+      +'display:flex!important;align-items:center;gap:7px;padding:0 11px!important;'
+      +'background:transparent!important;border:0!important;border-left:1px solid '+LINE+'!important;'
+      +'align-self:stretch;box-shadow:none!important}',
+    /* l'invite de lettrage prenait toute la largeur : elle passe en info-bulle */
+    U+'.ecm-bar .ec-lhint{display:none!important}',
+    U+'.ecm-bar .ec-llbl,'+U+'.ecm-bar .ec-flbl{color:'+MUT+'!important;font-size:10.5px;letter-spacing:.06em}',
+    U+'.ecm-bar .ec-lbtn,'+U+'.ecm-bar .ec-flbtn{'
+      +'background:'+BG+'!important;border:1px solid '+LINE2+'!important;color:'+INK+'!important;'
+      +'font:inherit;font-size:11px;padding:4px 9px;border-radius:2px;cursor:pointer}',
+    U+'.ecm-bar .ec-lbtn:hover,'+U+'.ecm-bar .ec-flbtn:hover{background:'+HOVER+'!important}',
+    U+'.ecm-bar .ec-lbtn,'+U+'.ecm-bar .ec-flbtn{white-space:nowrap;line-height:1.1}',
+    U+'.ecm-bar .ec-flinp{'
+      +'background:'+BG+'!important;border:1px solid '+LINE2+'!important;color:'+INK+'!important;'
+      +'font:inherit;font-size:11px;padding:4px 8px;border-radius:2px;min-width:210px}',
+    /* --- ALLÈGEMENT : le reste du cadre rend de la place à la grille --- */
+    U+'.ec-titlebar{padding:6px 12px!important}',
+    U+'.ecm-mi{padding:6px 12px}',
+    U+'.ec-fields{padding:6px 12px!important;gap:14px!important}',
+    U+'.ec-status{padding:4px 12px!important}'
+  ].join('\n');
+
+  function injecter(){
+    try{
+      if(document.getElementById('saisie-barre-mod')) return;
+      var st=document.createElement('style'); st.id='saisie-barre-mod';
+      st.textContent=CSS; document.head.appendChild(st);
+    }catch(e){}
+  }
+  injecter();
+
+  function apres(){ injecter(); build(); }
+  try{
+    if(typeof window.ecRender==='function'){
+      var _e=window.ecRender; window.ecRender=function(){ var v=_e.apply(this,arguments); apres(); return v; };
+    }
+    if(typeof window.render==='function'){
+      var _r=window.render; window.render=function(){ var v=_r.apply(this,arguments); apres(); return v; };
+    }
+  }catch(e){}
+  setTimeout(apres, 400);
+})();
+</script>
+<script id="yada-addon-bandes-compactes">
+/* =====================================================================
+   yada-addon-bandes-compactes — v623 (100% ADDITIF)
+   Allège l'espace des pages : regroupe les bandes d'actions empilées
+   en UNE seule bande par page (même principe que la bande de la page
+   de saisie). Les contrôles sont DÉPLACÉS dans le DOM (les handlers
+   inline voyagent avec eux) — aucune logique n'est réécrite.
+
+   Surfaces traitées :
+     · #cl-overlay (grand-livre lecture seule / page d'édition d'un compte)
+         .cl-tb + .cl-letbar        → une seule bande
+     · #yada-cp   (Charges & Paie)
+         .cp-head + .cp-bar         → une seule bande
+     · #yada-ed   (Éditions)
+         .ed-pbar reste unique, resserrée
+   Idempotent (marqueur data-bc), rejoué après chaque rendu.
+   ===================================================================== */
+(function(){
+  var LINE='#242427';
+
+  function fusion(hote, source, cls){
+    if(!hote || !source || source===hote) return false;
+    if(source.getAttribute('data-bc')==='1') return false;
+    var sep=document.createElement('span');
+    sep.className='bc-sep';
+    hote.appendChild(sep);
+    var box=document.createElement('span');
+    box.className='bc-grp '+(cls||'');
+    while(source.firstChild) box.appendChild(source.firstChild);
+    hote.appendChild(box);
+    source.setAttribute('data-bc','1');
+    source.style.display='none';
+    return true;
+  }
+
+  function compte(){
+    var ov=document.getElementById('cl-overlay'); if(!ov) return;
+    var app=ov.querySelector('.cl-app'); if(!app) return;
+    var tb=app.querySelector('.cl-tb'), lb=app.querySelector('.cl-letbar');
+    if(tb && lb) fusion(tb, lb, 'bc-let');
+  }
+
+  function paie(){
+    var cp=document.getElementById('yada-cp'); if(!cp) return;
+    var head=cp.querySelector('.cp-head'), bar=cp.querySelector('.cp-bar');
+    if(!head || !bar) return;
+    var close=head.querySelector('.cp-close');
+    if(bar.getAttribute('data-bc')==='1') return;
+    var box=document.createElement('span'); box.className='bc-grp bc-cp';
+    while(bar.firstChild) box.appendChild(bar.firstChild);
+    if(close) head.insertBefore(box, close); else head.appendChild(box);
+    bar.setAttribute('data-bc','1'); bar.style.display='none';
+  }
+
+  var CSS=[
+    /* groupe fusionné : reste en ligne, sans habillage propre */
+    'html body:not(#_yz) .bc-grp{display:inline-flex;align-items:center;gap:10px;flex-wrap:wrap;'
+      +'background:transparent!important;border:0!important;padding:0!important;margin:0!important;box-shadow:none!important}',
+    'html body:not(#_yz) .bc-sep{display:inline-block;width:1px;align-self:stretch;min-height:18px;'
+      +'background:'+LINE+';margin:0 4px}',
+    /* grand-livre lecture seule : une seule bande, hint replié */
+    'html body:not(#_yz) #cl-overlay .cl-tb{flex-wrap:wrap;row-gap:8px}',
+    'html body:not(#_yz) #cl-overlay .cl-lethint{display:none!important}',
+    'html body:not(#_yz) #cl-overlay .bc-grp .cl-spacer{display:none!important}',
+    'html body:not(#_yz) #cl-overlay .cl-letsum{white-space:nowrap}',
+    /* Charges & Paie : actions remontées dans le bandeau-titre */
+    'html body:not(#_yz) #yada-cp .cp-head{flex-wrap:wrap;row-gap:8px}',
+    'html body:not(#_yz) #yada-cp .bc-cp .cp-sp{display:none!important}',
+    'html body:not(#_yz) #yada-cp .cp-ruban{padding:8px 0 4px!important}',
+    /* Éditions : barre d'aperçu resserrée */
+    'html body:not(#_yz) #yada-ed .ed-pbar{padding-top:6px!important;padding-bottom:6px!important}',
+    /* page de saisie : derniers fonds bleutés hérités (derrière la grille) → noir */
+    'html body:not(#_yz) #ec-overlay .ec-tablewrap{background:#000!important}',
+    'html body:not(#_yz) #ec-overlay .ec-table thead,'
+      +'html body:not(#_yz) #ec-overlay .ec-table thead tr{background:#121214!important}'
+  ].join('');
+
+  function injecter(){
+    if(document.getElementById('bandes-compactes-mod')) return;
+    try{ var st=document.createElement('style'); st.id='bandes-compactes-mod';
+      st.textContent=CSS; document.head.appendChild(st); }catch(e){}
+  }
+
+  function apres(){ injecter(); try{ compte(); }catch(e){} try{ paie(); }catch(e){} }
+  injecter();
+  try{
+    if(typeof window.render==='function'){
+      var _r=window.render; window.render=function(){ var v=_r.apply(this,arguments); apres(); return v; };
+    }
+    if(typeof window.clRender==='function'){
+      var _c=window.clRender; window.clRender=function(){ var v=_c.apply(this,arguments); apres(); return v; };
+    }
+    if(typeof window.ouvrirCompteLecture==='function'){
+      var _o=window.ouvrirCompteLecture;
+      window.ouvrirCompteLecture=function(){ var v=_o.apply(this,arguments); setTimeout(apres,0); return v; };
+    }
+  }catch(e){}
+
+  /* le grand-livre lecture seule se re-rend par des appels internes
+     (clSetQ / clSort / clNav…) qui ne passent pas par window.clRender :
+     on observe donc son overlay. La fusion étant idempotente, aucune boucle. */
+  try{
+    var busy=false;
+    var obs=new MutationObserver(function(){
+      if(busy) return; busy=true;
+      try{ compte(); }catch(e){}
+      setTimeout(function(){ busy=false; }, 0);
+    });
+    var lancerObs=function(){
+      var ov=document.getElementById('cl-overlay');
+      if(ov){ obs.observe(ov,{childList:true,subtree:true}); return true; }
+      return false;
+    };
+    if(!lancerObs()){ var t=setInterval(function(){ if(lancerObs()) clearInterval(t); }, 700); }
+  }catch(e){}
+
+  setTimeout(apres, 400);
 })();
 </script>
 </body>
