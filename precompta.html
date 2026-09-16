@@ -11097,7 +11097,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v625';
+    b.textContent='YADA · v626';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -28886,7 +28886,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       +'<div class="pc-head">'
         +'<div class="pc-title">Plan comptable</div>'
         +'<div class="pc-count">'+list.length+' comptes</div>'
-        +'<button class="pc-close" onclick="pcFermer()" title="Fermer et revenir à la Consultation" aria-label="Fermer">✕</button>'
+        +'<button class="pc-close" onclick="pcFermer()" title="Fermer" aria-label="Fermer">✕</button>'
       +'</div>'
       +'<div class="pc-srow">'
         +'<select id="pc-mode" class="pc-sel" onchange="pcSetMode(this.value)" title="Choisir comment filtrer">'
@@ -29019,7 +29019,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     return '<div id="yada-is"><div class="is-wrap">'
       +'<div class="is-head"><div class="is-title">Informations société</div>'
         +'<div class="is-sub">'+esc(s.raison||'Fiche d\'identité du dossier')+'</div>'
-        +'<button class="is-close" onclick="isFermer()" title="Enregistrer et revenir à la Consultation" aria-label="Fermer">✕</button>'
+        +'<button class="is-close" onclick="isFermer()" title="Enregistrer et fermer" aria-label="Fermer">✕</button>'
       +'</div>'
       +'<div class="is-body">'
       +'<div class="is-card"><div class="is-ch">Identité</div><div class="is-grid g3">'
@@ -29185,13 +29185,18 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     if(typeof yadaConfirm==='function') yadaConfirm('Réinitialiser l\'application et recharger les dossiers de démonstration ?', go, {danger:true});
     else if(confirm('Réinitialiser ?')) go();
   };
-  window.setFermer=function(){ window.__setView=null; try{ current='compta'; }catch(e){} if(typeof render==='function') render(); };
+  /* v626 — un seul bouton : Fermer. Un panneau ouvert se ferme sur la grille des
+     réglages ; depuis la grille, on ferme le module (destination posée par
+     `yada-addon-fermer-unique` : la page principale). */
+  window.setFermer=function(){
+    if(window.__setView){ window.__setView=null; if(typeof render==='function') render(); return 'panneau'; }
+    try{ current='compta'; }catch(e){} if(typeof render==='function') render();
+  };
   window.pageParametrage=function(){
     var k=window.__setView;
     var head='<div id="yada-set"><div class="set-wrap"><div class="set-head">'
-      +(k?'<button class="set-back" onclick="setOpen(null)" title="Retour aux réglages" aria-label="Retour">←</button>':'')
       +'<div class="set-title">'+(k?TITRES[k]:'Paramétrage')+'</div>'
-      +'<button class="set-close" onclick="setFermer()" title="Revenir à la Consultation" aria-label="Fermer">✕</button>'
+      +'<button class="set-close" onclick="setFermer()" title="Fermer" aria-label="Fermer">✕</button>'
       +'</div>';
     if(!k){
       var grid='<div class="set-grid">'+TILES.map(function(t){
@@ -29310,7 +29315,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     return '<div id="yada-cf"><div class="cf-wrap">'
       +'<div class="cf-head"><span class="cf-hic">'+LOCK+'</span><div class="cf-title">Coffre-fort des identifiants</div>'
         +'<span class="cf-count">'+nOk+' / '+nOrg+' renseignés</span>'
-        +'<button class="cf-close" onclick="cfFermer()" title="Revenir à la Consultation" aria-label="Fermer">✕</button></div>'
+        +'<button class="cf-close" onclick="cfFermer()" title="Fermer" aria-label="Fermer">✕</button></div>'
       +'<div class="cf-body">'
         +'<div class="cf-rail">'
           +'<input class="cf-search" placeholder="Rechercher…" oninput="cfFilter(this.value)">'
@@ -29491,7 +29496,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     return '<div id="yada-ti"><div class="ti-wrap">'
       +'<div class="ti-head"><div class="ti-title">Tiers</div>'
         +'<button class="ti-new" onclick="tiNew()">＋ Nouveau tiers</button>'
-        +'<button class="ti-close" onclick="tiFermer()" title="Revenir à la Consultation" aria-label="Fermer">✕</button></div>'
+        +'<button class="ti-close" onclick="tiFermer()" title="Fermer" aria-label="Fermer">✕</button></div>'
       +'<div class="ti-body">'
         +'<div class="ti-rail"><input class="ti-search" placeholder="Rechercher un tiers…" oninput="tiFilter(this.value)">'+railTabs
           +'<div class="ti-list">'+railItems+'</div></div>'
@@ -29626,7 +29631,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     return '<div id="yada-so"><div class="so-wrap">'
       +'<div class="so-head"><div class="so-title">Sociétés — Portefeuille</div>'
         +'<button class="so-qonto" onclick="accederQonto()" title="Ouvrir le compte bancaire Qonto">Accéder à Qonto</button>'
-        +'<button class="so-close" onclick="socFermer()" title="Revenir à la Consultation" aria-label="Fermer">✕</button></div>'
+        +'<button class="so-close" onclick="socFermer()" title="Fermer" aria-label="Fermer">✕</button></div>'
       +'<div class="so-kpis">'
         +'<div class="so-kpi"><div class="l">Entreprises activées</div><div class="v num">'+actifs+' <span class="so-mut">/ '+total+'</span></div></div>'
         +'<div class="so-kpi"><div class="l">Écritures comptables rejetées</div><div class="v num">'+(cab.ecrituresRejetees||0)+'</div></div>'
@@ -29736,7 +29741,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     return '<div id="yada-jr"><div class="jr-wrap">'
       +'<div class="jr-head"><div class="jr-title">Journal comptable</div>'
         +'<span class="jr-exo">Exercice '+((typeof exoYear==='function')?exoYear():'')+'</span>'
-        +'<button class="jr-close" onclick="jrFermer()" title="Revenir à la Consultation" aria-label="Fermer">✕</button></div>'
+        +'<button class="jr-close" onclick="jrFermer()" title="Fermer" aria-label="Fermer">✕</button></div>'
       +'<div class="jr-body">'
         +'<div class="jr-rail"><input class="jr-search" placeholder="Rechercher…" value="'+e2(window.__jrQ||'')+'" oninput="jrFilter(this.value)" autocomplete="off">'
           +'<div class="jr-list">'+rail+'</div></div>'
@@ -29843,7 +29848,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     return '<div id="yada-ed"><div class="ed-wrap">'
       +'<div class="ed-head"><div class="ed-title">Éditions comptables</div>'
         +'<span class="ed-exo">Exercice '+e2(exo)+'</span>'
-        +'<button class="ed-close" onclick="edFermer()" title="Revenir à la Consultation" aria-label="Fermer">✕</button></div>'
+        +'<button class="ed-close" onclick="edFermer()" title="Fermer" aria-label="Fermer">✕</button></div>'
       +'<div class="ed-body">'
         +'<div class="ed-rail">'+rail+'</div>'
         +'<div class="ed-panel">'
@@ -29993,7 +29998,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     return '<div id="yada-tv"><div class="tv-wrap">'
       +'<div class="tv-head"><div class="tv-title">Module TVA</div>'
         +'<span class="tv-exo">Exercice '+e2(exo)+'</span>'
-        +'<button class="tv-close" onclick="tvFermer()" title="Revenir à la Consultation" aria-label="Fermer">✕</button></div>'
+        +'<button class="tv-close" onclick="tvFermer()" title="Fermer" aria-label="Fermer">✕</button></div>'
       +'<div class="tv-body">'
         +'<div class="tv-rail">'+seg+railInner+'</div>'
         +'<div class="tv-panel">'+right+'</div>'
@@ -30122,7 +30127,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     return '<div id="yada-cp"><div class="cp-wrap">'
       +'<div class="cp-head"><div class="cp-title">Charges & Paie</div>'
         +'<span class="cp-exo">Exercice '+e2(exo)+'</span>'
-        +'<button class="cp-close" onclick="cpFermer()" title="Revenir à la Consultation" aria-label="Fermer">✕</button></div>'
+        +'<button class="cp-close" onclick="cpFermer()" title="Fermer" aria-label="Fermer">✕</button></div>'
       +'<div class="cp-ruban">'+ruban+'</div>'
       +'<div class="cp-bar"><span class="cp-info">'+((P.salaries||[]).length)+' salarié(s) · Brut '+E(c.brut)+' · Coût employeur '+E(c.coutTotal||0)+'</span><span class="cp-sp"></span>'+actions+'</div>'
       +'<div class="cp-two">'+odCard('OD PAIE',piece,odPaieLignes(c))+odCard('OD CHARGES',piece,odChargesLignes(c))+'</div>'
@@ -30294,7 +30299,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     return '<div id="yada-bq"><div class="bq-wrap">'
       +'<div class="bq-head"><div class="bq-title">Banque</div>'
         +'<span class="bq-exo">Exercice '+e2(exo)+'</span>'
-        +'<button class="bq-close" onclick="bqFermer()" title="Revenir à la Consultation" aria-label="Fermer">✕</button></div>'
+        +'<button class="bq-close" onclick="bqFermer()" title="Fermer" aria-label="Fermer">✕</button></div>'
       +'<div class="bq-body">'
         +'<div class="bq-rail"><div class="bq-gh">Compte bancaire</div>'+accHTML
           +'<div class="bq-gh">Mois'+(exo?(' ('+e2(exo)+')'):'')+'</div>'+moisHTML+'</div>'
@@ -30471,7 +30476,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     return '<div id="yada-rp"><div class="rp-wrap">'
       +'<div class="rp-head"><div class="rp-title">Rapprochement bancaire</div>'
         +'<span class="rp-exo">Exercice '+e2(exo)+'</span>'
-        +'<button class="rp-close" onclick="rpFermer()" title="Revenir à la Consultation" aria-label="Fermer">✕</button></div>'
+        +'<button class="rp-close" onclick="rpFermer()" title="Fermer" aria-label="Fermer">✕</button></div>'
       +'<div class="rp-top">'
         +'<div class="rp-per"><div class="rp-colh">Périodes</div>'+perCol+'</div>'
         +'<div class="rp-jr"><div class="rp-colh">Comptes & relevés</div>'+jrCol+'</div>'
@@ -30578,7 +30583,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     return '<div id="yada-fe"><div class="fe-wrap">'
       +'<div class="fe-head"><div class="fe-title">Import / Export FEC</div>'
         +'<span class="fe-exo">Exercice '+FD(s.exoDebut)+' → '+FD(s.exoFin)+'</span>'
-        +'<button class="fe-close" onclick="feFermer()" title="Revenir à la Consultation" aria-label="Fermer">✕</button></div>'
+        +'<button class="fe-close" onclick="feFermer()" title="Fermer" aria-label="Fermer">✕</button></div>'
       +'<div class="fe-sub">Fichier des Écritures Comptables · '+e2(s.raison||'')+(s.formeJur?(' ('+e2(s.formeJur)+')'):'')+'</div>'
 
       /* ── Assistant d'import ── */
@@ -30797,7 +30802,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     return '<div id="yada-an"><div class="an-wrap">'
       +'<div class="an-head"><div class="an-title">Analytique &amp; rentabilité</div>'
         +'<span class="an-exo">Exercice '+FD(s.exoDebut)+' → '+FD(s.exoFin)+'</span>'
-        +'<button class="an-close" onclick="anFermer()" title="Revenir à la Consultation" aria-label="Fermer">✕</button></div>'
+        +'<button class="an-close" onclick="anFermer()" title="Fermer" aria-label="Fermer">✕</button></div>'
       +'<div class="an-sub">Rapport calculé sur toutes les écritures · '+e2(s.raison||'')+'</div>'
       +'<div class="an-bar"><span class="an-lbl">Exercice :</span>'+yrBtns
         +'<span class="an-sp"></span>'
@@ -30907,7 +30912,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     if(typeof window.__imIdx!=='number'||window.__imIdx>=ims.length) window.__imIdx=0;
     var head='<div class="im-head"><div class="im-title">Immobilisations &amp; Financements</div>'
       +'<span class="im-exo">Exercice '+FD(s.exoDebut)+' → '+FD(s.exoFin)+'</span>'
-      +'<button class="im-close" onclick="imFermer()" title="Revenir à la Consultation" aria-label="Fermer">✕</button></div>'
+      +'<button class="im-close" onclick="imFermer()" title="Fermer" aria-label="Fermer">✕</button></div>'
       +'<div class="im-sub">Fiche par immobilisation · plan d’amortissement · '+e2(s.raison||'')+'</div>'
       +'<div class="im-topbar"><button class="im-btn im-pri" onclick="imNouveau()">＋ Immobilisation</button>'
       +'<span class="im-sp"></span>'
@@ -31118,7 +31123,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     return '<div id="yada-rg"><div class="rg-wrap">'
       +'<div class="rg-head"><div class="rg-title">Suivi des règlements</div>'
         +'<span class="rg-exo">'+e2(s.raison||'')+'</span>'
-        +'<button class="rg-close" onclick="regFermer()" title="Revenir à la Consultation" aria-label="Fermer">✕</button></div>'
+        +'<button class="rg-close" onclick="regFermer()" title="Fermer" aria-label="Fermer">✕</button></div>'
       +'<div class="rg-sub">Créances clients &amp; dettes fournisseurs — factures non réglées (FEC inclus)</div>'
       +'<div class="rg-tabs"><button class="rg-tab'+(estClient?' on':'')+'" onclick="regTab(\'client\')">Clients — à encaisser</button>'
         +'<button class="rg-tab'+(!estClient?' on':'')+'" onclick="regTab(\'fournisseur\')">Fournisseurs — à payer</button></div>'
@@ -31273,7 +31278,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     return '<div id="yada-db"><div class="db-wrap">'
       +'<div class="db-head"><div class="db-title">Tableau de bord</div>'
         +'<span class="db-exo">Exercice '+FD(s.exoDebut)+' → '+FD(s.exoFin)+'</span>'
-        +'<button class="db-close" onclick="dbFermer()" title="Revenir à la Consultation" aria-label="Fermer">✕</button></div>'
+        +'<button class="db-close" onclick="dbFermer()" title="Fermer" aria-label="Fermer">✕</button></div>'
       +'<div class="db-subrow"><span class="db-sub">Rapport de gestion · '+e2(s.raison||'')+(s.formeJur?(' ('+e2(s.formeJur)+')'):'')+'</span>'
         +'<button class="db-btn" onclick="dbImprimer()">🖨 Imprimer</button></div>'
       +s1+s2+s3
@@ -33245,7 +33250,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       +'<div class="ctl-head"><div class="ctl-hl"><div class="ctl-eyebrow">YADA · CONTRÔLES</div><div class="ctl-title">Contrôles de cohérence comptable</div></div>'
         +'<span class="ctl-exo">'+e2((db.societe&&db.societe.raison)||'')+' · Exercice '+((typeof exoYear==='function')?exoYear():'')+'</span>'
         +'<button class="ctl-btn" onclick="ctlRefresh()">Rafraîchir</button>'
-        +'<button class="ctl-close" onclick="ctlFermer()" title="Revenir à la Consultation" aria-label="Fermer">✕</button></div>'
+        +'<button class="ctl-close" onclick="ctlFermer()" title="Fermer" aria-label="Fermer">✕</button></div>'
       +'<div class="ctl-scroll">'
         +'<div class="ctl-kpis">'+kpiBox('Écritures analysées',a.total,'')+kpiBox('Anomalies critiques',crit,'crit')+kpiBox('Avertissements',warn,'warn')+kpiBox('À vérifier',chk,'info')+'</div>'
         +'<div class="ctl-note">Audit en lecture seule de tout le dossier — aucune écriture n\'est modifiée. '+(crit?('Corrigez les '+crit+' anomalie(s) critique(s) via la Consultation / le Journal.'):'Aucune anomalie critique. ✓')+'</div>'
@@ -33589,7 +33594,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       +'<div class="ib-head"><div class="ib-hl"><div class="ib-eyebrow">YADA · IMPORT BANCAIRE</div><div class="ib-title">Import du relevé bancaire</div></div>'
         +'<span class="ib-exo">'+e2((db.societe&&db.societe.raison)||'')+' · Exercice '+((typeof exoYear==='function')?exoYear():'')+'</span>'
         +(ST.ops.length?'<button class="ib-btn" onclick="ibReset()">Vider</button>':'')
-        +'<button class="ib-close" onclick="ibFermer()" title="Revenir à la Consultation" aria-label="Fermer">✕</button></div>'
+        +'<button class="ib-close" onclick="ibFermer()" title="Fermer" aria-label="Fermer">✕</button></div>'
       +'<div class="ib-scroll">'
         +'<div class="ib-kpis">'+kpiBox('Opérations lues',ST.ops.length)+kpiBox('Nouvelles',nv)+kpiBox('Déjà rapprochées',rp)+kpiBox('Déjà importées',dj)+'</div>'
         +'<div class="ib-drop" ondragover="return ibOver(event)" ondrop="return ibDrop(event)" onclick="ibPick()">'
@@ -33896,7 +33901,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       +'<div class="rc-head"><div class="rc-hl"><div class="rc-eyebrow">YADA · ÉCRITURES RÉCURRENTES</div>'
         +'<div class="rc-title">Modèles &amp; échéancier</div></div>'
         +'<span class="rc-exo">'+e2((db.societe&&db.societe.raison)||'')+' · Exercice '+e2(anneeExo())+'</span>'
-        +'<button class="rc-close" onclick="rcFermer()" title="Revenir à la Consultation" aria-label="Fermer">✕</button></div>'
+        +'<button class="rc-close" onclick="rcFermer()" title="Fermer" aria-label="Fermer">✕</button></div>'
       +'<div class="rc-scroll">'
         +'<div class="rc-kpis">'+kpiBox('Modèles actifs',actifs)+kpiBox('Échéances de l’exercice',tot)
           +kpiBox('Déjà générées',fait)+kpiBox('Restant à générer',Math.max(tot-fait,0))+'</div>'
@@ -33993,7 +33998,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
 /* Sortie de module — filet de navigation (100% ADDITIF).
    La barre latérale est masquée dans les modules (v383) et le menu « Modules »
    ne vit que dans la Consultation : un module sans bouton de retour piège
-   l'utilisateur. Cet addon ajoute un ✕ « Revenir à la Consultation » aux
+   l'utilisateur. Cet addon ajoute un ✕ « Fermer » aux
    modules qui n'en ont pas, au style Registre des ✕ existants. */
 (function(){
   'use strict';
@@ -34033,8 +34038,8 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       var b=document.createElement('button');
       b.id='yada-sortie'; b.className='yada-sortie-btn'; b.type='button';
       b.textContent='\u2715';
-      b.title='Revenir \u00e0 la Consultation';
-      b.setAttribute('aria-label','Revenir \u00e0 la Consultation');
+      b.title='Fermer';
+      b.setAttribute('aria-label','Fermer');
       b.onclick=function(ev){ try{ ev.stopPropagation(); }catch(e){} window.yadaRetourConsultation(); };
       head.classList.add('yada-sortie-host');
       /* on réserve la place du bouton pour ne recouvrir aucun contenu du bandeau */
@@ -35045,7 +35050,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       var b=document.createElement('button');
       b.id='sg-fermer'; b.type='button'; b.className='sg-fermer-btn';
       b.textContent='✕';
-      b.title='Fermer la Consultation (retour à la page principale)';
+      b.title='Fermer la Consultation';
       b.setAttribute('aria-label','Fermer la Consultation');
       b.onclick=function(ev){
         try{ ev.stopPropagation(); ev.preventDefault(); }catch(e){}
@@ -35080,6 +35085,77 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     ].join('');
     (document.head||document.documentElement).appendChild(st);
   }catch(e){}
+})();
+</script>
+<script id="yada-addon-fermer-unique">
+/* v626 — UN SEUL bouton : FERMER (plus aucun bouton « retour »).
+   Tous les modules affichaient un ✕ dont l'intitulé était « Revenir à la
+   Consultation » et dont l'action ramenait sur la Consultation (current='compta') :
+   c'était un bouton de RETOUR déguisé en croix. Désormais le ✕ est un vrai bouton
+   de FERMETURE : il ferme la page et rend la PAGE PRINCIPALE (l'accueil, qui est
+   aussi la page d'entrée du logiciel au démarrage — invariant v549), exactement
+   comme le ✕ de la Consultation (v625).
+   100% ADDITIF : les traitements de fermeture existants (enregistrement, remise
+   à zéro des états) sont conservés — on n'en change que la destination. */
+(function(){
+  'use strict';
+  if(window.__fermerUnique) return; window.__fermerUnique=true;
+
+  /* Fermer = rendre la page principale (même drapeau que le démarrage). */
+  window.yadaFermerPage=function(){
+    try{ window.__homeView=true; }catch(e){}
+    try{ if(typeof render==='function') render(); }catch(e){}
+  };
+
+  /* Le filet générique v614 (modules sans sortie) ferme lui aussi. */
+  window.yadaRetourConsultation=function(){ window.yadaFermerPage(); };
+
+  /* Les fermetures de module gardent leur traitement (save, enregistrement,
+     réinitialisation d'état) mais atterrissent sur la page principale. */
+  var FERME=['pcFermer','isFermer','setFermer','cfFermer','tiFermer','socFermer',
+             'jrFermer','edFermer','tvFermer','cpFermer','bqFermer','rpFermer',
+             'feFermer','anFermer','imFermer','regFermer','dbFermer','ctlFermer',
+             'ibFermer','rcFermer'];
+  FERME.forEach(function(n){
+    try{
+      var f=window[n]; if(typeof f!=='function') return;
+      window[n]=function(){
+        var x; try{ x=f.apply(this,arguments); }catch(e){}
+        /* sentinelle 'panneau' : la fermeture n'a refermé qu'un sous-panneau du
+           module (Paramétrage) — on reste dans le module. */
+        if(x!=='panneau') window.yadaFermerPage();
+        return x;
+      };
+    }catch(e){}
+  });
+
+  /* Intitulés : plus aucun « revenir à la Consultation ». */
+  function libelle(t){
+    if(!t) return '';
+    if(/^Enregistrer et revenir/i.test(t)) return 'Enregistrer et fermer';
+    if(/revenir . la Consultation/i.test(t)) return 'Fermer';
+    return '';
+  }
+  function relabel(){
+    try{
+      var n=document.querySelectorAll('[title],[aria-label]');
+      for(var i=0;i<n.length;i++){
+        var e=n[i];
+        var t=e.getAttribute('title')||'', v=libelle(t);
+        if(v) e.setAttribute('title',v);
+        var a=e.getAttribute('aria-label')||'', w=libelle(a);
+        if(w) e.setAttribute('aria-label',w);
+      }
+    }catch(e){}
+  }
+  try{
+    if(typeof window.render==='function'){
+      var _r=window.render;
+      window.render=function(){ var x=_r.apply(this,arguments); try{ relabel(); }catch(e){} return x; };
+    }
+  }catch(e){}
+  try{ setInterval(relabel, 900); }catch(e){}
+  try{ relabel(); }catch(e){}
 })();
 </script>
 </body>
