@@ -36,7 +36,20 @@
 
 ---
 
-## 🟢 Dernière mise à jour — BANDE DE MODULES sur la page de saisie (menus regroupés, sans surlignage) + bandes regroupées sur les autres pages — v623
+## 🟢 Dernière mise à jour — Bande de la page de saisie : « Nouvelle écriture » → « Journal », modules Écriture et Journal SÉPARÉS — v624
+**Quoi :** dans la **bande de modules** de la page de saisie (v623), l'entrée **« Nouvelle écriture »** est renommée **« Journal »**, et les modules **Écriture** et **Journal** redeviennent **deux modules distincts** (la fusion de la v623 est annulée) :
+- **Écriture** → **Journal** (crée une écriture à saisir) · Insérer une ligne · Supprimer la ligne (ou les N lignes sélectionnées) · Solder l'écriture · Solder en compte d'attente 471 ;
+- **Journal** → les **7 journaux du dossier** (HA · VT · BQ · ODP · ODC · ODTVA · OD) · Saisir une opération….
+
+La bande repasse donc à **7 modules** : **Écriture · Journal · Compte · Lettrage · Affichage · Traitements · Aide**. Tout le reste de la v623 est conservé : **aucun surlignage** sur la bande (module ouvert marqué par un filet blanc de 1 px, survol sans fond), **filtre et lettrage dans la bande**, **6 bandes** au lieu de 9, et le regroupement des bandes du **grand-livre en lecture seule**, de **Charges & Paie** et des **Éditions**.
+
+**Comment — 1 édition de `MENUS()` dans `yada-addon-saisie-barre` :** rétablissement des deux entrées `['ecriture','Écriture',[…]]` et `['journal','Journal', JRN()…]`, avec le libellé de l'action `nouvelle` passé de « Nouvelle écriture » à **« Journal »**. L'action reste `ecAjouterEcriture` (aucune logique modifiée). `sw.js` yada-v219, badge v624, `version.json` 624.
+
+**Validé :** `node --check` (**297 scripts inline, 0 erreur**) + `node --check sw.js` OK + balises `</head>`/`</body>`/`</html>` inchangées (3/5/3) + **filet d'équilibre** (`YADA_CHROME=… node tests/equilibre-ecritures.mjs` : vente 1200=1200, achat 600=600 ✅) + **rendu Playwright** (bande = **7 modules séparés** [Écriture · Journal · Compte · Lettrage · Affichage · Traitements · Aide] ; « Écriture » = Journal · Insérer une ligne · Supprimer la ligne · Solder · 471 ; « Journal » = les 7 journaux + Saisir une opération… ; clic sur **« Journal »** dans Écriture → **écriture créée** (19 → 20) ; entrée ouverte **sans surlignage** `background rgba(0,0,0,0)` ; page de saisie toujours à **6 bandes**) + **aller-retour sur les 23 modules : 0 problème** + **0 pageerror**. Badge → **v624**.
+
+---
+
+## 🟢 MAJ précédente — BANDE DE MODULES sur la page de saisie (menus regroupés, sans surlignage) + bandes regroupées sur les autres pages — v623
 **Quoi :** la **page de saisie** (éditeur d'écritures `.ec-sage`) reçoit une **bande de modules** comme le bandeau du haut de la Consultation — mais avec **ses propres entrées** — et l'espace de la page est **allégé** : les bandes d'actions empilées sont **regroupées dans la bande**. Le même principe est appliqué aux **autres pages** et aux **pages d'édition**.
 1. **Bande de modules (6 entrées)** — **Journal · Compte · Lettrage · Affichage · Traitements · Aide**. Le module **« Journal »** regroupe ce qui était séparé en « Écriture » + « Journal » (demande : *« le bouton nouvelle écriture → Journal »*) : **Nouvelle écriture · Insérer une ligne · Supprimer la ligne (ou les N lignes sélectionnées) · Solder l'écriture · Solder en compte d'attente 471 · Saisir une opération… · les 7 journaux du dossier** (HA · VT · BQ · ODP · ODC · ODTVA · OD). « Compte » ouvre le grand-livre en lecture seule ; « Lettrage » lettre/délettre/vide la sélection ; « Affichage » filtre, inverse le tri, plein écran, propage sur un autre écran ; « Traitements » ouvre les paramètres de saisie ; « Aide » liste les raccourcis. **Aucune logique réécrite** : chaque entrée délègue aux fonctions existantes (`ecAjouterEcriture`, `ecInsertLine`, `ecSupprimerLignesSelection`, `ecSolder`, `ecCompteAttente`, `ouvrirJournalEditable`, `ecNouvelleOperation`, `ouvrirCompteLecture`, `ecLettrerSel`, `ecDelettrerSel`, `ecToggleSort`, `wmToggle`, `wmPop`, `ecOuvrirParamSaisie`).
 2. **Aucun surlignage sur la bande** — le module ouvert ne s'inverse plus en pastille claire : il **reste sur le fond de la bande**, marqué par un **simple filet blanc de 1 px sous l'entrée** ; le survol ne pose **aucun fond**. Mesuré : entrée ouverte `background rgba(0,0,0,0)`, encre `#fff`.

@@ -11097,7 +11097,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v623';
+    b.textContent='YADA · v624';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -34747,13 +34747,13 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
   }
   function MENUS(){
     return [
-      ['journal','Journal', [
-        ['Nouvelle écriture','nouvelle'], ['Insérer une ligne','insLigne'],
+      ['ecriture','Écriture', [
+        ['Journal','nouvelle'], ['Insérer une ligne','insLigne'],
         [nbSel()>1?('Supprimer les '+nbSel()+' lignes sélectionnées'):'Supprimer la ligne','supLigne'],
         ['-'],
-        ['Solder l\'écriture','solder'], ['Solder en compte d\'attente 471','attente'],
-        ['-'], ['Saisir une opération…','operation'], ['-']
-      ].concat(JRN().map(function(j){ return [j[1],'journal:'+j[0]]; }))],
+        ['Solder l\'écriture','solder'], ['Solder en compte d\'attente 471','attente']
+      ]],
+      ['journal','Journal', JRN().map(function(j){ return [j[1],'journal:'+j[0]]; }).concat([['-'],['Saisir une opération…','operation']])],
       ['compte','Compte', [
         ['Grand-livre du compte (lecture seule)','grandLivre']
       ]],
