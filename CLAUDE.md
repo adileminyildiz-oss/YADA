@@ -36,7 +36,31 @@
 
 ---
 
-## 🟢 Dernière mise à jour — UN SEUL bouton : FERMER (plus aucun bouton « retour ») — v626
+## 🟢 Dernière mise à jour — AUCUN TEXTE EN GRAS NI EN ITALIQUE dans l'interface (balayage global des 23 modules) — v627
+**Quoi :** application de la **règle permanente** de l'utilisateur — *« ne jamais afficher de texte en gras, italique ou souligné »* — à **tout le logiciel**, et plus seulement aux deux modules traités en v619 (Consultation & Déclaration). Le balayage relevé en v619 (**« 480 éléments en gras, 2 en italique » — non engagé faute de demande explicite**) est désormais **exécuté** : mesuré à **583 éléments en gras** et **2 en italique** sur les 23 modules (Pilotage 140 · Infos société 48 · Fournisseurs 35 · Tiers 33 · Suivi des règlements 27 · Charges & Paie 26 · Analytique 23 · FEC 22 · Plan comptable 19 · Sociétés 19 · Tableau de bord 19 · Paramétrage 16 · Coffre-fort 16 · Journal 16 · Banque 16 · Rapprochement 16 · Immobilisations 16 · Salarié 16 · Éditions 13 · TVA 9 · Contrôles 9 · Import bancaire 9 · Écritures récurrentes 9) → **0 gras, 0 italique**. Couvre aussi les surfaces hors module (barre latérale, fenêtres, menus, modales, notifications).
+
+**Deux exceptions, toutes deux déjà posées :**
+1. **Les éditions imprimables gardent leur mise en forme papier** — `.doc-page`, `.inv` et `#print-area` sont **exclus** : le gras des en-têtes de colonnes et des totaux d'une balance ou d'un bilan est une **convention d'édition imprimée**, pas un gras d'interface (distinction énoncée en v619). Vérifié : l'édition de la Balance conserve ses **85 éléments en gras** sur feuille blanche.
+2. **Le SOULIGNÉ n'est pas touché** — les **4 seuls** éléments soulignés du logiciel sont des **LIENS** : « Qonto » (`.so-link`, module Sociétés, ×3) et « impots.gouv.fr · espace professionnel » (`.tvar-lk`, module Déclaration). C'est le souligné **qui les fait reconnaître comme des liens** — exception posée en v613, confirmée en v619 pour impots.gouv.fr, ici étendue par cohérence au lien Qonto.
+
+**Aucune hiérarchie n'est perdue :** chaque titre, en-tête ou total portait **déjà** un autre signal — **serif contre mono**, **taille**, **pastille inversée** (fond clair / texte noir), **filet blanc**. Contrôlé à l'écran sur Pilotage (140 gras → 0) et Suivi des règlements (27 → 0) : titre de module, en-têtes de colonnes, onglet actif, tiers sélectionné et montants restent parfaitement distincts.
+
+**Comment — nouvel addon `yada-addon-sans-gras` (100% ADDITIF & CSS-ONLY, injecté en DERNIER) :** `<style id="sans-gras-mod">` posant **une seule règle** — `html body:not(#_yz) *:not(.doc-page):not(.doc-page *):not(.inv):not(.inv *):not(#print-area):not(#print-area *){font-weight:400!important;font-style:normal!important}` — créé une fois puis **garanti après chaque rendu** (`ensure()` greffé sur `render` + intervalle 1500 ms, idempotent par l'id). **Points techniques :** (1) le préfixe `:not(#_yz)` apporte un **niveau d'ID** et chacun des six `:not(.x)` un niveau de classe → spécificité **(1,6,2)** + `!important`, ce qui bat la couche globale `yada-addon-registre-unify` (v609, (2,1,5)) sur `#main table thead th` **et** toutes les feuilles de module, sans surenchère ; (2) l'exclusion des éditions passe par un **sélecteur complexe dans `:not()`** (Selectors Level 4) — vérifié à l'exécution : un `<b>` posé dans `.doc-page` / `.inv` / `#print-area` reste à **700**, le même `<b>` dans l'interface passe à **400** ; (3) **aucun `style="font-weight:…!important"` en ligne** n'existe dans le fichier (relevé : 0), donc la règle n'est jamais écrasée. `sw.js` yada-v222, badge v627, `version.json` 627.
+
+**Validé :** `node --check` (**300 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (19674/19674) + balises `</head>`/`</body>`/`</html>` inchangées (3/5/3) + **filet d'équilibre** (`YADA_CHROME=… node tests/equilibre-ecritures.mjs` : vente 1200=1200, achat 600=600 ✅) + **mesure Playwright avant / après sur les 23 modules** :
+
+| Mesure | Avant | Après |
+| --- | --- | --- |
+| Texte en **gras** (interface) | **583** | **0** |
+| Texte en **italique** (interface) | **2** | **0** |
+| Texte **souligné** (liens Qonto + impots.gouv.fr) | 4 | **4** (conservés) |
+| Gras dans l'**édition Balance** (`.doc-page`) | 85 | **85** (conservé) |
+
++ **navigation réellement exercée** (`pagesRoutedOk` 23/23 : `body[data-page]` = module demandé à chaque étape — la sonde pilote le binding lexical `current`, car `window.current` **n'existe pas** dans le fichier et ne route rien) + **invariant v626 préservé** (23/23 modules : exactement **1 sortie « Fermer »**, **0 intitulé « retour »/« revenir »**, clic réel → page principale) + **chroma identique avant / après** (2346 = 2346, **aucune couleur introduite** — la règle ne touche que le poids et le style de la police) + **0 pageerror**, **0 console.error**. Badge → **v627**.
+
+---
+
+## 🟢 MAJ précédente — UN SEUL bouton : FERMER (plus aucun bouton « retour ») — v626
 **Quoi :** demande explicite — **« Je veux pas de boutons retour, je veux uniquement un bouton fermer »**. Les **23 modules** affichaient bien un **✕**, mais c'était un **bouton de RETOUR déguisé en croix** : son intitulé était **« Revenir à la Consultation »** (ou « Fermer et revenir… » / « Enregistrer et revenir… ») et son action ramenait sur la **Consultation** (`current='compta'`). Désormais le ✕ est un **vrai bouton de FERMETURE** : il **ferme la page** et rend la **PAGE PRINCIPALE** (l'accueil « Génération Experts », qui est aussi la page d'entrée du logiciel au démarrage — invariant v549), **exactement comme le ✕ de la Consultation** (v625). Les **intitulés** deviennent **« Fermer »** partout (« Enregistrer et fermer » pour Informations société, qui enregistre avant de fermer) — le mot « revenir » disparaît de l'interface.
 
 **Paramétrage — le dernier bouton « ← Retour » retiré :** le module Paramétrage (grille de tuiles → panneau de réglage) portait une **flèche « ← Retour aux réglages »** à côté de son ✕ — soit **deux boutons** dans le même bandeau. La flèche est **supprimée** et le ✕ devient **contextuel, en restant un unique bouton « Fermer »** : panneau ouvert → **ferme le panneau** (retour à la grille des réglages, on reste dans le module) ; depuis la grille → **ferme le module** (page principale). Les autres boutons de retour du code (`fermerCompteAux`, `admPaieSel('')`, `ds-back-chip`…) sont **inatteignables** depuis la table rase v535 — vérifié par balayage des 23 modules : **0 intitulé « retour » / « revenir » visible**.

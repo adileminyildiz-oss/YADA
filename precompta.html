@@ -11097,7 +11097,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v626';
+    b.textContent='YADA · v627';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -35156,6 +35156,40 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
   }catch(e){}
   try{ setInterval(relabel, 900); }catch(e){}
   try{ relabel(); }catch(e){}
+})();
+</script>
+<script id="yada-addon-sans-gras">
+/* v627 — RÈGLE PERMANENTE : aucun texte en GRAS ni en ITALIQUE dans l'interface.
+   Balayage global (100% CSS) de toutes les surfaces du logiciel : modules, barre
+   latérale, fenêtres, menus, modales, notifications.
+   EXCLUES : les ÉDITIONS IMPRIMABLES (.doc-page, .inv, #print-area) — le gras des
+   totaux y est une convention d'édition papier, pas un gras d'interface.
+   Le SOULIGNÉ n'est pas touché : les seuls éléments soulignés du logiciel sont des
+   LIENS (Qonto, impots.gouv.fr) — c'est ce qui les fait reconnaître comme des liens
+   (exception posée en v613, confirmée en v619). */
+(function(){
+  'use strict';
+  if(window.__sansGras) return; window.__sansGras=true;
+  var ID='sans-gras-mod';
+  /* Spécificité : `:not(#_yz)` apporte un niveau d'ID (1,0,2) et chaque `:not(.x)`
+     un niveau de classe → (1,6,2) + !important, ce qui bat les couches Registre
+     (v595/v609) et toutes les feuilles de module sans surenchère. */
+  var EX=':not(.doc-page):not(.doc-page *):not(.inv):not(.inv *):not(#print-area):not(#print-area *)';
+  var CSS='html body:not(#_yz) *'+EX+'{font-weight:400 !important;font-style:normal !important}';
+  function ensure(){
+    try{
+      var s=document.getElementById(ID);
+      if(!s){ s=document.createElement('style'); s.id=ID; s.textContent=CSS; (document.head||document.documentElement).appendChild(s); }
+    }catch(e){}
+  }
+  ensure();
+  try{
+    if(typeof window.render==='function'){
+      var _r=window.render;
+      window.render=function(){ var x=_r.apply(this,arguments); try{ ensure(); }catch(e){} return x; };
+    }
+  }catch(e){}
+  try{ setInterval(ensure, 1500); }catch(e){}
 })();
 </script>
 </body>
