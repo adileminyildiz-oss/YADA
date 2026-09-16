@@ -6424,7 +6424,7 @@ function pageCompta(){
       <div class="sg-right">
         ${sgJrn ? '' : `<div class="sg-tabs">${tabs}<div class="sg-tabnav"><span>◄</span><span>►</span></div></div>`}
         ${sgJrn ? sgJournalGrid(sgJrn, sgPer) : `<div class="sg-grid">
-          <table class="sg-tbl"><thead><tr><th style="width:120px">Compte</th><th>Libellé</th><th class="r">Solde N</th><th class="sg-sens"></th></tr></thead>
+          <table class="sg-tbl"><thead><tr><th style="width:120px">Compte</th><th>Libellé</th><th class="r">Solde N</th><th class="sg-sens">D/C</th></tr></thead>
           <tbody>${rows}</tbody></table>
         </div>`}
       </div>
@@ -11083,7 +11083,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v630';
+    b.textContent='YADA · v631';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -35247,6 +35247,80 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       ['Données', 'Enregistrées sur cet appareil — aucune donnée ne sort du poste']
     ]));
   };
+})();
+</script>
+<script id="yada-addon-entetes-alignes">
+/* v631 — ALIGNEMENT DES EN-TÊTES DE COLONNE (filet générique, 100% additif)
+   Chaque feuille de module « Registre » pose `#yada-XX .yy-tbl th{text-align:left}`
+   — spécificité (1,1,1), un ID — qui écrase la règle globale `td.r,th.r{text-align:right}`
+   (0,1,1). Résultat : les colonnes de montants sont à droite, mais le NOM de la colonne
+   reste à gauche (Débit, Crédit, Montant, CA, Marge, Collectée…). Un `class="r"` ajouté
+   au markup reste donc sans effet.
+   Ici on ne surenchérit pas sur la cascade : après chaque rendu, on lit l'alignement
+   RÉELLEMENT calculé des cellules de chaque colonne et on le recopie sur son en-tête
+   (style en ligne `!important`). L'en-tête tombe ainsi toujours au-dessus de son contenu,
+   y compris pour toute table ajoutée plus tard. Idempotent : une fois posé, le calcul
+   correspond et plus rien n'est écrit.
+   Exclusions : les éditions imprimables (`.doc-page`, `.inv`, `#print-area`) gardent leur
+   mise en forme papier, comme en v627. */
+(function(){
+  function norm(v){ v=(v||'').trim(); if(v==='start')return 'left'; if(v==='end')return 'right'; return v||'left'; }
+  /* Alignement visuel d'une cellule : si elle ne contient qu'un champ de saisie
+     (grilles de saisie), c'est l'alignement du champ qui se voit, pas celui du <td>. */
+  function cellAlign(td){
+    try{
+      var ctl=td.querySelector('input,select,textarea');
+      if(ctl && !(td.textContent||'').trim()) return norm(getComputedStyle(ctl).textAlign);
+    }catch(e){}
+    return norm(getComputedStyle(td).textAlign);
+  }
+  function sweep(){
+    var tables, t, ti, i;
+    try{ tables=document.querySelectorAll('table'); }catch(e){ return; }
+    for(ti=0; ti<tables.length; ti++){
+      t=tables[ti];
+      try{
+        if(t.closest('.doc-page,.inv,#print-area')) continue;
+        var rect=t.getBoundingClientRect();
+        if(rect.width<2 || rect.height<2) continue;             /* table non rendue */
+        var hrs=t.querySelectorAll('thead tr');
+        if(!hrs.length) continue;
+        var hs=hrs[hrs.length-1].children, n=hs.length, skip=false;
+        for(i=0;i<n;i++){ if((hs[i].colSpan||1)>1){ skip=true; break; } }
+        if(skip) continue;                                       /* en-têtes groupés : non traités */
+        var rows=t.querySelectorAll('tbody tr'), cnt=[], seen=0, ri, tr, multi;
+        for(i=0;i<n;i++) cnt.push({});
+        for(ri=0; ri<rows.length; ri++){
+          tr=rows[ri];
+          if(tr.children.length!==n) continue;                   /* ligne de total / sous-titre */
+          multi=false;
+          for(i=0;i<n;i++){ if((tr.children[i].colSpan||1)>1){ multi=true; break; } }
+          if(multi) continue;
+          seen++;
+          for(i=0;i<n;i++){ var a=cellAlign(tr.children[i]); cnt[i][a]=(cnt[i][a]||0)+1; }
+        }
+        if(!seen) continue;                                      /* colonne sans contenu : rien à déduire */
+        for(i=0;i<n;i++){
+          var c=cnt[i], keys=Object.keys(c);
+          if(!keys.length) continue;
+          var dom=keys[0], k;
+          for(k=1;k<keys.length;k++){ if(c[keys[k]]>c[dom]) dom=keys[k]; }
+          var th=hs[i];
+          if(norm(getComputedStyle(th).textAlign)===dom) continue;
+          th.style.setProperty('text-align', dom, 'important');
+        }
+      }catch(e){}
+    }
+  }
+  window.yadaAlignerEntetes=sweep;
+  try{
+    var _r=window.render;
+    if(typeof _r==='function'){
+      window.render=function(){ var v=_r.apply(this,arguments); try{ sweep(); }catch(e){} return v; };
+    }
+  }catch(e){}
+  try{ setInterval(sweep,1500); }catch(e){}
+  try{ sweep(); setTimeout(sweep,300); setTimeout(sweep,1200); }catch(e){}
 })();
 </script>
 </body>

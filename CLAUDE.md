@@ -36,7 +36,31 @@
 
 ---
 
-## 🟢 Dernière mise à jour — Balayage ALIGNEMENT & SYMÉTRIE des 23 modules : plus aucune formule vide (4 en-têtes de colonne nommés) — v630
+## 🟢 Dernière mise à jour — Les EN-TÊTES suivent leur colonne : 30 noms de colonne réalignés + 5ᵉ en-tête vide nommé — v631
+**Quoi :** poursuite de la demande — *« Tout doit être aligné et symétrique »*. La v630 vérifiait que les **montants** étaient alignés à droite ; elle ne vérifiait **jamais que le NOM de la colonne suivait**. Mesuré sur un dossier réellement peuplé : **30 écarts sur 70 colonnes**, dont **29 fois le même défaut** — une colonne de montants alignée à droite dont l'en-tête flotte à gauche. Sur **9 modules** : Sociétés, Journal, TVA, Charges & Paie, Banque, Analytique, Suivi des règlements, Tableau de bord, Consultation. Les noms concernés sont exactement les colonnes d'argent : **Débit · Crédit · Montant · CA · Charges · Résultat · Marge · Part · Collectée · Déductible · À payer · Crédit reporté · Dépensé · CA facturé · Fact. fourn. · Fact. client · Docs manq.** Après : **0 écart**, à couverture identique (16 tables, 70 colonnes).
+
+**Pourquoi le `class="r"` de la v630 ne servait à rien :** chaque feuille de module « Registre » pose `#yada-XX .yy-tbl th{text-align:left}` — spécificité **(1,1,1)**, un ID — qui écrase la règle globale `td.r,th.r{text-align:right}` **(0,1,1)**. Les deux en-têtes « Dossier » et « Favori » nommés en v630 portaient donc bien `class="r"` **sans effet visible** : ils restaient à gauche au-dessus d'une colonne à droite. Le défaut n'était pas dans le markup mais dans la cascade.
+
+**Un 5ᵉ en-tête vide, que la v630 ne pouvait pas voir :** `<th class="sg-sens"></th>` dans la Consultation — la colonne qui affiche le **sens D ou C** d'un solde. Le balayage v630 tournait sur un dossier **vide** (l'application démarre sans aucun dossier depuis la v386) : sans écritures ni plan comptable, cette table ne rendait **aucune ligne**, donc la sonde la sautait. Le « 0 en-tête vide » de la v630 était mesuré sur une base trop mince. L'en-tête est nommé **`D/C`** — trois caractères, la notation comptable même que porte la colonne, qui tient dans ses 30 px.
+
+**Comment — nouvel addon `yada-addon-entetes-alignes` (100% ADDITIF, injecté en DERNIER) + 1 édition chirurgicale :** plutôt que de surenchérir sur la cascade module par module (il aurait fallu une règle par table, et une de plus à chaque table future), le filet est **générique** : après chaque rendu, pour chaque table, il lit l'alignement **réellement calculé** des cellules de chaque colonne et le **recopie sur son en-tête** (style en ligne `!important`). L'en-tête tombe ainsi toujours au-dessus de son contenu, **y compris pour toute table ajoutée plus tard**. **Points techniques :** (1) **idempotent** — une fois le style posé, le calculé correspond et plus rien n'est écrit ; (2) **alignement visuel, pas structurel** — si une cellule ne contient qu'un champ de saisie, c'est l'alignement du **champ** qui est lu, pas celui du `<td>` (sinon la grille de saisie aurait vu ses en-têtes Débit/Crédit tirés à gauche) ; (3) les lignes dont le nombre de cellules diffère de l'en-tête (totaux, sous-titres) et les en-têtes **groupés** (`colspan>1`) sont **ignorés** ; (4) les **éditions imprimables** (`.doc-page`, `.inv`, `#print-area`) sont **exclues** — elles gardent leur convention papier, comme en v627. Greffe sur `render` (patron maison `window.render=function(){…}`) + intervalle 1500 ms. `sw.js` yada-v226, badge v631, `version.json` 631.
+
+**Validé :** `node --check` (**302 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014) + balises `</head>`/`</body>`/`</html>` inchangées (3/5/3) + **filet d'équilibre** (`YADA_CHROME=… node tests/equilibre-ecritures.mjs` : vente 1200=1200, achat 600=600 ✅) + **balayage des 23 modules sur un dossier RÉELLEMENT PEUPLÉ** (plan comptable 981 comptes, 3 écritures, 4 tiers) :
+
+| Mesure | Avant | Après |
+| --- | --- | --- |
+| **En-tête non aligné sur sa colonne** | **30 / 70** | **0 / 70** |
+| **En-têtes de colonne vides** | **1** (`sg-sens`) | **0** |
+| Tables inspectées · colonnes comparées | 16 · 70 | 16 · 70 (identique) |
+| Grille de saisie : Débit / Crédit / Solde | à droite | **à droite** (non touchée) |
+
++ `pagesRoutedOk` **24/24** + **invariant v627 préservé** (**0 gras**, **0 italique**, soulignés = les seuls liens Qonto / impots.gouv.fr) + **invariant v626 préservé** (**24/24 avec exactement 1 sortie « Fermer »**) + **0 bouton vide**, **0 bouton sans action**, **0 montant mal aligné** + **aucun débordement** (`scrollWidth = clientWidth`) + **0 pageerror**, **0 console.error**. Badge → **v631**.
+
+**Leçon de méthode (à retenir) :** un balayage qui rend **0** n'a de valeur que si l'on **compte aussi ce qu'il a inspecté**. La première passe de cette version renvoyait « 0 écart » — en réalité elle n'avait vu **aucune table** (`tbl:0`) : l'application démarre vide et sur la page d'accueil, donc `current=…` ne routait rien. C'est le même piège qu'en v630 (`window.current` inexistant), sous une autre forme. Toute sonde doit désormais publier ses **compteurs de couverture** (tables vues · colonnes comparées) à côté de son résultat.
+
+---
+
+## 🟢 MAJ précédente — Balayage ALIGNEMENT & SYMÉTRIE des 23 modules : plus aucune formule vide (4 en-têtes de colonne nommés) — v630
 **Quoi :** application de la demande — *« Tout doit être aligné et symétrique, aucun boutons vide, aucune formule vide »* — **au-delà des menus de la Consultation (v629), à l'ensemble des 23 modules**. Balayage mesuré : **0 bouton vide**, **0 bouton sans action**, **0 libellé vide**, **0 montant mal aligné** (tous à droite), **0 écart irrégulier** dans les barres horizontales — mais **4 EN-TÊTES DE COLONNE VIDES** au-dessus de colonnes d'action. Ils sont **nommés** :
 
 | Module | Table | Contenu de la colonne | Avant | Après |
