@@ -11097,7 +11097,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v624';
+    b.textContent='YADA · v625';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -35012,6 +35012,74 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
   }catch(e){}
 
   setTimeout(apres, 400);
+})();
+</script>
+<script id="yada-addon-consult-fermer">
+/* v625 — CONSULTATION : bouton de FERMETURE → retour à la PAGE PRINCIPALE.
+   La page de Consultation n'avait plus aucune sortie : les boutons de fenêtre
+   (─ ▢ ✕) de la barre de titre ont été retirés du markup (v410) puis masqués
+   par le reset (v548 : `.sg-app .sg-win{display:none!important}`), et le filet
+   générique `yada-addon-sortie-module` (v614) exclut explicitement `compta`.
+   On ajoute donc un ✕ « Fermer la Consultation » dans le bandeau-titre :
+   au clic, on revient sur la PAGE PRINCIPALE (l'accueil, qui est aussi la page
+   d'entrée du logiciel au démarrage — `__homeView=true`). Le dossier ouvert est
+   conservé (la page principale reste sur « Applications du dossier »).
+   100% ADDITIF : aucune logique de la Consultation n'est modifiée. */
+(function(){
+  'use strict';
+  var INK='#f5f5f6';
+
+  /* Retour à la page principale (accueil) — même drapeau que le démarrage. */
+  window.yadaFermerConsultation=function(){
+    try{ window.__homeView=true; }catch(e){}
+    try{ if(typeof render==='function') render(); }catch(e){}
+  };
+
+  function ensure(){
+    try{
+      if(window.__homeView===true) return;
+      if(typeof current==='undefined' || current!=='compta') return;
+      var app=document.querySelector('.sg-app'); if(!app) return;
+      var t=app.querySelector('.sg-title'); if(!t) return;
+      if(t.querySelector('#sg-fermer')) return;
+      var b=document.createElement('button');
+      b.id='sg-fermer'; b.type='button'; b.className='sg-fermer-btn';
+      b.textContent='✕';
+      b.title='Fermer la Consultation (retour à la page principale)';
+      b.setAttribute('aria-label','Fermer la Consultation');
+      b.onclick=function(ev){
+        try{ ev.stopPropagation(); ev.preventDefault(); }catch(e){}
+        window.yadaFermerConsultation();
+      };
+      t.appendChild(b);
+    }catch(e){}
+  }
+
+  try{
+    if(typeof window.render==='function'){
+      var _r=window.render;
+      window.render=function(){ var x=_r.apply(this,arguments); try{ ensure(); }catch(e){} return x; };
+    }
+  }catch(e){}
+  try{ setInterval(ensure, 900); }catch(e){}
+  try{ ensure(); }catch(e){}
+
+  try{
+    var st=document.createElement('style'); st.id='consult-fermer-mod';
+    st.textContent=[
+      '.sg-fermer-btn{position:absolute;top:8px;right:12px;z-index:6;width:30px;height:30px;'
+       +'display:flex;align-items:center;justify-content:center;background:#000;color:'+INK+';'
+       +'border:1px solid '+INK+';border-radius:7px;cursor:pointer;font-size:13px;line-height:1;padding:0}',
+      '.sg-fermer-btn:hover{background:'+INK+';color:#000}',
+      'html body:not(#_yz) .sg-fermer-btn{font-family:ui-monospace,Menlo,Consolas,monospace!important;'
+       +'font-weight:400!important;font-style:normal!important;text-decoration:none!important;'
+       +'letter-spacing:0!important;text-transform:none!important}',
+      /* place réservée dans le bandeau : le ✕ ne recouvre aucun texte du titre */
+      'html body:not(#_yz) .sg-app .sg-title{padding-right:52px!important}',
+      'html body:not(#_yz) .sg-app.yada-cregi .sg-title{padding-right:52px!important}'
+    ].join('');
+    (document.head||document.documentElement).appendChild(st);
+  }catch(e){}
 })();
 </script>
 </body>
