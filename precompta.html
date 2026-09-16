@@ -5612,7 +5612,7 @@ function sgSelRow(code){ sgRow=code; render(); }
 let dbSnapshot=null;             // état sauvegardé (pour « Fermer sans sauver »)
 function snapshotDB(){ try{ persistActif(); dbSnapshot=JSON.stringify(db); }catch{ dbSnapshot=null; } }
 function toggleFichier(){ toggleMenu('sg-fichier'); }
-const SG_MENUS=['sg-fichier','sg-exercice','sg-journal','sg-compte','sg-balances','sg-param','sg-util','sg-nav'];
+const SG_MENUS=['sg-fichier','sg-exercice','sg-journal','sg-compte','sg-balances','sg-param','sg-util','sg-nav','sg-aide'];
 function closeMenus(){ SG_MENUS.forEach(id=>{ const m=document.getElementById(id); if(m) m.classList.remove('open'); }); }
 function closeFichier(){ closeMenus(); }
 function toggleMenu(id){ const want=document.getElementById(id); const wasOpen=want&&want.classList.contains('open'); closeMenus(); if(want&&!wasOpen) want.classList.add('open'); }
@@ -6178,7 +6178,7 @@ function pageChargesPaie(){
         <div>
           <div class="cp-panel"><div class="cp-panel-h"><h2>Salariés & rémunérations brutes</h2><span class="mini">${(P.salaries||[]).length} salarié(s)</span></div>
             <div class="cp-panel-b">
-              <table class="cp-saltbl"><thead><tr><th>Compte tiers</th><th>Nom</th><th>Poste</th><th class="r">Brut mensuel</th><th></th></tr></thead>
+              <table class="cp-saltbl"><thead><tr><th>Compte tiers</th><th>Nom</th><th>Poste</th><th class="r">Brut mensuel</th><th class="r">Actions</th></tr></thead>
               <tbody>${salRows||'<tr><td colspan=5 style="padding:14px;color:#888">Aucun salarié — ajoutez-en ci-dessous.</td></tr>'}</tbody></table>
               <div class="cp-addrow">
                 <div style="width:130px"><label>Compte tiers</label><input id="cp-aux-prev" readonly value="421XXXX00" style="width:100%;font-family:'IBM Plex Mono',monospace"></div>
@@ -6322,9 +6322,6 @@ function pageCompta(){
           <button onclick="fileExporter()">Exporter…</button>
           <button onclick="fileImporter()">Importer…</button>
           <div class="sep"></div>
-          <button onclick="toast('Synchro compta lancée')">Synchro compta</button>
-          <button onclick="toast('Connexion à Compta &amp; Facturation')">Connexion à Compta &amp; Facturation</button>
-          <div class="sep"></div>
           <button onclick="fileFermer()">Fermer</button>
           <button class="danger" onclick="fileFermerSansSauver()">Fermer sans sauver</button>
         </div></span><span class="mi" onclick="event.stopPropagation();toggleExercice()">Exercice
@@ -6343,8 +6340,6 @@ function pageCompta(){
           <div class="sep"></div>
           <button onclick="exClotureMois()">Clôture définitive du mois sélectionné</button>
           <button onclick="exClotureExo()">Clôture définitive et archivage légal de l'exercice</button>
-          <button style="color:#aaa" onclick="toast('Archivage légal — disponible après clôture')">Archivage légal</button>
-          <button onclick="toast('A.D.N. Compta')">A.D.N. Compta</button>
           <button onclick="exAttestationFEC()">Imprimer l'attestation de conformité FEC</button>
           <button onclick="fileExportFEC(false)">Génération du fichier des écritures comptables pour l'Administration Fiscale</button>
           <button onclick="fileImporter()">Importer un fichier des écritures comptables</button>
@@ -6369,8 +6364,6 @@ function pageCompta(){
           <div class="sep"></div>
           <button onclick="current='rappro';closeMenus();render();toast('Lettrage / rapprochement')">Lettrage…</button>
           <div class="sep"></div>
-          <button onclick="toast('Marque suivante')">Marque suivante</button>
-          <div class="sep"></div>
           <button onclick="cmpAffichage('mouvements')">${cmpMode==='mouvements'?'✓ ':''}Mouvementés</button>
           <button onclick="cmpAffichage('alpha')">${cmpMode==='alpha'?'✓ ':''}Ordre alphabétique</button>
           <button onclick="cmpAffichage('tous')">${cmpMode==='tous'?'✓ ':''}Tous les comptes du plan</button>
@@ -6386,7 +6379,6 @@ function pageCompta(){
         <div class="sg-dd" id="sg-param">
           <button onclick="closeMenus();current='plancomptable';render();toast('Plan comptable')">Plan comptable…</button>
           <button onclick="paramJournaux()">Plan de journaux…</button>
-          <button onclick="toast('Export vers Sage Active')">Exporter vers Sage Active…</button>
         </div></span><span class="mi" onclick="event.stopPropagation();toggleMenu('sg-util')">Utilitaires
         <div class="sg-dd" id="sg-util">
           <button onclick="exVerrouillerExo()">Verrouiller les comptes</button>
@@ -6394,28 +6386,16 @@ function pageCompta(){
           <div class="sep"></div>
           <button onclick="utilValiderLignes()">Valider les lignes comptables</button>
           <button onclick="utilMajTVA()">Mettre à jour les règles de TVA des écritures</button>
-          <button onclick="toast('Signalement des pièces associées mis à jour')">Mettre à jour le signalement des pièces associées</button>
           <div class="sep"></div>
           <button onclick="utilCopieBalance()">Copier la balance générale dans le presse-papier</button>
           <button onclick="utilCopieLignes()">Copier les lignes dans le presse-papier</button>
-          <button onclick="toast('Coller les lignes — presse-papier vide')">Coller les lignes du presse-papier</button>
           <div class="sep"></div>
-          <button onclick="toast('Export Coala Acquisition')">Exporter Coala Acquisition</button>
           <button onclick="fileImporter()">Importer balance Sage</button>
           <div class="sep"></div>
           <button onclick="utilDoublonsScanBank()">Supprimer les doublons dans les pièces ScanBank</button>
           <div class="sep"></div>
           <button onclick="utilExportVA()">Export des chiffres de la VA</button>
           <button onclick="fileImporter()">Importer un fichier EDITDFC</button>
-          <button onclick="toast('Renommage préfixes des auxiliaires')">Renommage préfixes des auxiliaires</button>
-          <div class="sep"></div>
-          <button onclick="toast('Ciel Up To Experts')">Ciel Up To Experts ▸</button>
-          <div class="sep"></div>
-          <button onclick="toast('Import des crédits-bails')">Importer les crédits-bails</button>
-          <button onclick="toast('Import des locations')">Importer les locations</button>
-          <button onclick="toast('Import des emprunts')">Importer les emprunts</button>
-          <div class="sep"></div>
-          <button onclick="toast('Paramétrage du curseur d\\'import d\\'écritures')">Paramétrage du curseur d'import d'écritures</button>
         </div></span><span class="mi" onclick="event.stopPropagation();toggleMenu('sg-nav')">Navigation
         <div class="sg-dd" id="sg-nav">
           <button onclick="closeMenus();current='dossier';render();toast('Dossier permanent')">Ouvrir le dossier permanent…</button>
@@ -6423,7 +6403,13 @@ function pageCompta(){
           <button onclick="closeMenus();current='analytique';render();toast('Comptabilité analytique')">Ouvrir la comptabilité analytique…</button>
           <button onclick="closeMenus();current='editions';render();toast('Révision / éditions')">Ouvrir Sage Révision Experts…</button>
           <button onclick="closeMenus();current='facturation';render();toast('Automatisation Facture Électronique')">Ouvrir Automatisation Facture Électronique…</button>
-        </div></span><span>Aide</span></div>
+        </div></span><span class="mi" onclick="event.stopPropagation();toggleMenu('sg-aide')">Aide
+        <div class="sg-dd" id="sg-aide">
+          <button onclick="sgAideRaccourcis()">Raccourcis clavier…</button>
+          <button onclick="sgAideGuide()">Comment lire cette page…</button>
+          <div class="sep"></div>
+          <button onclick="sgAidePropos()">À propos de YADA…</button>
+        </div></span></div>
     <div class="sg-body">
       <div class="sg-left">
         <div class="sg-col">
@@ -6438,7 +6424,7 @@ function pageCompta(){
       <div class="sg-right">
         ${sgJrn ? '' : `<div class="sg-tabs">${tabs}<div class="sg-tabnav"><span>◄</span><span>►</span></div></div>`}
         ${sgJrn ? sgJournalGrid(sgJrn, sgPer) : `<div class="sg-grid">
-          <table class="sg-tbl"><thead><tr><th style="width:120px">Compte</th><th>Libellé</th><th class="r">Solde N</th><th class="sg-sens"></th></tr></thead>
+          <table class="sg-tbl"><thead><tr><th style="width:120px">Compte</th><th>Libellé</th><th class="r">Solde N</th><th class="sg-sens">D/C</th></tr></thead>
           <tbody>${rows}</tbody></table>
         </div>`}
       </div>
@@ -11097,7 +11083,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v626';
+    b.textContent='YADA · v631';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -21317,7 +21303,7 @@ ${lignes}
     var rows=r.salaries.map(function(s,i){ return '<tr><td><span class="sal-dot" style="background:'+couleur(s,i)+'"></span> <b>'+esc((s.nom||'')+' '+(s.prenom||''))+'</b></td><td>'+esc(s.poste||'')+'</td><td>'+esc(s.statut||'')+'</td><td class="r">'+money(s.brut)+'</td><td class="r">'+money(s.net)+'</td><td class="r"><button class="btn btn-ghost btn-sm" onclick="salEdit(\''+s.id+'\')">✎ Fiche</button> <button class="btn btn-ghost btn-sm" onclick="salDel(\''+s.id+'\')">🗑</button></td></tr>'; }).join('')||'<tr><td colspan="6" class="empty">Aucun salarié enregistré.</td></tr>';
     return '<div class="card"><h2>👥 Liste des salariés</h2><div class="sub">Cliquez sur « Fiche » pour toutes les informations, documents et l\'accès YADA.</div>'
       +'<div style="margin:6px 0 10px"><button class="btn btn-pri btn-sm" onclick="salEdit(\'new\')">➕ Nouveau salarié</button></div>'
-      +'<table class="pil-t"><thead><tr><th>Nom Prénom</th><th>Poste</th><th>Statut</th><th class="r">Brut</th><th class="r">Net</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+      +'<table class="pil-t"><thead><tr><th>Nom Prénom</th><th>Poste</th><th>Statut</th><th class="r">Brut</th><th class="r">Net</th><th class="r">Actions</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
       +(window.salSel?salFiche(window.salSel):'');
   }
   window.salEdit=function(id){ window.salSel=id; if(typeof render==='function')render(); setTimeout(function(){ var el=document.getElementById('sal-fiche'); if(el) el.scrollIntoView({block:'start',behavior:'smooth'}); },40); };
@@ -28655,6 +28641,10 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
   /* menus déroulants : rester en liste pleine largeur mais compacts verticalement */
   +'html body:not(#_yz) .sg-app .sg-dd button{padding:6px 11px !important;width:100% !important;text-align:left !important}'
   +'html body:not(#_yz) .sg-app .sg-menu .mi{padding:5px 8px !important;font-size:12px !important}'
+  /* v628 — les entrées SANS menu déroulant (ex. « Aide ») sont de simples <span> sans .mi :
+     faute du même padding, leur texte tombait 8 px trop près du voisin (rythme rompu en fin de barre).
+     Même boîte, mais ni pointeur ni survol : ce sont des libellés, pas des commandes. */
+  +'html body:not(#_yz) .sg-app .sg-menu>span:not(.mi){padding:5px 8px !important;font-size:12px !important}'
   +'html body:not(#_yz) .sg-app .sg-exoarr{padding:2px 8px !important;font-size:14px !important}'
   +'html body:not(#_yz) .sg-app .sg-wbtn{padding:2px 6px !important}';
   document.head.appendChild(st);
@@ -29638,7 +29628,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       +'</div>'
       +'<input class="so-search" placeholder="Rechercher une entreprise…" value="'+e2(q)+'" oninput="socFilter(this.value)" autocomplete="off">'
       +'<div class="so-tblwrap"><table class="so-tbl"><thead><tr>'
-        +'<th>Nom de l\'entreprise</th><th class="r">Fact. fourn.</th><th class="r">Fact. client</th><th class="r">Docs manq.</th><th>Portail</th><th></th><th></th>'
+        +'<th>Nom de l\'entreprise</th><th class="r">Fact. fourn.</th><th class="r">Fact. client</th><th class="r">Docs manq.</th><th>Portail</th><th class="r">Dossier</th><th class="r">Favori</th>'
       +'</tr></thead><tbody id="so-tbody">'+rows(liste())+'</tbody></table></div>'
       +'</div></div>';
   };
@@ -30132,7 +30122,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       +'<div class="cp-bar"><span class="cp-info">'+((P.salaries||[]).length)+' salarié(s) · Brut '+E(c.brut)+' · Coût employeur '+E(c.coutTotal||0)+'</span><span class="cp-sp"></span>'+actions+'</div>'
       +'<div class="cp-two">'+odCard('OD PAIE',piece,odPaieLignes(c))+odCard('OD CHARGES',piece,odChargesLignes(c))+'</div>'
       +'<div class="cp-sal"><div class="cp-sh">Salariés & rémunérations brutes</div>'
-        +'<table class="cp-saltbl"><thead><tr><th>Compte tiers</th><th>Nom</th><th>Poste</th><th class="r">Brut mensuel</th><th></th></tr></thead>'
+        +'<table class="cp-saltbl"><thead><tr><th>Compte tiers</th><th>Nom</th><th>Poste</th><th class="r">Brut mensuel</th><th class="r">Actions</th></tr></thead>'
         +'<tbody>'+salRows+'</tbody></table>'
         +'<div class="cp-add">'
           +'<div class="cp-f"><label>Nom</label><input id="cp-nom" class="cp-in" placeholder="NOM Prénom"></div>'
@@ -35156,6 +35146,181 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
   }catch(e){}
   try{ setInterval(relabel, 900); }catch(e){}
   try{ relabel(); }catch(e){}
+})();
+</script>
+<script id="yada-addon-sans-gras">
+/* v627 — RÈGLE PERMANENTE : aucun texte en GRAS ni en ITALIQUE dans l'interface.
+   Balayage global (100% CSS) de toutes les surfaces du logiciel : modules, barre
+   latérale, fenêtres, menus, modales, notifications.
+   EXCLUES : les ÉDITIONS IMPRIMABLES (.doc-page, .inv, #print-area) — le gras des
+   totaux y est une convention d'édition papier, pas un gras d'interface.
+   Le SOULIGNÉ n'est pas touché : les seuls éléments soulignés du logiciel sont des
+   LIENS (Qonto, impots.gouv.fr) — c'est ce qui les fait reconnaître comme des liens
+   (exception posée en v613, confirmée en v619). */
+(function(){
+  'use strict';
+  if(window.__sansGras) return; window.__sansGras=true;
+  var ID='sans-gras-mod';
+  /* Spécificité : `:not(#_yz)` apporte un niveau d'ID (1,0,2) et chaque `:not(.x)`
+     un niveau de classe → (1,6,2) + !important, ce qui bat les couches Registre
+     (v595/v609) et toutes les feuilles de module sans surenchère. */
+  var EX=':not(.doc-page):not(.doc-page *):not(.inv):not(.inv *):not(#print-area):not(#print-area *)';
+  var CSS='html body:not(#_yz) *'+EX+'{font-weight:400 !important;font-style:normal !important}';
+  function ensure(){
+    try{
+      var s=document.getElementById(ID);
+      if(!s){ s=document.createElement('style'); s.id=ID; s.textContent=CSS; (document.head||document.documentElement).appendChild(s); }
+    }catch(e){}
+  }
+  ensure();
+  try{
+    if(typeof window.render==='function'){
+      var _r=window.render;
+      window.render=function(){ var x=_r.apply(this,arguments); try{ ensure(); }catch(e){} return x; };
+    }
+  }catch(e){}
+  try{ setInterval(ensure, 1500); }catch(e){}
+})();
+</script>
+<script id="yada-addon-consult-aide">
+/* v629 — « Aide » de la barre de menus de la Consultation devient une VRAIE commande.
+   Jusqu'ici c'était un simple libellé inerte : elle ouvre désormais un menu déroulant
+   dont chaque entrée fait quelque chose (aucun bouton vide, aucune formule vide). */
+(function(){
+  function esc(t){ return String(t==null?'':t).replace(/[&<>"]/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+  function fermer(){ try{ closeMenus(); }catch(e){} }
+  function modale(titre, corpsHTML){
+    var c=document.getElementById('modal-c'), m=document.getElementById('modal');
+    if(!c||!m){ try{ toast(titre); }catch(e){} return; }
+    c.innerHTML='<div class="modal-h"><h3>'+esc(titre)+'</h3><button class="x" onclick="closeModal()">×</button></div>'
+      +'<div class="modal-b">'+corpsHTML+'</div>';
+    m.classList.add('show');
+  }
+  function table(lignes){
+    return '<table style="width:100%;border-collapse:collapse;font-size:12.5px">'
+      + lignes.map(function(x){
+          return '<tr><td style="padding:7px 14px 7px 0;white-space:nowrap;font-family:ui-monospace,Menlo,Consolas,monospace;color:#a8a9ad;vertical-align:top">'
+            + esc(x[0]) + '</td><td style="padding:7px 0">' + esc(x[1]) + '</td></tr>';
+        }).join('')
+      + '</table>';
+  }
+
+  window.sgAideRaccourcis=function(){
+    fermer();
+    modale('Raccourcis clavier', table([
+      ['Double-clic','Sur un compte : ouvre la saisie de ses écritures'],
+      ['Clic droit','Sur une écriture : ouvre la saisie du journal, positionnée dessus'],
+      ['Entrée','Saisie : champ suivant ; en fin d\'écriture soldée, passe à une nouvelle écriture'],
+      ['Flèche bas / haut','Saisie : ligne suivante / précédente (ou choix du compte si la liste est ouverte)'],
+      ['Tab / Maj+Tab','Saisie : colonne suivante / précédente'],
+      ['Glisser / Maj+clic','Saisie : sélectionner plusieurs lignes, puis Ctrl+C / Ctrl+V'],
+      ['Échap','Annule la sélection en cours ; ferme un menu ou une fenêtre']
+    ]));
+  };
+
+  window.sgAideGuide=function(){
+    fermer();
+    modale('Comment lire cette page', table([
+      ['Onglets','La nature des comptes : généraux, fournisseurs, clients, personnel, retenue de garantie'],
+      ['Périodes','Les mois de l\'exercice ; un mois sans écriture est affiché en gris'],
+      ['Journaux','Les journaux du dossier et, entre parenthèses, leur nombre d\'écritures sur le mois choisi'],
+      ['Filet blanc épais','Sépare deux écritures ; le filet fin sépare les lignes d\'une même écriture'],
+      ['Pied de fenêtre','Le cumul de la période et le résultat de l\'exercice'],
+      ['Bouton ✕','Ferme la Consultation et rend la page principale']
+    ]));
+  };
+
+  window.sgAidePropos=function(){
+    fermer();
+    var ver=''; try{ var b=document.getElementById('yada-ver'); ver=b?(b.textContent||'').trim():''; }catch(e){}
+    var soc='', exo='', nEcr=0, nDoss=0;
+    try{ soc=(db.societe&&(db.societe.dossierNom||db.societe.raison))||''; }catch(e){}
+    try{ exo=((db.societe.exoDebut||'')+' → '+(db.societe.exoFin||'')).trim(); }catch(e){}
+    try{ nEcr=(db.ecritures||[]).length; }catch(e){}
+    try{ nDoss=((db.cabinet&&db.cabinet.dossiers)||[]).length; }catch(e){}
+    modale('À propos de YADA', table([
+      ['Version', ver||'YADA'],
+      ['Dossier ouvert', soc||'aucun'],
+      ['Exercice', exo||'non défini'],
+      ['Écritures du dossier', String(nEcr)],
+      ['Dossiers du portefeuille', String(nDoss)],
+      ['Données', 'Enregistrées sur cet appareil — aucune donnée ne sort du poste']
+    ]));
+  };
+})();
+</script>
+<script id="yada-addon-entetes-alignes">
+/* v631 — ALIGNEMENT DES EN-TÊTES DE COLONNE (filet générique, 100% additif)
+   Chaque feuille de module « Registre » pose `#yada-XX .yy-tbl th{text-align:left}`
+   — spécificité (1,1,1), un ID — qui écrase la règle globale `td.r,th.r{text-align:right}`
+   (0,1,1). Résultat : les colonnes de montants sont à droite, mais le NOM de la colonne
+   reste à gauche (Débit, Crédit, Montant, CA, Marge, Collectée…). Un `class="r"` ajouté
+   au markup reste donc sans effet.
+   Ici on ne surenchérit pas sur la cascade : après chaque rendu, on lit l'alignement
+   RÉELLEMENT calculé des cellules de chaque colonne et on le recopie sur son en-tête
+   (style en ligne `!important`). L'en-tête tombe ainsi toujours au-dessus de son contenu,
+   y compris pour toute table ajoutée plus tard. Idempotent : une fois posé, le calcul
+   correspond et plus rien n'est écrit.
+   Exclusions : les éditions imprimables (`.doc-page`, `.inv`, `#print-area`) gardent leur
+   mise en forme papier, comme en v627. */
+(function(){
+  function norm(v){ v=(v||'').trim(); if(v==='start')return 'left'; if(v==='end')return 'right'; return v||'left'; }
+  /* Alignement visuel d'une cellule : si elle ne contient qu'un champ de saisie
+     (grilles de saisie), c'est l'alignement du champ qui se voit, pas celui du <td>. */
+  function cellAlign(td){
+    try{
+      var ctl=td.querySelector('input,select,textarea');
+      if(ctl && !(td.textContent||'').trim()) return norm(getComputedStyle(ctl).textAlign);
+    }catch(e){}
+    return norm(getComputedStyle(td).textAlign);
+  }
+  function sweep(){
+    var tables, t, ti, i;
+    try{ tables=document.querySelectorAll('table'); }catch(e){ return; }
+    for(ti=0; ti<tables.length; ti++){
+      t=tables[ti];
+      try{
+        if(t.closest('.doc-page,.inv,#print-area')) continue;
+        var rect=t.getBoundingClientRect();
+        if(rect.width<2 || rect.height<2) continue;             /* table non rendue */
+        var hrs=t.querySelectorAll('thead tr');
+        if(!hrs.length) continue;
+        var hs=hrs[hrs.length-1].children, n=hs.length, skip=false;
+        for(i=0;i<n;i++){ if((hs[i].colSpan||1)>1){ skip=true; break; } }
+        if(skip) continue;                                       /* en-têtes groupés : non traités */
+        var rows=t.querySelectorAll('tbody tr'), cnt=[], seen=0, ri, tr, multi;
+        for(i=0;i<n;i++) cnt.push({});
+        for(ri=0; ri<rows.length; ri++){
+          tr=rows[ri];
+          if(tr.children.length!==n) continue;                   /* ligne de total / sous-titre */
+          multi=false;
+          for(i=0;i<n;i++){ if((tr.children[i].colSpan||1)>1){ multi=true; break; } }
+          if(multi) continue;
+          seen++;
+          for(i=0;i<n;i++){ var a=cellAlign(tr.children[i]); cnt[i][a]=(cnt[i][a]||0)+1; }
+        }
+        if(!seen) continue;                                      /* colonne sans contenu : rien à déduire */
+        for(i=0;i<n;i++){
+          var c=cnt[i], keys=Object.keys(c);
+          if(!keys.length) continue;
+          var dom=keys[0], k;
+          for(k=1;k<keys.length;k++){ if(c[keys[k]]>c[dom]) dom=keys[k]; }
+          var th=hs[i];
+          if(norm(getComputedStyle(th).textAlign)===dom) continue;
+          th.style.setProperty('text-align', dom, 'important');
+        }
+      }catch(e){}
+    }
+  }
+  window.yadaAlignerEntetes=sweep;
+  try{
+    var _r=window.render;
+    if(typeof _r==='function'){
+      window.render=function(){ var v=_r.apply(this,arguments); try{ sweep(); }catch(e){} return v; };
+    }
+  }catch(e){}
+  try{ setInterval(sweep,1500); }catch(e){}
+  try{ sweep(); setTimeout(sweep,300); setTimeout(sweep,1200); }catch(e){}
 })();
 </script>
 </body>

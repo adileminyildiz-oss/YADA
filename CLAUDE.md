@@ -36,7 +36,141 @@
 
 ---
 
-## 🟢 Dernière mise à jour — UN SEUL bouton : FERMER (plus aucun bouton « retour ») — v626
+## 🟢 Dernière mise à jour — Les EN-TÊTES suivent leur colonne : 30 noms de colonne réalignés + 5ᵉ en-tête vide nommé — v631
+**Quoi :** poursuite de la demande — *« Tout doit être aligné et symétrique »*. La v630 vérifiait que les **montants** étaient alignés à droite ; elle ne vérifiait **jamais que le NOM de la colonne suivait**. Mesuré sur un dossier réellement peuplé : **30 écarts sur 70 colonnes**, dont **29 fois le même défaut** — une colonne de montants alignée à droite dont l'en-tête flotte à gauche. Sur **9 modules** : Sociétés, Journal, TVA, Charges & Paie, Banque, Analytique, Suivi des règlements, Tableau de bord, Consultation. Les noms concernés sont exactement les colonnes d'argent : **Débit · Crédit · Montant · CA · Charges · Résultat · Marge · Part · Collectée · Déductible · À payer · Crédit reporté · Dépensé · CA facturé · Fact. fourn. · Fact. client · Docs manq.** Après : **0 écart**, à couverture identique (16 tables, 70 colonnes).
+
+**Pourquoi le `class="r"` de la v630 ne servait à rien :** chaque feuille de module « Registre » pose `#yada-XX .yy-tbl th{text-align:left}` — spécificité **(1,1,1)**, un ID — qui écrase la règle globale `td.r,th.r{text-align:right}` **(0,1,1)**. Les deux en-têtes « Dossier » et « Favori » nommés en v630 portaient donc bien `class="r"` **sans effet visible** : ils restaient à gauche au-dessus d'une colonne à droite. Le défaut n'était pas dans le markup mais dans la cascade.
+
+**Un 5ᵉ en-tête vide, que la v630 ne pouvait pas voir :** `<th class="sg-sens"></th>` dans la Consultation — la colonne qui affiche le **sens D ou C** d'un solde. Le balayage v630 tournait sur un dossier **vide** (l'application démarre sans aucun dossier depuis la v386) : sans écritures ni plan comptable, cette table ne rendait **aucune ligne**, donc la sonde la sautait. Le « 0 en-tête vide » de la v630 était mesuré sur une base trop mince. L'en-tête est nommé **`D/C`** — trois caractères, la notation comptable même que porte la colonne, qui tient dans ses 30 px.
+
+**Comment — nouvel addon `yada-addon-entetes-alignes` (100% ADDITIF, injecté en DERNIER) + 1 édition chirurgicale :** plutôt que de surenchérir sur la cascade module par module (il aurait fallu une règle par table, et une de plus à chaque table future), le filet est **générique** : après chaque rendu, pour chaque table, il lit l'alignement **réellement calculé** des cellules de chaque colonne et le **recopie sur son en-tête** (style en ligne `!important`). L'en-tête tombe ainsi toujours au-dessus de son contenu, **y compris pour toute table ajoutée plus tard**. **Points techniques :** (1) **idempotent** — une fois le style posé, le calculé correspond et plus rien n'est écrit ; (2) **alignement visuel, pas structurel** — si une cellule ne contient qu'un champ de saisie, c'est l'alignement du **champ** qui est lu, pas celui du `<td>` (sinon la grille de saisie aurait vu ses en-têtes Débit/Crédit tirés à gauche) ; (3) les lignes dont le nombre de cellules diffère de l'en-tête (totaux, sous-titres) et les en-têtes **groupés** (`colspan>1`) sont **ignorés** ; (4) les **éditions imprimables** (`.doc-page`, `.inv`, `#print-area`) sont **exclues** — elles gardent leur convention papier, comme en v627. Greffe sur `render` (patron maison `window.render=function(){…}`) + intervalle 1500 ms. `sw.js` yada-v226, badge v631, `version.json` 631.
+
+**Validé :** `node --check` (**302 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014) + balises `</head>`/`</body>`/`</html>` inchangées (3/5/3) + **filet d'équilibre** (`YADA_CHROME=… node tests/equilibre-ecritures.mjs` : vente 1200=1200, achat 600=600 ✅) + **balayage des 23 modules sur un dossier RÉELLEMENT PEUPLÉ** (plan comptable 981 comptes, 3 écritures, 4 tiers) :
+
+| Mesure | Avant | Après |
+| --- | --- | --- |
+| **En-tête non aligné sur sa colonne** | **30 / 70** | **0 / 70** |
+| **En-têtes de colonne vides** | **1** (`sg-sens`) | **0** |
+| Tables inspectées · colonnes comparées | 16 · 70 | 16 · 70 (identique) |
+| Grille de saisie : Débit / Crédit / Solde | à droite | **à droite** (non touchée) |
+
++ `pagesRoutedOk` **24/24** + **invariant v627 préservé** (**0 gras**, **0 italique**, soulignés = les seuls liens Qonto / impots.gouv.fr) + **invariant v626 préservé** (**24/24 avec exactement 1 sortie « Fermer »**) + **0 bouton vide**, **0 bouton sans action**, **0 montant mal aligné** + **aucun débordement** (`scrollWidth = clientWidth`) + **0 pageerror**, **0 console.error**. Badge → **v631**.
+
+**Leçon de méthode (à retenir) :** un balayage qui rend **0** n'a de valeur que si l'on **compte aussi ce qu'il a inspecté**. La première passe de cette version renvoyait « 0 écart » — en réalité elle n'avait vu **aucune table** (`tbl:0`) : l'application démarre vide et sur la page d'accueil, donc `current=…` ne routait rien. C'est le même piège qu'en v630 (`window.current` inexistant), sous une autre forme. Toute sonde doit désormais publier ses **compteurs de couverture** (tables vues · colonnes comparées) à côté de son résultat.
+
+---
+
+## 🟢 MAJ précédente — Balayage ALIGNEMENT & SYMÉTRIE des 23 modules : plus aucune formule vide (4 en-têtes de colonne nommés) — v630
+**Quoi :** application de la demande — *« Tout doit être aligné et symétrique, aucun boutons vide, aucune formule vide »* — **au-delà des menus de la Consultation (v629), à l'ensemble des 23 modules**. Balayage mesuré : **0 bouton vide**, **0 bouton sans action**, **0 libellé vide**, **0 montant mal aligné** (tous à droite), **0 écart irrégulier** dans les barres horizontales — mais **4 EN-TÊTES DE COLONNE VIDES** au-dessus de colonnes d'action. Ils sont **nommés** :
+
+| Module | Table | Contenu de la colonne | Avant | Après |
+| --- | --- | --- | --- | --- |
+| Sociétés | `so-tbl` | bouton « Ouvrir » | (vide) | **Dossier** |
+| Sociétés | `so-tbl` | pastille favori ● / ○ | (vide) | **Favori** |
+| Charges & Paie | `cp-saltbl` | bouton × (supprimer) | (vide) | **Actions** |
+| Salarié | `pil-t` | ✎ Fiche · 🗑 | (vide) | **Actions** |
+
+Chaque en-tête reçoit `class="r"` — **le même alignement à droite que sa colonne** (les cellules d'action sont en `td.r`) — donc l'en-tête tombe **exactement au-dessus** de son contenu. Un en-tête vide au-dessus d'une colonne qui agit est une **formule vide** : la colonne existe, elle ne se nomme pas.
+
+**Les 413 cellules vides restantes sont LÉGITIMES et ne sont PAS touchées** — qualifiées une par une (regroupement classe + table + en-tête de colonne, puis relecture du contenu de ligne) :
+- **Éditions (101)** — colonnes **Débit / Crédit / Solde débit / Solde crédit** d'une balance : une ligne porte un débit **ou** un crédit, **jamais les deux** ; la colonne « Compte » est vide sur les lignes de **sous-total** (« Total 28 »). C'est la **convention d'édition comptable** — remplir ces cases serait une faute de lecture.
+- **Pilotage (288)** — les **cases à cocher `.ea-c`** de la grille « État d'avancement » (v458 : 3 dossiers × 8 tâches × 12 mois = 288). Elles sont **vides tant que la tâche n'est pas cochée** — c'est leur état normal ; le clic passe par **délégation d'événements** sur `document`, d'où l'absence d'`onclick` sur la cellule (ce qui les faisait passer pour inertes au premier balayage).
+- **Journal (21)** — colonne **Pièce** quand l'écriture n'en porte pas, et colonne **Date** sur les **lignes de suite** d'une même écriture (la date n'est écrite qu'une fois par écriture, convention du journal).
+- **Fournisseurs (3)** — colonne de montant opposée au sens de la ligne.
+
+**Comment — 4 éditions chirurgicales (aucun nouvel addon) :** `<th></th><th></th>` → `<th class="r">Dossier</th><th class="r">Favori</th>` (`so-tbl`) ; `<th></th>` → `<th class="r">Actions</th>` dans `cp-saltbl` (**2 occurrences** — le markup d'origine **et** la refonte Registre v604, gardées identiques) et dans `pil-t` (module Salarié). `sw.js` yada-v225, badge v630, `version.json` 630.
+
+**Validé :** `node --check` (**301 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014) + balises `</head>`/`</body>`/`</html>` inchangées (3/5/3) + **filet d'équilibre** (`YADA_CHROME=… node tests/equilibre-ecritures.mjs` : vente 1200=1200, achat 600=600 ✅) + **balayage des 23 modules** :
+
+| Mesure | Avant | Après |
+| --- | --- | --- |
+| **En-têtes de colonne vides** | **4** | **0** |
+| Libellés / valeurs vides | 0 | 0 |
+| Boutons vides | 0 | 0 |
+| Boutons sans action | 0 | 0 |
+| Montants non alignés à droite | 0 | 0 |
+| Écarts irréguliers (barres horizontales) | 0 | 0 |
+| Cellules vides **légitimes** (montants · cases à cocher) | 417 | **413** |
+
++ `pagesRoutedOk` **23/23** + **invariant v627 préservé** (**0 gras**, **0 italique**, **4 soulignés** = les liens Qonto ×3 et impots.gouv.fr) + **invariant v626 préservé** (**23/23 modules avec exactement 1 sortie « Fermer »**, **0 intitulé « retour »/« revenir »**) + **aucun débordement** (`scrollWidth = clientWidth`) + **0 pageerror**, **0 console.error**. Badge → **v630**.
+
+---
+
+## 🟢 MAJ précédente — Consultation : « Aide » devient une COMMANDE + aucun bouton vide dans les menus (barre entièrement symétrique) — v629
+**Quoi :** deux demandes. (1) **« Aide » n'était pas une commande** — c'était le seul libellé inerte de la barre de menus de la Consultation (réaligné en v628, mais toujours sans action). Elle **ouvre désormais un menu déroulant** comme les neuf autres entrées, avec **trois commandes qui font réellement quelque chose** : **Raccourcis clavier…** (double-clic, clic droit, Entrée, flèches, Tab, sélection multiple, Échap), **Comment lire cette page…** (onglets, périodes, journaux, filet blanc épais = séparation d'écritures, pied de fenêtre, bouton ✕) et **À propos de YADA…** (version, dossier ouvert, exercice, nombre d'écritures, dossiers du portefeuille, rappel que les données ne quittent pas le poste). (2) **Aucun bouton vide, aucune formule vide** — balayage des menus : **15 entrées sur 93 ne faisaient rien** (elles affichaient seulement une notification annonçant une action qui n'existe pas) et sont **retirées**, avec les **séparateurs devenus orphelins**.
+
+**Les 15 entrées retirées, et pourquoi :** **Synchro compta**, **Connexion à Compta & Facturation**, **A.D.N. Compta**, **Exporter vers Sage Active…**, **Exporter Coala Acquisition**, **Ciel Up To Experts ▸** → des **produits externes Sage/Ciel** auxquels un logiciel interne hors-ligne ne peut pas se connecter ; **Archivage légal** → **doublon** de « Clôture définitive et archivage légal de l'exercice », juste au-dessus ; **Coller les lignes du presse-papier** → **redondant** (la saisie a déjà Ctrl+V depuis la v224) et sa notification disait littéralement « presse-papier vide » ; **Marque suivante**, **Mettre à jour le signalement des pièces associées**, **Renommage préfixes des auxiliaires**, **Paramétrage du curseur d'import d'écritures**, **Importer les crédits-bails / les locations / les emprunts** → fonctions **jamais implémentées**. Un bouton qui promet un traitement et ne le fait pas est un **faux bouton** : mieux vaut qu'il n'existe pas que de laisser croire au traitement.
+
+**Comment — 3 éditions chirurgicales + 1 addon (`yada-addon-consult-aide`, 100% ADDITIF) :** (1) le `<span>Aide</span>` inerte devient `<span class="mi" onclick="toggleMenu('sg-aide')">` + un `<div class="sg-dd" id="sg-aide">` à 3 boutons ; (2) `'sg-aide'` ajouté à **`SG_MENUS`** → il se **ferme** avec les autres (`closeMenus`, clic extérieur) ; (3) les 15 boutons + 5 séparateurs orphelins retirés du markup de `pageCompta`. L'addon définit `sgAideRaccourcis` / `sgAideGuide` / `sgAidePropos` (modale `#modal` + tableau libellé/explication, contenu **lu en direct** pour « À propos » : badge de version, `db.societe`, `db.ecritures`, `db.cabinet.dossiers`). **Point technique :** « Aide » portant désormais `.mi`, elle reçoit le `padding:5px 8px` de `consult-ui-mod` (v563) **par la règle normale** — la règle générique `span:not(.mi)` de la v628 est conservée comme filet pour une future entrée sans menu, mais **ne s'applique plus à rien** dans la Consultation. `sw.js` yada-v224, badge v629, `version.json` 629.
+
+**Validé :** `node --check` (**301 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014) + balises `</head>`/`</body>`/`</html>` inchangées (3/5/3) + **filet d'équilibre** (`YADA_CHROME=… node tests/equilibre-ecritures.mjs` : vente 1200=1200, achat 600=600 ✅) + **mesure Playwright** :
+
+| Mesure | Avant (v628) | Après (v629) |
+| --- | --- | --- |
+| Entrées de la barre portant `.mi` | 9 / 10 | **10 / 10** |
+| Pointeur sur « Aide » | `default` (inerte) | **`pointer`** (commande) |
+| Écarts texte-à-texte | 34 px (9/9) | 34 px (9/9) — **inchangés** |
+| Remplissage · hauteur des entrées | `5px 8px` · 25,2 px | `5px 8px` · 25,2 px — **identiques sur les 10** |
+| Boutons de menu | 93 | **81** |
+| Dont sans action réelle | **15** | **0** |
+| Séparateurs orphelins / doublés | 5 | **0** |
+| Commandes de « Aide » | 0 | **3** (7 · 6 · 6 lignes rendues, **0 cellule vide**) |
+
++ **balayage des 23 modules** : **0 bouton vide**, **0 bouton sans action**, `pagesRoutedOk` **23/23** + **invariant v627 préservé** (**0 gras**, **0 italique**, **4 soulignés** = les liens Qonto et impots.gouv.fr) + **invariant v626 préservé** (23/23 sortie « Fermer », **0 intitulé « retour »/« revenir »**) + **aucun débordement** de la barre à **1440 / 1280 / 1024 / 900 px** (`scrollWidth = clientWidth`, `document` sans défilement horizontal) + **0 pageerror**, **0 console.error**. Badge → **v629**.
+
+**Constaté et NON traité (à arbitrer) :** les barres de menus décoratives des modules **Rapprochement** (`.rb-menu`, entrées « Lignes » et « Aide » inertes) et **Immobilisations** (`.im-menu`, 7 libellés inertes) **ne sont plus rendues à l'écran** depuis les refontes Registre (v597 / v602) — vérifié par balayage : aucune n'est visible dans les 23 modules. Leur markup subsiste dans le fichier ; le retirer serait du nettoyage mort, sans effet visible, donc non engagé.
+
+---
+
+## 🟢 MAJ précédente — Consultation : entrée « Aide » de la barre de menus réalignée (rythme régulier en fin de barre) — v628
+**Quoi :** dans la **barre de menus de la Consultation** (Fichier · Exercice · Journal · Compte · Balances · Paramètres · Utilitaires · Navigation · Modules · **Aide**), l'entrée **« Aide » était décalée** : son texte tombait **8 px trop près** de son voisin, cassant le rythme de la barre au dernier élément. Mesuré avant correctif : **écart texte-à-texte de 26 px avant « Aide »** contre **34 px entre toutes les autres entrées**. Après : **34 px partout** (9 écarts sur 9 identiques).
+
+**Pourquoi :** les neuf entrées qui ouvrent un menu déroulant portent la classe `.mi` et reçoivent `padding:5px 8px` (`consult-ui-mod`, v563). **« Aide » n'ouvre aucun menu** : c'est un simple `<span>` **sans `.mi`**, donc **`padding:0`** — sa boîte collait au texte, d'où les 8 px manquants d'un seul côté. Le décalage n'était pas une erreur de marge mais une entrée **hors du sélecteur**.
+
+**Comment — 1 règle ajoutée à `<style id="consult-ui-mod">` (édition chirurgicale, aucun nouvel addon) :** `html body:not(#_yz) .sg-app .sg-menu>span:not(.mi){padding:5px 8px!important;font-size:12px!important}` — **même boîte** que les entrées à menu, **mais ni pointeur ni survol** : `cursor:default` et **aucun fond au survol** sont conservés, car « Aide » **est un libellé, pas une commande** — lui donner l'apparence d'un bouton promettrait une action qui n'existe pas. La règle est **générique** (`span:not(.mi)`) : toute future entrée sans menu déroulant sera alignée d'office. `sw.js` yada-v223, badge v628, `version.json` 628.
+
+**Validé :** `node --check` (**300 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014) + balises `</head>`/`</body>`/`</html>` inchangées (3/5/3) + **filet d'équilibre** (`YADA_CHROME=… node tests/equilibre-ecritures.mjs` : vente 1200=1200, achat 600=600 ✅) + **mesure Playwright avant / après** :
+
+| Mesure (barre de menus de la Consultation) | Avant | Après |
+| --- | --- | --- |
+| Écart texte-à-texte **avant « Aide »** | **26 px** | **34 px** |
+| Écart entre les autres entrées | 34 px | 34 px |
+| Écarts distincts sur la barre | **2** (26 · 34) | **1** (34) |
+| Remplissage de « Aide » | `0px` | `5px 8px` |
+| Hauteur des entrées | 25,2 px | 25,2 px (inchangée) |
+| Pointeur / survol sur « Aide » | `default` · aucun fond | `default` · aucun fond (conservés) |
+
++ **aucun débordement** de la barre à **1440 / 1280 / 1024 / 900 px** (`scrollWidth = clientWidth`, dernier élément à 861,9 px, `document` sans défilement horizontal) + **invariant v627 préservé** (23/23 modules : **0 gras**, **0 italique**, **4 soulignés** = les liens Qonto et impots.gouv.fr) + **invariant v626 préservé** (23/23 modules : sortie « Fermer », **0 intitulé « retour »/« revenir »**) + **navigation réellement exercée** (`pagesRoutedOk` 23/23) + **aucune couleur introduite** (la règle ne pose que `padding` et `font-size`) + **0 pageerror**, **0 console.error**. Badge → **v628**.
+
+**Constaté et NON traité (à arbitrer) :** « Aide » **n'ouvre rien** — c'est la seule entrée inerte de la barre. La **page de saisie** possède déjà, elle, une entrée « Aide » qui **liste les raccourcis clavier** (v623) ; brancher la même liste ici rendrait l'entrée utile et cohérente, mais c'est un **ajout de fonctionnalité** non demandé, donc non engagé. À noter aussi : la **seconde barre `.sg-menu`** du fichier (module « Saisie journal Banque », 7 libellés tous sans `.mi`) bénéficie de la même règle, mais **ce module n'est pas atteignable** depuis la table rase v535 (`saisiebq` absent de `window.YADA_OK`, 23 modules enregistrés) — l'effet n'a donc **pas pu être mesuré à l'écran** et n'est pas revendiqué.
+
+---
+
+## 🟢 MAJ précédente — AUCUN TEXTE EN GRAS NI EN ITALIQUE dans l'interface (balayage global des 23 modules) — v627
+**Quoi :** application de la **règle permanente** de l'utilisateur — *« ne jamais afficher de texte en gras, italique ou souligné »* — à **tout le logiciel**, et plus seulement aux deux modules traités en v619 (Consultation & Déclaration). Le balayage relevé en v619 (**« 480 éléments en gras, 2 en italique » — non engagé faute de demande explicite**) est désormais **exécuté** : mesuré à **583 éléments en gras** et **2 en italique** sur les 23 modules (Pilotage 140 · Infos société 48 · Fournisseurs 35 · Tiers 33 · Suivi des règlements 27 · Charges & Paie 26 · Analytique 23 · FEC 22 · Plan comptable 19 · Sociétés 19 · Tableau de bord 19 · Paramétrage 16 · Coffre-fort 16 · Journal 16 · Banque 16 · Rapprochement 16 · Immobilisations 16 · Salarié 16 · Éditions 13 · TVA 9 · Contrôles 9 · Import bancaire 9 · Écritures récurrentes 9) → **0 gras, 0 italique**. Couvre aussi les surfaces hors module (barre latérale, fenêtres, menus, modales, notifications).
+
+**Deux exceptions, toutes deux déjà posées :**
+1. **Les éditions imprimables gardent leur mise en forme papier** — `.doc-page`, `.inv` et `#print-area` sont **exclus** : le gras des en-têtes de colonnes et des totaux d'une balance ou d'un bilan est une **convention d'édition imprimée**, pas un gras d'interface (distinction énoncée en v619). Vérifié : l'édition de la Balance conserve ses **85 éléments en gras** sur feuille blanche.
+2. **Le SOULIGNÉ n'est pas touché** — les **4 seuls** éléments soulignés du logiciel sont des **LIENS** : « Qonto » (`.so-link`, module Sociétés, ×3) et « impots.gouv.fr · espace professionnel » (`.tvar-lk`, module Déclaration). C'est le souligné **qui les fait reconnaître comme des liens** — exception posée en v613, confirmée en v619 pour impots.gouv.fr, ici étendue par cohérence au lien Qonto.
+
+**Aucune hiérarchie n'est perdue :** chaque titre, en-tête ou total portait **déjà** un autre signal — **serif contre mono**, **taille**, **pastille inversée** (fond clair / texte noir), **filet blanc**. Contrôlé à l'écran sur Pilotage (140 gras → 0) et Suivi des règlements (27 → 0) : titre de module, en-têtes de colonnes, onglet actif, tiers sélectionné et montants restent parfaitement distincts.
+
+**Comment — nouvel addon `yada-addon-sans-gras` (100% ADDITIF & CSS-ONLY, injecté en DERNIER) :** `<style id="sans-gras-mod">` posant **une seule règle** — `html body:not(#_yz) *:not(.doc-page):not(.doc-page *):not(.inv):not(.inv *):not(#print-area):not(#print-area *){font-weight:400!important;font-style:normal!important}` — créé une fois puis **garanti après chaque rendu** (`ensure()` greffé sur `render` + intervalle 1500 ms, idempotent par l'id). **Points techniques :** (1) le préfixe `:not(#_yz)` apporte un **niveau d'ID** et chacun des six `:not(.x)` un niveau de classe → spécificité **(1,6,2)** + `!important`, ce qui bat la couche globale `yada-addon-registre-unify` (v609, (2,1,5)) sur `#main table thead th` **et** toutes les feuilles de module, sans surenchère ; (2) l'exclusion des éditions passe par un **sélecteur complexe dans `:not()`** (Selectors Level 4) — vérifié à l'exécution : un `<b>` posé dans `.doc-page` / `.inv` / `#print-area` reste à **700**, le même `<b>` dans l'interface passe à **400** ; (3) **aucun `style="font-weight:…!important"` en ligne** n'existe dans le fichier (relevé : 0), donc la règle n'est jamais écrasée. `sw.js` yada-v222, badge v627, `version.json` 627.
+
+**Validé :** `node --check` (**300 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (19674/19674) + balises `</head>`/`</body>`/`</html>` inchangées (3/5/3) + **filet d'équilibre** (`YADA_CHROME=… node tests/equilibre-ecritures.mjs` : vente 1200=1200, achat 600=600 ✅) + **mesure Playwright avant / après sur les 23 modules** :
+
+| Mesure | Avant | Après |
+| --- | --- | --- |
+| Texte en **gras** (interface) | **583** | **0** |
+| Texte en **italique** (interface) | **2** | **0** |
+| Texte **souligné** (liens Qonto + impots.gouv.fr) | 4 | **4** (conservés) |
+| Gras dans l'**édition Balance** (`.doc-page`) | 85 | **85** (conservé) |
+
++ **navigation réellement exercée** (`pagesRoutedOk` 23/23 : `body[data-page]` = module demandé à chaque étape — la sonde pilote le binding lexical `current`, car `window.current` **n'existe pas** dans le fichier et ne route rien) + **invariant v626 préservé** (23/23 modules : exactement **1 sortie « Fermer »**, **0 intitulé « retour »/« revenir »**, clic réel → page principale) + **chroma identique avant / après** (2346 = 2346, **aucune couleur introduite** — la règle ne touche que le poids et le style de la police) + **0 pageerror**, **0 console.error**. Badge → **v627**.
+
+---
+
+## 🟢 MAJ précédente — UN SEUL bouton : FERMER (plus aucun bouton « retour ») — v626
 **Quoi :** demande explicite — **« Je veux pas de boutons retour, je veux uniquement un bouton fermer »**. Les **23 modules** affichaient bien un **✕**, mais c'était un **bouton de RETOUR déguisé en croix** : son intitulé était **« Revenir à la Consultation »** (ou « Fermer et revenir… » / « Enregistrer et revenir… ») et son action ramenait sur la **Consultation** (`current='compta'`). Désormais le ✕ est un **vrai bouton de FERMETURE** : il **ferme la page** et rend la **PAGE PRINCIPALE** (l'accueil « Génération Experts », qui est aussi la page d'entrée du logiciel au démarrage — invariant v549), **exactement comme le ✕ de la Consultation** (v625). Les **intitulés** deviennent **« Fermer »** partout (« Enregistrer et fermer » pour Informations société, qui enregistre avant de fermer) — le mot « revenir » disparaît de l'interface.
 
 **Paramétrage — le dernier bouton « ← Retour » retiré :** le module Paramétrage (grille de tuiles → panneau de réglage) portait une **flèche « ← Retour aux réglages »** à côté de son ✕ — soit **deux boutons** dans le même bandeau. La flèche est **supprimée** et le ✕ devient **contextuel, en restant un unique bouton « Fermer »** : panneau ouvert → **ferme le panneau** (retour à la grille des réglages, on reste dans le module) ; depuis la grille → **ferme le module** (page principale). Les autres boutons de retour du code (`fermerCompteAux`, `admPaieSel('')`, `ds-back-chip`…) sont **inatteignables** depuis la table rase v535 — vérifié par balayage des 23 modules : **0 intitulé « retour » / « revenir » visible**.
