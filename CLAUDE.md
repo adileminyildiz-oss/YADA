@@ -36,7 +36,18 @@
 
 ---
 
-## 🟢 Dernière mise à jour — Bande de la page de saisie : « Nouvelle écriture » → « Journal », modules Écriture et Journal SÉPARÉS — v624
+## 🟢 Dernière mise à jour — CONSULTATION : bouton de FERMETURE ✕ → retour à la PAGE PRINCIPALE — v625
+**Quoi :** la **page de Consultation** peut enfin être **fermée**. Un bouton **✕ « Fermer la Consultation »** est ajouté **en haut à droite du bandeau-titre** ; au clic, on **revient sur la PAGE PRINCIPALE** — l'accueil « Génération Experts », qui est aussi la **page d'entrée du logiciel** au démarrage (`__homeView=true`, invariant v549). Le **dossier ouvert est conservé** : la page principale se rouvre sur « Mes dossiers · Applications du dossier ».
+
+**Pourquoi elle n'avait plus de sortie :** les **boutons de fenêtre** de la barre de titre (`─ ▢ ✕`) ont été **retirés du markup** en v410 (il ne restait que `▢`), puis la `.sg-win` entière a été **masquée** par le reset en v548 (`.sg-app .sg-win{display:none!important}`) ; et le **filet générique** `yada-addon-sortie-module` (v614), qui greffe un ✕ sur tout module sans sortie, **exclut explicitement `compta`** (`if(current==='compta') return;`). La Consultation était donc le seul écran sans aucune sortie visible — seule la barre latérale « Accueil » (masquée dans les modules) ou un rechargement permettaient d'en sortir.
+
+**Comment — nouvel addon `yada-addon-consult-fermer` (100% ADDITIF, injecté en DERNIER) :** `window.yadaFermerConsultation()` = `__homeView=true` + `render()` (exactement le drapeau de démarrage → la page d'entrée est bien la page principale) ; `ensure()` (greffé sur `render` + intervalle 900 ms, **idempotent** par l'id `#sg-fermer`) insère le bouton dans `.sg-app .sg-title`. **Point technique :** le bandeau reçoit `padding-right:52px` **sur les deux sélecteurs** — `html body:not(#_yz) .sg-app .sg-title` (1,3,2) **et** `html body:not(#_yz) .sg-app.yada-cregi .sg-title` (1,4,2) — car la couche Registre (v595) pose `padding:26px 16px 12px!important` à (1,4,2) et écraserait un seul des deux ; la place du ✕ est ainsi **réservée** et il ne recouvre aucun texte du titre. Style aux jetons Registre (34→**30×30**, fond `#000`, filet et encre `#f5f5f6`, mono, **aucun gras/italique/souligné**, survol inversé). `sw.js` yada-v220, badge v625, `version.json` 625.
+
+**Validé :** `node --check` (**298 scripts inline, 0 erreur**) + `node --check sw.js` OK + balises `</head>`/`</body>`/`</html>` inchangées (3/5/3) + **filet d'équilibre** (`YADA_CHROME=… node tests/equilibre-ecritures.mjs` : vente 1200=1200, achat 600=600 ✅) + **rendu Playwright** (démarrage = **page principale** `.acc-blk` + `__homeView=true` + badge v625 ; Consultation : **✕ présent** dans `.sg-title`, 30×30, `ui-monospace` poids **400** sans souligné, `padding-right:52px` réservé, **0 chevauchement** avec le texte du titre (texte à 806 px, bouton à 1237 px), bouton **dans l'écran** ; **clic réel sur le ✕ → retour page principale** (`.acc-blk` rendue, `.sg-app` disparue) ; réouverture de la Consultation → **exactement 1 bouton** (idempotent)) + **aller-retour sur les 23 modules : 0 problème** + **chroma identique avant / après** (456 éléments hérités de `.sg-menu`/`.sg-dd`, **aucune couleur introduite**) + **0 pageerror**. Badge → **v625**.
+
+---
+
+## 🟢 MAJ précédente — Bande de la page de saisie : « Nouvelle écriture » → « Journal », modules Écriture et Journal SÉPARÉS — v624
 **Quoi :** dans la **bande de modules** de la page de saisie (v623), l'entrée **« Nouvelle écriture »** est renommée **« Journal »**, et les modules **Écriture** et **Journal** redeviennent **deux modules distincts** (la fusion de la v623 est annulée) :
 - **Écriture** → **Journal** (crée une écriture à saisir) · Insérer une ligne · Supprimer la ligne (ou les N lignes sélectionnées) · Solder l'écriture · Solder en compte d'attente 471 ;
 - **Journal** → les **7 journaux du dossier** (HA · VT · BQ · ODP · ODC · ODTVA · OD) · Saisir une opération….
