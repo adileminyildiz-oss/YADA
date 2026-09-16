@@ -36,7 +36,43 @@
 
 ---
 
-## 🟢 Dernière mise à jour — Consultation : « Aide » devient une COMMANDE + aucun bouton vide dans les menus (barre entièrement symétrique) — v629
+## 🟢 Dernière mise à jour — Balayage ALIGNEMENT & SYMÉTRIE des 23 modules : plus aucune formule vide (4 en-têtes de colonne nommés) — v630
+**Quoi :** application de la demande — *« Tout doit être aligné et symétrique, aucun boutons vide, aucune formule vide »* — **au-delà des menus de la Consultation (v629), à l'ensemble des 23 modules**. Balayage mesuré : **0 bouton vide**, **0 bouton sans action**, **0 libellé vide**, **0 montant mal aligné** (tous à droite), **0 écart irrégulier** dans les barres horizontales — mais **4 EN-TÊTES DE COLONNE VIDES** au-dessus de colonnes d'action. Ils sont **nommés** :
+
+| Module | Table | Contenu de la colonne | Avant | Après |
+| --- | --- | --- | --- | --- |
+| Sociétés | `so-tbl` | bouton « Ouvrir » | (vide) | **Dossier** |
+| Sociétés | `so-tbl` | pastille favori ● / ○ | (vide) | **Favori** |
+| Charges & Paie | `cp-saltbl` | bouton × (supprimer) | (vide) | **Actions** |
+| Salarié | `pil-t` | ✎ Fiche · 🗑 | (vide) | **Actions** |
+
+Chaque en-tête reçoit `class="r"` — **le même alignement à droite que sa colonne** (les cellules d'action sont en `td.r`) — donc l'en-tête tombe **exactement au-dessus** de son contenu. Un en-tête vide au-dessus d'une colonne qui agit est une **formule vide** : la colonne existe, elle ne se nomme pas.
+
+**Les 413 cellules vides restantes sont LÉGITIMES et ne sont PAS touchées** — qualifiées une par une (regroupement classe + table + en-tête de colonne, puis relecture du contenu de ligne) :
+- **Éditions (101)** — colonnes **Débit / Crédit / Solde débit / Solde crédit** d'une balance : une ligne porte un débit **ou** un crédit, **jamais les deux** ; la colonne « Compte » est vide sur les lignes de **sous-total** (« Total 28 »). C'est la **convention d'édition comptable** — remplir ces cases serait une faute de lecture.
+- **Pilotage (288)** — les **cases à cocher `.ea-c`** de la grille « État d'avancement » (v458 : 3 dossiers × 8 tâches × 12 mois = 288). Elles sont **vides tant que la tâche n'est pas cochée** — c'est leur état normal ; le clic passe par **délégation d'événements** sur `document`, d'où l'absence d'`onclick` sur la cellule (ce qui les faisait passer pour inertes au premier balayage).
+- **Journal (21)** — colonne **Pièce** quand l'écriture n'en porte pas, et colonne **Date** sur les **lignes de suite** d'une même écriture (la date n'est écrite qu'une fois par écriture, convention du journal).
+- **Fournisseurs (3)** — colonne de montant opposée au sens de la ligne.
+
+**Comment — 4 éditions chirurgicales (aucun nouvel addon) :** `<th></th><th></th>` → `<th class="r">Dossier</th><th class="r">Favori</th>` (`so-tbl`) ; `<th></th>` → `<th class="r">Actions</th>` dans `cp-saltbl` (**2 occurrences** — le markup d'origine **et** la refonte Registre v604, gardées identiques) et dans `pil-t` (module Salarié). `sw.js` yada-v225, badge v630, `version.json` 630.
+
+**Validé :** `node --check` (**301 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014) + balises `</head>`/`</body>`/`</html>` inchangées (3/5/3) + **filet d'équilibre** (`YADA_CHROME=… node tests/equilibre-ecritures.mjs` : vente 1200=1200, achat 600=600 ✅) + **balayage des 23 modules** :
+
+| Mesure | Avant | Après |
+| --- | --- | --- |
+| **En-têtes de colonne vides** | **4** | **0** |
+| Libellés / valeurs vides | 0 | 0 |
+| Boutons vides | 0 | 0 |
+| Boutons sans action | 0 | 0 |
+| Montants non alignés à droite | 0 | 0 |
+| Écarts irréguliers (barres horizontales) | 0 | 0 |
+| Cellules vides **légitimes** (montants · cases à cocher) | 417 | **413** |
+
++ `pagesRoutedOk` **23/23** + **invariant v627 préservé** (**0 gras**, **0 italique**, **4 soulignés** = les liens Qonto ×3 et impots.gouv.fr) + **invariant v626 préservé** (**23/23 modules avec exactement 1 sortie « Fermer »**, **0 intitulé « retour »/« revenir »**) + **aucun débordement** (`scrollWidth = clientWidth`) + **0 pageerror**, **0 console.error**. Badge → **v630**.
+
+---
+
+## 🟢 MAJ précédente — Consultation : « Aide » devient une COMMANDE + aucun bouton vide dans les menus (barre entièrement symétrique) — v629
 **Quoi :** deux demandes. (1) **« Aide » n'était pas une commande** — c'était le seul libellé inerte de la barre de menus de la Consultation (réaligné en v628, mais toujours sans action). Elle **ouvre désormais un menu déroulant** comme les neuf autres entrées, avec **trois commandes qui font réellement quelque chose** : **Raccourcis clavier…** (double-clic, clic droit, Entrée, flèches, Tab, sélection multiple, Échap), **Comment lire cette page…** (onglets, périodes, journaux, filet blanc épais = séparation d'écritures, pied de fenêtre, bouton ✕) et **À propos de YADA…** (version, dossier ouvert, exercice, nombre d'écritures, dossiers du portefeuille, rappel que les données ne quittent pas le poste). (2) **Aucun bouton vide, aucune formule vide** — balayage des menus : **15 entrées sur 93 ne faisaient rien** (elles affichaient seulement une notification annonçant une action qui n'existe pas) et sont **retirées**, avec les **séparateurs devenus orphelins**.
 
 **Les 15 entrées retirées, et pourquoi :** **Synchro compta**, **Connexion à Compta & Facturation**, **A.D.N. Compta**, **Exporter vers Sage Active…**, **Exporter Coala Acquisition**, **Ciel Up To Experts ▸** → des **produits externes Sage/Ciel** auxquels un logiciel interne hors-ligne ne peut pas se connecter ; **Archivage légal** → **doublon** de « Clôture définitive et archivage légal de l'exercice », juste au-dessus ; **Coller les lignes du presse-papier** → **redondant** (la saisie a déjà Ctrl+V depuis la v224) et sa notification disait littéralement « presse-papier vide » ; **Marque suivante**, **Mettre à jour le signalement des pièces associées**, **Renommage préfixes des auxiliaires**, **Paramétrage du curseur d'import d'écritures**, **Importer les crédits-bails / les locations / les emprunts** → fonctions **jamais implémentées**. Un bouton qui promet un traitement et ne le fait pas est un **faux bouton** : mieux vaut qu'il n'existe pas que de laisser croire au traitement.

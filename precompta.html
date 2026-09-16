@@ -6178,7 +6178,7 @@ function pageChargesPaie(){
         <div>
           <div class="cp-panel"><div class="cp-panel-h"><h2>Salariés & rémunérations brutes</h2><span class="mini">${(P.salaries||[]).length} salarié(s)</span></div>
             <div class="cp-panel-b">
-              <table class="cp-saltbl"><thead><tr><th>Compte tiers</th><th>Nom</th><th>Poste</th><th class="r">Brut mensuel</th><th></th></tr></thead>
+              <table class="cp-saltbl"><thead><tr><th>Compte tiers</th><th>Nom</th><th>Poste</th><th class="r">Brut mensuel</th><th class="r">Actions</th></tr></thead>
               <tbody>${salRows||'<tr><td colspan=5 style="padding:14px;color:#888">Aucun salarié — ajoutez-en ci-dessous.</td></tr>'}</tbody></table>
               <div class="cp-addrow">
                 <div style="width:130px"><label>Compte tiers</label><input id="cp-aux-prev" readonly value="421XXXX00" style="width:100%;font-family:'IBM Plex Mono',monospace"></div>
@@ -11083,7 +11083,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v629';
+    b.textContent='YADA · v630';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -21303,7 +21303,7 @@ ${lignes}
     var rows=r.salaries.map(function(s,i){ return '<tr><td><span class="sal-dot" style="background:'+couleur(s,i)+'"></span> <b>'+esc((s.nom||'')+' '+(s.prenom||''))+'</b></td><td>'+esc(s.poste||'')+'</td><td>'+esc(s.statut||'')+'</td><td class="r">'+money(s.brut)+'</td><td class="r">'+money(s.net)+'</td><td class="r"><button class="btn btn-ghost btn-sm" onclick="salEdit(\''+s.id+'\')">✎ Fiche</button> <button class="btn btn-ghost btn-sm" onclick="salDel(\''+s.id+'\')">🗑</button></td></tr>'; }).join('')||'<tr><td colspan="6" class="empty">Aucun salarié enregistré.</td></tr>';
     return '<div class="card"><h2>👥 Liste des salariés</h2><div class="sub">Cliquez sur « Fiche » pour toutes les informations, documents et l\'accès YADA.</div>'
       +'<div style="margin:6px 0 10px"><button class="btn btn-pri btn-sm" onclick="salEdit(\'new\')">➕ Nouveau salarié</button></div>'
-      +'<table class="pil-t"><thead><tr><th>Nom Prénom</th><th>Poste</th><th>Statut</th><th class="r">Brut</th><th class="r">Net</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+      +'<table class="pil-t"><thead><tr><th>Nom Prénom</th><th>Poste</th><th>Statut</th><th class="r">Brut</th><th class="r">Net</th><th class="r">Actions</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
       +(window.salSel?salFiche(window.salSel):'');
   }
   window.salEdit=function(id){ window.salSel=id; if(typeof render==='function')render(); setTimeout(function(){ var el=document.getElementById('sal-fiche'); if(el) el.scrollIntoView({block:'start',behavior:'smooth'}); },40); };
@@ -29628,7 +29628,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       +'</div>'
       +'<input class="so-search" placeholder="Rechercher une entreprise…" value="'+e2(q)+'" oninput="socFilter(this.value)" autocomplete="off">'
       +'<div class="so-tblwrap"><table class="so-tbl"><thead><tr>'
-        +'<th>Nom de l\'entreprise</th><th class="r">Fact. fourn.</th><th class="r">Fact. client</th><th class="r">Docs manq.</th><th>Portail</th><th></th><th></th>'
+        +'<th>Nom de l\'entreprise</th><th class="r">Fact. fourn.</th><th class="r">Fact. client</th><th class="r">Docs manq.</th><th>Portail</th><th class="r">Dossier</th><th class="r">Favori</th>'
       +'</tr></thead><tbody id="so-tbody">'+rows(liste())+'</tbody></table></div>'
       +'</div></div>';
   };
@@ -30122,7 +30122,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       +'<div class="cp-bar"><span class="cp-info">'+((P.salaries||[]).length)+' salarié(s) · Brut '+E(c.brut)+' · Coût employeur '+E(c.coutTotal||0)+'</span><span class="cp-sp"></span>'+actions+'</div>'
       +'<div class="cp-two">'+odCard('OD PAIE',piece,odPaieLignes(c))+odCard('OD CHARGES',piece,odChargesLignes(c))+'</div>'
       +'<div class="cp-sal"><div class="cp-sh">Salariés & rémunérations brutes</div>'
-        +'<table class="cp-saltbl"><thead><tr><th>Compte tiers</th><th>Nom</th><th>Poste</th><th class="r">Brut mensuel</th><th></th></tr></thead>'
+        +'<table class="cp-saltbl"><thead><tr><th>Compte tiers</th><th>Nom</th><th>Poste</th><th class="r">Brut mensuel</th><th class="r">Actions</th></tr></thead>'
         +'<tbody>'+salRows+'</tbody></table>'
         +'<div class="cp-add">'
           +'<div class="cp-f"><label>Nom</label><input id="cp-nom" class="cp-in" placeholder="NOM Prénom"></div>'
