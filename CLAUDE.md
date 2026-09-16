@@ -36,7 +36,33 @@
 
 ---
 
-## 🟢 Dernière mise à jour — Consultation : entrée « Aide » de la barre de menus réalignée (rythme régulier en fin de barre) — v628
+## 🟢 Dernière mise à jour — Consultation : « Aide » devient une COMMANDE + aucun bouton vide dans les menus (barre entièrement symétrique) — v629
+**Quoi :** deux demandes. (1) **« Aide » n'était pas une commande** — c'était le seul libellé inerte de la barre de menus de la Consultation (réaligné en v628, mais toujours sans action). Elle **ouvre désormais un menu déroulant** comme les neuf autres entrées, avec **trois commandes qui font réellement quelque chose** : **Raccourcis clavier…** (double-clic, clic droit, Entrée, flèches, Tab, sélection multiple, Échap), **Comment lire cette page…** (onglets, périodes, journaux, filet blanc épais = séparation d'écritures, pied de fenêtre, bouton ✕) et **À propos de YADA…** (version, dossier ouvert, exercice, nombre d'écritures, dossiers du portefeuille, rappel que les données ne quittent pas le poste). (2) **Aucun bouton vide, aucune formule vide** — balayage des menus : **15 entrées sur 93 ne faisaient rien** (elles affichaient seulement une notification annonçant une action qui n'existe pas) et sont **retirées**, avec les **séparateurs devenus orphelins**.
+
+**Les 15 entrées retirées, et pourquoi :** **Synchro compta**, **Connexion à Compta & Facturation**, **A.D.N. Compta**, **Exporter vers Sage Active…**, **Exporter Coala Acquisition**, **Ciel Up To Experts ▸** → des **produits externes Sage/Ciel** auxquels un logiciel interne hors-ligne ne peut pas se connecter ; **Archivage légal** → **doublon** de « Clôture définitive et archivage légal de l'exercice », juste au-dessus ; **Coller les lignes du presse-papier** → **redondant** (la saisie a déjà Ctrl+V depuis la v224) et sa notification disait littéralement « presse-papier vide » ; **Marque suivante**, **Mettre à jour le signalement des pièces associées**, **Renommage préfixes des auxiliaires**, **Paramétrage du curseur d'import d'écritures**, **Importer les crédits-bails / les locations / les emprunts** → fonctions **jamais implémentées**. Un bouton qui promet un traitement et ne le fait pas est un **faux bouton** : mieux vaut qu'il n'existe pas que de laisser croire au traitement.
+
+**Comment — 3 éditions chirurgicales + 1 addon (`yada-addon-consult-aide`, 100% ADDITIF) :** (1) le `<span>Aide</span>` inerte devient `<span class="mi" onclick="toggleMenu('sg-aide')">` + un `<div class="sg-dd" id="sg-aide">` à 3 boutons ; (2) `'sg-aide'` ajouté à **`SG_MENUS`** → il se **ferme** avec les autres (`closeMenus`, clic extérieur) ; (3) les 15 boutons + 5 séparateurs orphelins retirés du markup de `pageCompta`. L'addon définit `sgAideRaccourcis` / `sgAideGuide` / `sgAidePropos` (modale `#modal` + tableau libellé/explication, contenu **lu en direct** pour « À propos » : badge de version, `db.societe`, `db.ecritures`, `db.cabinet.dossiers`). **Point technique :** « Aide » portant désormais `.mi`, elle reçoit le `padding:5px 8px` de `consult-ui-mod` (v563) **par la règle normale** — la règle générique `span:not(.mi)` de la v628 est conservée comme filet pour une future entrée sans menu, mais **ne s'applique plus à rien** dans la Consultation. `sw.js` yada-v224, badge v629, `version.json` 629.
+
+**Validé :** `node --check` (**301 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014) + balises `</head>`/`</body>`/`</html>` inchangées (3/5/3) + **filet d'équilibre** (`YADA_CHROME=… node tests/equilibre-ecritures.mjs` : vente 1200=1200, achat 600=600 ✅) + **mesure Playwright** :
+
+| Mesure | Avant (v628) | Après (v629) |
+| --- | --- | --- |
+| Entrées de la barre portant `.mi` | 9 / 10 | **10 / 10** |
+| Pointeur sur « Aide » | `default` (inerte) | **`pointer`** (commande) |
+| Écarts texte-à-texte | 34 px (9/9) | 34 px (9/9) — **inchangés** |
+| Remplissage · hauteur des entrées | `5px 8px` · 25,2 px | `5px 8px` · 25,2 px — **identiques sur les 10** |
+| Boutons de menu | 93 | **81** |
+| Dont sans action réelle | **15** | **0** |
+| Séparateurs orphelins / doublés | 5 | **0** |
+| Commandes de « Aide » | 0 | **3** (7 · 6 · 6 lignes rendues, **0 cellule vide**) |
+
++ **balayage des 23 modules** : **0 bouton vide**, **0 bouton sans action**, `pagesRoutedOk` **23/23** + **invariant v627 préservé** (**0 gras**, **0 italique**, **4 soulignés** = les liens Qonto et impots.gouv.fr) + **invariant v626 préservé** (23/23 sortie « Fermer », **0 intitulé « retour »/« revenir »**) + **aucun débordement** de la barre à **1440 / 1280 / 1024 / 900 px** (`scrollWidth = clientWidth`, `document` sans défilement horizontal) + **0 pageerror**, **0 console.error**. Badge → **v629**.
+
+**Constaté et NON traité (à arbitrer) :** les barres de menus décoratives des modules **Rapprochement** (`.rb-menu`, entrées « Lignes » et « Aide » inertes) et **Immobilisations** (`.im-menu`, 7 libellés inertes) **ne sont plus rendues à l'écran** depuis les refontes Registre (v597 / v602) — vérifié par balayage : aucune n'est visible dans les 23 modules. Leur markup subsiste dans le fichier ; le retirer serait du nettoyage mort, sans effet visible, donc non engagé.
+
+---
+
+## 🟢 MAJ précédente — Consultation : entrée « Aide » de la barre de menus réalignée (rythme régulier en fin de barre) — v628
 **Quoi :** dans la **barre de menus de la Consultation** (Fichier · Exercice · Journal · Compte · Balances · Paramètres · Utilitaires · Navigation · Modules · **Aide**), l'entrée **« Aide » était décalée** : son texte tombait **8 px trop près** de son voisin, cassant le rythme de la barre au dernier élément. Mesuré avant correctif : **écart texte-à-texte de 26 px avant « Aide »** contre **34 px entre toutes les autres entrées**. Après : **34 px partout** (9 écarts sur 9 identiques).
 
 **Pourquoi :** les neuf entrées qui ouvrent un menu déroulant portent la classe `.mi` et reçoivent `padding:5px 8px` (`consult-ui-mod`, v563). **« Aide » n'ouvre aucun menu** : c'est un simple `<span>` **sans `.mi`**, donc **`padding:0`** — sa boîte collait au texte, d'où les 8 px manquants d'un seul côté. Le décalage n'était pas une erreur de marge mais une entrée **hors du sélecteur**.
