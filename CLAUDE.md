@@ -36,7 +36,31 @@
 
 ---
 
-## 🟢 Dernière mise à jour — AUCUN TEXTE EN GRAS NI EN ITALIQUE dans l'interface (balayage global des 23 modules) — v627
+## 🟢 Dernière mise à jour — Consultation : entrée « Aide » de la barre de menus réalignée (rythme régulier en fin de barre) — v628
+**Quoi :** dans la **barre de menus de la Consultation** (Fichier · Exercice · Journal · Compte · Balances · Paramètres · Utilitaires · Navigation · Modules · **Aide**), l'entrée **« Aide » était décalée** : son texte tombait **8 px trop près** de son voisin, cassant le rythme de la barre au dernier élément. Mesuré avant correctif : **écart texte-à-texte de 26 px avant « Aide »** contre **34 px entre toutes les autres entrées**. Après : **34 px partout** (9 écarts sur 9 identiques).
+
+**Pourquoi :** les neuf entrées qui ouvrent un menu déroulant portent la classe `.mi` et reçoivent `padding:5px 8px` (`consult-ui-mod`, v563). **« Aide » n'ouvre aucun menu** : c'est un simple `<span>` **sans `.mi`**, donc **`padding:0`** — sa boîte collait au texte, d'où les 8 px manquants d'un seul côté. Le décalage n'était pas une erreur de marge mais une entrée **hors du sélecteur**.
+
+**Comment — 1 règle ajoutée à `<style id="consult-ui-mod">` (édition chirurgicale, aucun nouvel addon) :** `html body:not(#_yz) .sg-app .sg-menu>span:not(.mi){padding:5px 8px!important;font-size:12px!important}` — **même boîte** que les entrées à menu, **mais ni pointeur ni survol** : `cursor:default` et **aucun fond au survol** sont conservés, car « Aide » **est un libellé, pas une commande** — lui donner l'apparence d'un bouton promettrait une action qui n'existe pas. La règle est **générique** (`span:not(.mi)`) : toute future entrée sans menu déroulant sera alignée d'office. `sw.js` yada-v223, badge v628, `version.json` 628.
+
+**Validé :** `node --check` (**300 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014) + balises `</head>`/`</body>`/`</html>` inchangées (3/5/3) + **filet d'équilibre** (`YADA_CHROME=… node tests/equilibre-ecritures.mjs` : vente 1200=1200, achat 600=600 ✅) + **mesure Playwright avant / après** :
+
+| Mesure (barre de menus de la Consultation) | Avant | Après |
+| --- | --- | --- |
+| Écart texte-à-texte **avant « Aide »** | **26 px** | **34 px** |
+| Écart entre les autres entrées | 34 px | 34 px |
+| Écarts distincts sur la barre | **2** (26 · 34) | **1** (34) |
+| Remplissage de « Aide » | `0px` | `5px 8px` |
+| Hauteur des entrées | 25,2 px | 25,2 px (inchangée) |
+| Pointeur / survol sur « Aide » | `default` · aucun fond | `default` · aucun fond (conservés) |
+
++ **aucun débordement** de la barre à **1440 / 1280 / 1024 / 900 px** (`scrollWidth = clientWidth`, dernier élément à 861,9 px, `document` sans défilement horizontal) + **invariant v627 préservé** (23/23 modules : **0 gras**, **0 italique**, **4 soulignés** = les liens Qonto et impots.gouv.fr) + **invariant v626 préservé** (23/23 modules : sortie « Fermer », **0 intitulé « retour »/« revenir »**) + **navigation réellement exercée** (`pagesRoutedOk` 23/23) + **aucune couleur introduite** (la règle ne pose que `padding` et `font-size`) + **0 pageerror**, **0 console.error**. Badge → **v628**.
+
+**Constaté et NON traité (à arbitrer) :** « Aide » **n'ouvre rien** — c'est la seule entrée inerte de la barre. La **page de saisie** possède déjà, elle, une entrée « Aide » qui **liste les raccourcis clavier** (v623) ; brancher la même liste ici rendrait l'entrée utile et cohérente, mais c'est un **ajout de fonctionnalité** non demandé, donc non engagé. À noter aussi : la **seconde barre `.sg-menu`** du fichier (module « Saisie journal Banque », 7 libellés tous sans `.mi`) bénéficie de la même règle, mais **ce module n'est pas atteignable** depuis la table rase v535 (`saisiebq` absent de `window.YADA_OK`, 23 modules enregistrés) — l'effet n'a donc **pas pu être mesuré à l'écran** et n'est pas revendiqué.
+
+---
+
+## 🟢 MAJ précédente — AUCUN TEXTE EN GRAS NI EN ITALIQUE dans l'interface (balayage global des 23 modules) — v627
 **Quoi :** application de la **règle permanente** de l'utilisateur — *« ne jamais afficher de texte en gras, italique ou souligné »* — à **tout le logiciel**, et plus seulement aux deux modules traités en v619 (Consultation & Déclaration). Le balayage relevé en v619 (**« 480 éléments en gras, 2 en italique » — non engagé faute de demande explicite**) est désormais **exécuté** : mesuré à **583 éléments en gras** et **2 en italique** sur les 23 modules (Pilotage 140 · Infos société 48 · Fournisseurs 35 · Tiers 33 · Suivi des règlements 27 · Charges & Paie 26 · Analytique 23 · FEC 22 · Plan comptable 19 · Sociétés 19 · Tableau de bord 19 · Paramétrage 16 · Coffre-fort 16 · Journal 16 · Banque 16 · Rapprochement 16 · Immobilisations 16 · Salarié 16 · Éditions 13 · TVA 9 · Contrôles 9 · Import bancaire 9 · Écritures récurrentes 9) → **0 gras, 0 italique**. Couvre aussi les surfaces hors module (barre latérale, fenêtres, menus, modales, notifications).
 
 **Deux exceptions, toutes deux déjà posées :**

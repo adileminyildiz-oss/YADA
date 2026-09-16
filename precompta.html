@@ -11097,7 +11097,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v627';
+    b.textContent='YADA · v628';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -28655,6 +28655,10 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
   /* menus déroulants : rester en liste pleine largeur mais compacts verticalement */
   +'html body:not(#_yz) .sg-app .sg-dd button{padding:6px 11px !important;width:100% !important;text-align:left !important}'
   +'html body:not(#_yz) .sg-app .sg-menu .mi{padding:5px 8px !important;font-size:12px !important}'
+  /* v628 — les entrées SANS menu déroulant (ex. « Aide ») sont de simples <span> sans .mi :
+     faute du même padding, leur texte tombait 8 px trop près du voisin (rythme rompu en fin de barre).
+     Même boîte, mais ni pointeur ni survol : ce sont des libellés, pas des commandes. */
+  +'html body:not(#_yz) .sg-app .sg-menu>span:not(.mi){padding:5px 8px !important;font-size:12px !important}'
   +'html body:not(#_yz) .sg-app .sg-exoarr{padding:2px 8px !important;font-size:14px !important}'
   +'html body:not(#_yz) .sg-app .sg-wbtn{padding:2px 6px !important}';
   document.head.appendChild(st);
