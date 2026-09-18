@@ -1,0 +1,1315 @@
+<style>
+/* ============ Design system ============ */
+:root{
+  /* Identité monochrome — noir & blanc, gris froids, typographie néo-grotesque */
+  --navy:#0d0f12; --navy-2:#1a1d22; --navy-3:#14171c;    /* primaire = noir ; navy-3 = accent (texte) noir */
+  --ink:#14171c; --muted:#5f646c; --line:#e6e8eb; --line-2:#d3d7dc;
+  --bg:#ffffff; --bg-2:#f5f6f8; --bg-3:#eceef1;
+  --gold:#14171c; --gold-2:#3a3f47;                      /* accent = noir (filet, marqueurs) */
+  --ok:#14171c; --warn:#4a4f57; --hot:#0d0f12; --cold:#8a9098;
+  --card:#ffffff; --shadow:0 12px 34px rgba(13,15,18,.12); --shadow-sm:0 4px 14px rgba(13,15,18,.08);
+  --logo-bg:#0d0f12; --logo-fg:#ffffff;                  /* monogramme : tuile noire, L blanc */
+  --radius:14px; --radius-sm:10px;
+  --sans:'Helvetica Neue',Helvetica,Arial,'Segoe UI',system-ui,'Liberation Sans',sans-serif;
+  --serif:'Helvetica Neue',Helvetica,Arial,'Segoe UI',system-ui,'Liberation Sans',sans-serif;
+  --maxw:1180px;
+}
+:root[data-theme="light"]{
+  --navy:#0d0f12; --navy-2:#1a1d22; --navy-3:#14171c;
+  --ink:#14171c; --muted:#5f646c; --line:#e6e8eb; --line-2:#d3d7dc;
+  --bg:#ffffff; --bg-2:#f5f6f8; --bg-3:#eceef1; --gold:#14171c; --gold-2:#3a3f47;
+  --card:#ffffff; --shadow:0 12px 34px rgba(13,15,18,.12); --shadow-sm:0 4px 14px rgba(13,15,18,.08);
+  --ok:#14171c; --warn:#4a4f57; --hot:#0d0f12; --cold:#8a9098;
+  --logo-bg:#0d0f12; --logo-fg:#ffffff;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --navy-3:#f2f3f5; --gold:#e9ebee; --gold-2:#c7cbd1;
+    --ink:#f2f3f5; --muted:#9aa0a8; --line:#23262b; --line-2:#2e3238;
+    --bg:#0b0c0e; --bg-2:#131518; --bg-3:#191c20;
+    --card:#101215; --shadow:0 14px 44px rgba(0,0,0,.55); --shadow-sm:0 4px 16px rgba(0,0,0,.45);
+    --ok:#e9ebee; --warn:#b8bdc5; --hot:#ffffff; --cold:#7b828b;
+    --logo-bg:#ffffff; --logo-fg:#0d0f12;
+  }
+}
+:root[data-theme="dark"]{
+  --navy-3:#f2f3f5; --gold:#e9ebee; --gold-2:#c7cbd1;
+  --ink:#f2f3f5; --muted:#9aa0a8; --line:#23262b; --line-2:#2e3238;
+  --bg:#0b0c0e; --bg-2:#131518; --bg-3:#191c20;
+  --card:#101215; --shadow:0 14px 44px rgba(0,0,0,.55); --shadow-sm:0 4px 16px rgba(0,0,0,.45);
+  --ok:#e9ebee; --warn:#b8bdc5; --hot:#ffffff; --cold:#7b828b;
+  --logo-bg:#ffffff; --logo-fg:#0d0f12;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; font-family:var(--sans); color:var(--ink); background:var(--bg);
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; line-height:1.6;
+}
+h1,h2,h3{font-family:var(--serif); font-weight:700; line-height:1.12; letter-spacing:-.025em; margin:0 0 .5em; text-wrap:balance}
+h1{font-size:clamp(2.1rem,5vw,3.5rem)}
+h2{font-size:clamp(1.6rem,3.4vw,2.5rem)}
+h3{font-size:1.2rem}
+p{margin:0 0 1rem}
+a{color:inherit;text-decoration:none}
+img{max-width:100%}
+.wrap{max-width:var(--maxw); margin:0 auto; padding:0 22px}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;font-family:var(--sans);font-weight:600;font-size:.78rem;
+  letter-spacing:.12em;text-transform:uppercase;color:var(--navy-3);background:var(--bg-3);
+  padding:6px 12px;border-radius:999px;border:1px solid var(--line)}
+@media (prefers-color-scheme:dark){.eyebrow{color:var(--gold)}}
+:root[data-theme="dark"] .eyebrow{color:var(--gold)}
+.eyebrow::before{content:"";width:14px;height:2px;border-radius:2px;background:var(--gold)}
+.section{padding:clamp(56px,8vw,110px) 0}
+.center{text-align:center}
+.lede{font-size:clamp(1.05rem,1.6vw,1.22rem);color:var(--muted);max-width:640px}
+.center .lede{margin-left:auto;margin-right:auto}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;cursor:pointer;
+  font-family:var(--sans);font-weight:600;font-size:.98rem;border:none;border-radius:12px;
+  padding:14px 24px;transition:transform .15s ease,box-shadow .2s ease,background .2s ease,opacity .2s;text-align:center}
+.btn:active{transform:translateY(1px)}
+.btn-pri{background:linear-gradient(135deg,var(--navy-2),var(--navy));color:#fff;box-shadow:0 8px 22px rgba(13,15,18,.28)}
+.btn-pri:hover{box-shadow:0 12px 30px rgba(13,15,18,.36);transform:translateY(-2px)}
+.btn-gold{background:linear-gradient(135deg,#1a1d22,#0d0f12);color:#fff;box-shadow:0 8px 22px rgba(13,15,18,.26)}
+.btn-gold:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(13,15,18,.4)}
+/* Séparation des boutons pleins sur fond sombre (noir sur noir) */
+@media (prefers-color-scheme:dark){.btn-pri,.btn-gold{border:1px solid rgba(255,255,255,.18)}}
+:root[data-theme="dark"] .btn-pri,:root[data-theme="dark"] .btn-gold{border:1px solid rgba(255,255,255,.18)}
+:root[data-theme="light"] .btn-pri,:root[data-theme="light"] .btn-gold{border:none}
+.btn-ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line-2)}
+.btn-ghost:hover{border-color:var(--navy-3);color:var(--navy-3)}
+.btn-lg{padding:16px 30px;font-size:1.05rem}
+.btn-sm{padding:9px 15px;font-size:.86rem;border-radius:9px}
+
+/* ============ Header ============ */
+header{position:sticky;top:0;z-index:60;background:rgba(255,255,255,.82);backdrop-filter:saturate(1.6) blur(14px);
+  border-bottom:1px solid var(--line)}
+@media (prefers-color-scheme:dark){header{background:rgba(12,13,15,.82)}}
+.nav{display:flex;align-items:center;justify-content:space-between;height:72px}
+.brand{display:flex;align-items:center;gap:11px;font-family:var(--serif);font-weight:600;font-size:1.35rem;color:var(--ink)}
+.brand .logo{width:40px;height:40px;border-radius:11px;overflow:hidden;box-shadow:var(--shadow-sm);display:block;flex:none}
+.brand .logo svg{width:100%;height:100%;display:block}
+.brand small{font-family:var(--sans);font-weight:500;font-size:.62rem;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);display:block;margin-top:-3px}
+.nav-links{display:flex;align-items:center;gap:6px}
+.nav-links a{padding:9px 14px;border-radius:9px;font-weight:500;font-size:.95rem;color:var(--muted);transition:.15s}
+.nav-links a:hover{color:var(--ink);background:var(--bg-3)}
+.nav-cta{display:flex;align-items:center;gap:10px}
+.burger{display:none;background:none;border:none;cursor:pointer;padding:8px;color:var(--ink)}
+@media(max-width:920px){
+  .nav-links{position:fixed;inset:72px 0 auto 0;flex-direction:column;background:var(--bg);border-bottom:1px solid var(--line);
+    padding:14px 22px;gap:2px;transform:translateY(-140%);transition:transform .28s ease;box-shadow:var(--shadow)}
+  .nav-links.open{transform:translateY(0)}
+  .nav-links a{padding:13px 12px;width:100%}
+  .burger{display:block}
+  .nav-cta .btn-ghost{display:none}
+}
+
+/* ============ Hero ============ */
+.hero{position:relative;overflow:hidden;background:
+  radial-gradient(1100px 500px at 88% -8%,rgba(20,23,28,.16),transparent 60%),
+  radial-gradient(800px 460px at 5% 10%,rgba(20,23,28,.14),transparent 55%),
+  var(--bg)}
+.hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:56px;align-items:center;padding:clamp(48px,7vw,96px) 0}
+.hero h1{margin-top:14px}
+.hero .lede{margin-top:6px}
+.hero-actions{display:flex;flex-wrap:wrap;gap:14px;margin-top:30px}
+.hero-trust{display:flex;flex-wrap:wrap;gap:22px;margin-top:34px;padding-top:26px;border-top:1px solid var(--line)}
+.hero-trust div{display:flex;flex-direction:column}
+.hero-trust b{font-family:var(--serif);font-size:1.55rem;color:var(--navy-3)}
+@media (prefers-color-scheme:dark){.hero-trust b{color:var(--gold)}}
+.hero-trust span{font-size:.82rem;color:var(--muted)}
+/* hero visual: assistant preview card */
+.hero-card{background:var(--card);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);overflow:hidden}
+.hero-card-top{display:flex;align-items:center;gap:11px;padding:16px 20px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--bg-2),transparent)}
+.hero-card-top .av{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,var(--navy-2),var(--navy));display:grid;place-items:center;color:var(--gold);font-size:1.2rem}
+.hero-card-top .live{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:.76rem;color:var(--ok);font-weight:600}
+.hero-card-top .live i{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 0 rgba(47,158,111,.6);animation:pulse 1.8s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(47,158,111,.5)}70%{box-shadow:0 0 0 9px rgba(47,158,111,0)}100%{box-shadow:0 0 0 0 rgba(47,158,111,0)}}
+.hero-card-body{padding:18px 20px;display:flex;flex-direction:column;gap:12px;min-height:230px}
+.bub{max-width:82%;padding:11px 14px;border-radius:15px;font-size:.92rem;line-height:1.45}
+.bub.ai{align-self:flex-start;background:var(--bg-3);border-bottom-left-radius:5px}
+.bub.me{align-self:flex-end;background:linear-gradient(135deg,var(--navy-2),var(--navy));color:#fff;border-bottom-right-radius:5px}
+.bub.chips{background:none;padding:0;display:flex;flex-wrap:wrap;gap:7px;max-width:100%}
+.bub.chips span{font-size:.82rem;padding:7px 12px;border:1px solid var(--line-2);border-radius:999px;color:var(--navy-3);background:var(--bg)}
+@media(max-width:900px){.hero-grid{grid-template-columns:1fr;gap:38px}.hero-card{max-width:520px}}
+
+/* ============ Trust strip ============ */
+.logos{padding:26px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--bg-2)}
+.logos-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:14px 30px}
+.logos-row span{font-family:var(--serif);font-size:1.05rem;color:var(--muted);opacity:.85}
+.logos-lead{text-align:center;font-size:.8rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:14px}
+
+/* ============ Services ============ */
+.grid{display:grid;gap:22px}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g4{grid-template-columns:repeat(4,1fr)}
+.g2{grid-template-columns:repeat(2,1fr)}
+@media(max-width:960px){.g3,.g4{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:620px){.g3,.g4,.g2{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:26px;box-shadow:var(--shadow-sm);
+  transition:transform .18s ease,box-shadow .2s ease,border-color .2s}
+.card:hover{transform:translateY(-4px);box-shadow:var(--shadow);border-color:var(--line-2)}
+.card .ic{width:52px;height:52px;border-radius:14px;display:grid;place-items:center;font-size:1.5rem;margin-bottom:16px;
+  background:linear-gradient(135deg,rgba(20,23,28,.12),rgba(20,23,28,.14));border:1px solid var(--line)}
+.card h3{margin-bottom:8px}
+.card p{color:var(--muted);font-size:.95rem;margin-bottom:0}
+.card ul{margin:12px 0 0;padding:0;list-style:none}
+.card ul li{position:relative;padding-left:24px;font-size:.9rem;color:var(--muted);margin-bottom:7px}
+.card ul li::before{content:"✓";position:absolute;left:0;color:var(--ok);font-weight:700}
+.card .price{margin-top:16px;font-family:var(--serif);font-size:1.35rem;color:var(--navy-3)}
+.card .price small{font-family:var(--sans);font-size:.8rem;color:var(--muted);font-weight:400}
+
+/* section head */
+.shead{max-width:680px;margin:0 auto 46px;text-align:center}
+.shead.left{margin-left:0;text-align:left}
+
+/* ============ Audience ============ */
+.aud{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
+.aud .pill{display:inline-flex;align-items:center;gap:9px;padding:12px 18px;border-radius:14px;background:var(--card);
+  border:1px solid var(--line);font-weight:500;box-shadow:var(--shadow-sm);font-size:.95rem}
+.aud .pill span{font-size:1.25rem}
+
+/* ============ Process ============ */
+.steps{counter-reset:st;display:grid;gap:20px;grid-template-columns:repeat(4,1fr)}
+@media(max-width:960px){.steps{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.steps{grid-template-columns:1fr}}
+.step{position:relative;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:26px 24px;box-shadow:var(--shadow-sm)}
+.step::before{counter-increment:st;content:counter(st);position:absolute;top:-16px;left:24px;width:40px;height:40px;border-radius:12px;
+  background:linear-gradient(135deg,var(--navy-2),var(--navy));color:var(--gold);display:grid;place-items:center;
+  font-family:var(--serif);font-size:1.2rem;box-shadow:var(--shadow-sm)}
+.step h3{margin:14px 0 6px}
+.step p{color:var(--muted);font-size:.92rem;margin:0}
+
+/* ============ AI section ============ */
+.ai-band{background:linear-gradient(135deg,var(--navy),var(--navy-2));color:#eaf1f8;border-radius:26px;padding:clamp(34px,5vw,62px);
+  position:relative;overflow:hidden;box-shadow:var(--shadow)}
+.ai-band::after{content:"";position:absolute;right:-90px;top:-90px;width:340px;height:340px;border-radius:50%;
+  background:radial-gradient(circle,rgba(255,255,255,.14),transparent 60%)}
+.ai-band h2{color:#fff}
+.ai-band .lede{color:#c3d3e4}
+.ai-feats{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:34px;position:relative;z-index:2}
+@media(max-width:820px){.ai-feats{grid-template-columns:1fr}}
+.ai-feat{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:15px;padding:20px}
+.ai-feat .ic{font-size:1.6rem;margin-bottom:10px}
+.ai-feat h3{color:#fff;font-size:1.08rem;margin-bottom:6px}
+.ai-feat p{color:#b9cadd;font-size:.9rem;margin:0}
+
+/* ============ Contact / intake ============ */
+.intake{display:grid;grid-template-columns:.9fr 1.1fr;gap:44px;align-items:start}
+@media(max-width:860px){.intake{grid-template-columns:1fr;gap:30px}}
+.field{margin-bottom:16px}
+.field label{display:block;font-weight:600;font-size:.88rem;margin-bottom:7px}
+.field input,.field select,.field textarea{width:100%;padding:13px 15px;border:1.5px solid var(--line-2);border-radius:11px;
+  font-family:var(--sans);font-size:.98rem;background:var(--bg);color:var(--ink);transition:.15s}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--navy-3);box-shadow:0 0 0 4px rgba(20,23,28,.12)}
+.field textarea{resize:vertical;min-height:110px}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:520px){.field-row{grid-template-columns:1fr}}
+.form-note{font-size:.82rem;color:var(--muted);margin-top:4px}
+.contact-side .card{margin-bottom:16px}
+.contact-side .card p{margin-bottom:6px}
+.ok-box{display:none;text-align:center;padding:34px;border:1.5px dashed var(--ok);border-radius:var(--radius);background:rgba(47,158,111,.06)}
+.ok-box.show{display:block}
+.ok-box .big{font-size:3rem}
+.ref{font-family:var(--serif);font-size:1.4rem;color:var(--navy-3);letter-spacing:.02em}
+
+/* ============ FAQ ============ */
+.faq{max-width:820px;margin:0 auto}
+.faq details{border:1px solid var(--line);border-radius:12px;margin-bottom:12px;background:var(--card);overflow:hidden}
+.faq summary{cursor:pointer;padding:18px 20px;font-weight:600;list-style:none;display:flex;justify-content:space-between;align-items:center}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";font-size:1.4rem;color:var(--navy-3)}
+.faq details[open] summary::after{content:"−"}
+.faq .a{padding:0 20px 18px;color:var(--muted)}
+
+/* ============ Footer ============ */
+footer{background:var(--navy);color:#c3d3e4;padding:60px 0 30px}
+.foot-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:34px}
+@media(max-width:820px){.foot-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:520px){.foot-grid{grid-template-columns:1fr}}
+footer .brand{color:#fff}
+footer .brand small{color:#8aa5be}
+footer h4{color:#fff;font-size:.82rem;letter-spacing:.12em;text-transform:uppercase;margin:0 0 14px}
+footer a{display:block;color:#b0c4d8;padding:5px 0;font-size:.92rem}
+footer a:hover{color:var(--gold)}
+.foot-bottom{margin-top:44px;padding-top:22px;border-top:1px solid rgba(255,255,255,.12);display:flex;flex-wrap:wrap;
+  justify-content:space-between;gap:12px;font-size:.82rem;color:#8aa5be}
+
+/* ============ Chat widget ============ */
+#chat-fab{position:fixed;right:22px;bottom:22px;z-index:80;width:62px;height:62px;border-radius:50%;border:none;cursor:pointer;
+  background:linear-gradient(135deg,var(--navy-2),var(--navy));color:var(--gold);font-size:1.6rem;box-shadow:0 12px 34px rgba(13,15,18,.4);
+  display:grid;place-items:center;transition:transform .2s}
+#chat-fab:hover{transform:scale(1.06)}
+#chat-fab .badge{position:absolute;top:-3px;right:-3px;background:var(--hot);color:#fff;font-size:.66rem;font-weight:700;
+  min-width:20px;height:20px;border-radius:10px;display:grid;place-items:center;padding:0 5px;font-family:var(--sans)}
+#chat-panel{position:fixed;right:22px;bottom:96px;z-index:80;width:390px;max-width:calc(100vw - 28px);height:min(620px,calc(100vh - 128px));
+  background:var(--card);border:1px solid var(--line);border-radius:20px;box-shadow:0 26px 70px rgba(13,15,18,.42);
+  display:none;flex-direction:column;overflow:hidden}
+#chat-panel.open{display:flex;animation:slideup .25s ease}
+@keyframes slideup{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.chat-head{display:flex;align-items:center;gap:12px;padding:15px 18px;background:linear-gradient(135deg,var(--navy),var(--navy-2));color:#fff}
+.chat-head .av{width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.12);display:grid;place-items:center;color:var(--gold);font-size:1.2rem}
+.chat-head b{display:block;font-family:var(--serif);font-size:1.05rem}
+.chat-head span{font-size:.76rem;color:#a9c1d8;display:flex;align-items:center;gap:6px}
+.chat-head span i{width:7px;height:7px;border-radius:50%;background:var(--ok)}
+.chat-head .x{margin-left:auto;background:none;border:none;color:#c3d3e4;cursor:pointer;font-size:1.5rem;line-height:1;padding:4px 8px;border-radius:8px}
+.chat-head .x:hover{background:rgba(255,255,255,.1)}
+.chat-log{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:12px;background:var(--bg-2)}
+.msg{max-width:84%;padding:11px 14px;border-radius:15px;font-size:.93rem;line-height:1.5;white-space:pre-wrap;word-wrap:break-word}
+.msg.ai{align-self:flex-start;background:var(--card);border:1px solid var(--line);border-bottom-left-radius:5px;box-shadow:var(--shadow-sm)}
+.msg.me{align-self:flex-end;background:linear-gradient(135deg,var(--navy-2),var(--navy));color:#fff;border-bottom-right-radius:5px}
+.msg.sys{align-self:center;background:var(--bg-3);color:var(--muted);font-size:.8rem;border-radius:999px;padding:6px 14px}
+.chat-chips{display:flex;flex-wrap:wrap;gap:7px;padding:0 18px 8px;background:var(--bg-2)}
+.chat-chips button{font-size:.84rem;padding:8px 13px;border:1px solid var(--line-2);border-radius:999px;background:var(--card);
+  color:var(--navy-3);cursor:pointer;transition:.15s;font-family:var(--sans);font-weight:500}
+.chat-chips button:hover{background:var(--navy);color:#fff;border-color:var(--navy-3)}
+.chat-input{display:flex;gap:8px;padding:12px;border-top:1px solid var(--line);background:var(--card)}
+.chat-input input{flex:1;padding:12px 14px;border:1.5px solid var(--line-2);border-radius:11px;font-size:.95rem;background:var(--bg);color:var(--ink)}
+.chat-input input:focus{outline:none;border-color:var(--navy-3)}
+.chat-input button{border:none;background:linear-gradient(135deg,var(--navy-2),var(--navy));color:#fff;width:46px;border-radius:11px;cursor:pointer;font-size:1.1rem}
+.typing{display:inline-flex;gap:4px;align-items:center}
+.typing i{width:7px;height:7px;border-radius:50%;background:var(--muted);animation:blink 1.2s infinite}
+.typing i:nth-child(2){animation-delay:.2s}.typing i:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,60%,100%{opacity:.25}30%{opacity:1}}
+.recap{background:var(--bg-3);border:1px solid var(--line);border-radius:12px;padding:14px;font-size:.88rem}
+.recap b{color:var(--navy-3)}
+.recap .row{display:flex;justify-content:space-between;gap:10px;padding:4px 0;border-bottom:1px dashed var(--line)}
+.recap .row:last-child{border-bottom:none}
+.tag{display:inline-block;font-size:.72rem;font-weight:700;padding:3px 9px;border-radius:999px;margin:2px 3px 0 0}
+.tag.hot{background:rgba(209,73,91,.14);color:var(--hot)}
+.tag.warm{background:rgba(224,145,58,.16);color:var(--warn)}
+.tag.cold{background:rgba(107,127,149,.16);color:var(--cold)}
+.tag.info{background:rgba(20,23,28,.12);color:var(--navy-3)}
+
+/* ============ Admin / CRM drawer ============ */
+#crm{position:fixed;inset:0;z-index:120;background:var(--bg);display:none;flex-direction:column;overflow-y:auto}
+#crm.open{display:flex}
+.crm-head{position:sticky;top:0;background:var(--card);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:14px;padding:16px 22px;z-index:2}
+.crm-head h2{margin:0;font-size:1.3rem}
+.crm-body{padding:22px;max-width:1180px;margin:0 auto;width:100%}
+.crm-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
+@media(max-width:760px){.crm-kpis{grid-template-columns:repeat(2,1fr)}}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;box-shadow:var(--shadow-sm)}
+.kpi b{font-family:var(--serif);font-size:1.9rem;color:var(--navy-3);display:block}
+.kpi span{font-size:.82rem;color:var(--muted)}
+.crm-filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.crm-filters button{padding:8px 14px;border:1px solid var(--line-2);border-radius:999px;background:var(--card);cursor:pointer;font-size:.86rem;color:var(--muted)}
+.crm-filters button.on{background:var(--navy);color:#fff;border-color:var(--navy-3)}
+.lead{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:12px;box-shadow:var(--shadow-sm)}
+.lead-top{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:8px}
+.lead-top .ref{font-size:.86rem;color:var(--muted);font-family:var(--sans)}
+.lead-top .score{margin-left:auto;font-weight:700;font-size:.82rem}
+.lead h4{margin:0;font-size:1.05rem}
+.lead .meta{font-size:.88rem;color:var(--muted);margin:2px 0 8px}
+.lead .msg-body{font-size:.9rem;background:var(--bg-2);border-radius:9px;padding:10px 12px;margin-top:8px}
+.empty{text-align:center;color:var(--muted);padding:50px}
+
+/* utility */
+.hide{display:none!important}
+.mt0{margin-top:0}
+[hidden]{display:none!important}
+
+/* ===== Monochrome — correctifs de lisibilité ===== */
+.hero-card-top .av,.step::before,#chat-fab,.chat-head .av{color:#fff}
+.chat-head span i{background:#fff}
+.hero-card-top .live,.hero-card-top .live i{color:#5f646c}
+.ai-band .eyebrow{color:#fff!important;border-color:rgba(255,255,255,.28)!important}
+.ai-band .btn-gold{background:#fff!important;color:#0d0f12!important;border:none!important;box-shadow:0 8px 22px rgba(0,0,0,.25)}
+.ai-band .btn-gold:hover{background:#eef0f2!important}
+.tag.hot{background:rgba(13,15,18,.11);color:var(--hot)}
+.tag.warm{background:rgba(13,15,18,.075);color:var(--warn)}
+.tag.cold{background:rgba(13,15,18,.05);color:var(--cold)}
+.tag.info{background:rgba(13,15,18,.07);color:var(--navy-3)}
+:root[data-theme="dark"] .tag.hot{background:rgba(255,255,255,.14)}
+:root[data-theme="dark"] .tag.warm{background:rgba(255,255,255,.1)}
+:root[data-theme="dark"] .tag.cold{background:rgba(255,255,255,.06)}
+:root[data-theme="dark"] .tag.info{background:rgba(255,255,255,.08)}
+@media (prefers-color-scheme:dark){.tag.hot{background:rgba(255,255,255,.14)}.tag.warm{background:rgba(255,255,255,.1)}.tag.cold{background:rgba(255,255,255,.06)}.tag.info{background:rgba(255,255,255,.08)}}
+
+/* =====================================================================
+   Liquid glass + Spatial UI (monochrome) — surfaces en verre dépoli,
+   fond ambiant pour la réfraction, profondeur par ombres étagées.
+   ===================================================================== */
+:root{
+  --glass-bg:linear-gradient(155deg,rgba(255,255,255,.72),rgba(255,255,255,.46));
+  --glass-brd:rgba(255,255,255,.7);
+  --glass-blur:blur(20px) saturate(175%);
+  --glass-hi:inset 0 1px 0 rgba(255,255,255,.85), inset 0 0 0 1px rgba(13,15,18,.04);
+  --glass-sh:0 20px 50px -14px rgba(13,15,18,.30), 0 6px 18px -8px rgba(13,15,18,.16);
+  --glass-sh-hi:0 32px 70px -16px rgba(13,15,18,.36), 0 10px 24px -8px rgba(13,15,18,.2);
+  --amb-a:rgba(13,15,18,.06); --amb-b:rgba(13,15,18,.045);
+}
+@media (prefers-color-scheme:dark){:root{
+  --glass-bg:linear-gradient(155deg,rgba(255,255,255,.10),rgba(255,255,255,.028));
+  --glass-brd:rgba(255,255,255,.15);
+  --glass-hi:inset 0 1px 0 rgba(255,255,255,.16), inset 0 0 0 1px rgba(255,255,255,.03);
+  --glass-sh:0 26px 60px -16px rgba(0,0,0,.72), 0 8px 22px -10px rgba(0,0,0,.55);
+  --glass-sh-hi:0 40px 90px -18px rgba(0,0,0,.8), 0 12px 30px -10px rgba(0,0,0,.6);
+  --amb-a:rgba(255,255,255,.06); --amb-b:rgba(255,255,255,.045);
+}}
+:root[data-theme="light"]{
+  --glass-bg:linear-gradient(155deg,rgba(255,255,255,.72),rgba(255,255,255,.46));
+  --glass-brd:rgba(255,255,255,.7);
+  --glass-hi:inset 0 1px 0 rgba(255,255,255,.85), inset 0 0 0 1px rgba(13,15,18,.04);
+  --glass-sh:0 20px 50px -14px rgba(13,15,18,.30), 0 6px 18px -8px rgba(13,15,18,.16);
+  --glass-sh-hi:0 32px 70px -16px rgba(13,15,18,.36), 0 10px 24px -8px rgba(13,15,18,.2);
+  --amb-a:rgba(13,15,18,.06); --amb-b:rgba(13,15,18,.045);
+}
+:root[data-theme="dark"]{
+  --glass-bg:linear-gradient(155deg,rgba(255,255,255,.10),rgba(255,255,255,.028));
+  --glass-brd:rgba(255,255,255,.15);
+  --glass-hi:inset 0 1px 0 rgba(255,255,255,.16), inset 0 0 0 1px rgba(255,255,255,.03);
+  --glass-sh:0 26px 60px -16px rgba(0,0,0,.72), 0 8px 22px -10px rgba(0,0,0,.55);
+  --glass-sh-hi:0 40px 90px -18px rgba(0,0,0,.8), 0 12px 30px -10px rgba(0,0,0,.6);
+  --amb-a:rgba(255,255,255,.06); --amb-b:rgba(255,255,255,.045);
+}
+/* Fond ambiant fixe : blooms doux monochromes (matière pour le flou) */
+body::before{content:"";position:fixed;inset:-10% -10% -10% -10%;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(38% 34% at 14% 8%, var(--amb-a), transparent 62%),
+    radial-gradient(34% 32% at 88% 10%, var(--amb-b), transparent 60%),
+    radial-gradient(46% 40% at 60% 108%, var(--amb-a), transparent 62%);}
+/* Surfaces en verre */
+.card,.kpi,.step,.aud .pill,.faq details,.hero-card,.contact-side .card,
+#intakeForm,.lead,.recap,#chat-panel,#modal-c,.msg.ai,.bub.ai,.bub.chips span{
+  background:var(--glass-bg) !important;
+  -webkit-backdrop-filter:var(--glass-blur); backdrop-filter:var(--glass-blur);
+  border:1px solid var(--glass-brd) !important;
+  box-shadow:var(--glass-sh), var(--glass-hi) !important;
+}
+.card:hover,.aud .pill:hover{box-shadow:var(--glass-sh-hi), var(--glass-hi) !important; transform:translateY(-5px)}
+/* Chat & KPI : rayons doux et texte inchangé */
+.msg.ai,.bub.ai{border-radius:15px}
+.bub.chips span{box-shadow:none !important}
+/* En-tête : verre plus prononcé */
+header{-webkit-backdrop-filter:blur(24px) saturate(180%) !important; backdrop-filter:blur(24px) saturate(180%) !important;
+  background:linear-gradient(180deg,rgba(255,255,255,.72),rgba(255,255,255,.5)) !important; border-bottom:1px solid var(--glass-brd) !important}
+:root[data-theme="dark"] header, @media(prefers-color-scheme:dark){}
+:root[data-theme="dark"] header{background:linear-gradient(180deg,rgba(20,22,26,.6),rgba(11,12,14,.42)) !important; border-bottom:1px solid rgba(255,255,255,.1) !important}
+@media (prefers-color-scheme:dark){header{background:linear-gradient(180deg,rgba(20,22,26,.6),rgba(11,12,14,.42)) !important; border-bottom:1px solid rgba(255,255,255,.1) !important}}
+/* Bande IA : panneau de verre sombre flottant (spatial) */
+.ai-band{background:linear-gradient(155deg,rgba(22,24,29,.78),rgba(10,11,13,.62)) !important;
+  -webkit-backdrop-filter:blur(22px) saturate(160%); backdrop-filter:blur(22px) saturate(160%);
+  border:1px solid rgba(255,255,255,.14); box-shadow:var(--glass-sh-hi), inset 0 1px 0 rgba(255,255,255,.12)}
+.ai-feat{background:rgba(255,255,255,.07) !important; -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
+  border:1px solid rgba(255,255,255,.14) !important; box-shadow:inset 0 1px 0 rgba(255,255,255,.1)}
+/* Bouton fantôme en verre */
+.btn-ghost{background:var(--glass-bg) !important; -webkit-backdrop-filter:var(--glass-blur); backdrop-filter:var(--glass-blur);
+  border:1px solid var(--glass-brd) !important; box-shadow:var(--glass-hi)}
+.btn-ghost:hover{box-shadow:var(--glass-sh), var(--glass-hi)}
+/* Léger flottement du visuel hero (spatial, discret) */
+@keyframes lastFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@media (prefers-reduced-motion:no-preference){.hero-card{animation:lastFloat 7s ease-in-out infinite}}
+/* Le FAB reste en verre teinté noir */
+#chat-fab{background:linear-gradient(150deg,rgba(26,29,34,.92),rgba(13,15,18,.92)) !important;
+  -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,.14)}
+
+/* ===================================================================
+   Passe qualité v2 — Spatial UI (parallaxe ambiante) + Liquid glass
+   premium (reflet spéculaire suivant le curseur). 100% monochrome.
+   =================================================================== */
+:root{ --glass-blur:blur(26px) saturate(185%); --orb1:rgba(13,15,18,.075); --orb2:rgba(13,15,18,.05); }
+@media (prefers-color-scheme:dark){ :root{ --glass-blur:blur(26px) saturate(150%); --orb1:rgba(255,255,255,.07); --orb2:rgba(130,150,180,.06); } }
+:root[data-theme="light"]{ --orb1:rgba(13,15,18,.075); --orb2:rgba(13,15,18,.05); }
+:root[data-theme="dark"]{ --orb1:rgba(255,255,255,.07); --orb2:rgba(130,150,180,.06); }
+/* Couche ambiante à halos (profondeur spatiale) — remplace le fond fixe simple */
+body::before{display:none}
+#ambient{position:fixed;inset:-18%;z-index:-1;pointer-events:none;overflow:hidden}
+#ambient .orb{position:absolute;border-radius:50%;filter:blur(72px);opacity:.6;transition:transform .35s cubic-bezier(.22,.61,.36,1);will-change:transform}
+#ambient .orb-a{width:48vw;height:48vw;left:-6vw;top:-9vw;background:radial-gradient(circle at 32% 30%,var(--orb1),transparent 62%)}
+#ambient .orb-b{width:42vw;height:42vw;right:-8vw;top:3vw;background:radial-gradient(circle at 60% 40%,var(--orb2),transparent 60%)}
+#ambient .orb-c{width:54vw;height:54vw;left:24vw;bottom:-24vw;background:radial-gradient(circle at 50% 50%,var(--orb1),transparent 64%)}
+/* Reflet spéculaire qui suit le curseur sur les surfaces de verre */
+.card,.kpi,.hero-card,.ai-feat{position:relative;isolation:isolate}
+.card::after,.kpi::after,.hero-card::after,.ai-feat::after{content:"";position:absolute;inset:0;border-radius:inherit;
+  pointer-events:none;z-index:1;opacity:0;transition:opacity .4s ease;mix-blend-mode:screen;
+  background:radial-gradient(300px circle at var(--mx,50%) var(--my,50%),rgba(255,255,255,.18),transparent 55%)}
+.card:hover::after,.kpi:hover::after,.hero-card:hover::after,.ai-feat:hover::after{opacity:1}
+.card>*,.kpi>*,.hero-card>*,.ai-feat>*{position:relative;z-index:2}
+/* Profondeur au survol : élévation plus marquée + ombre premium */
+.card{transition:transform .3s cubic-bezier(.22,.61,.36,1),box-shadow .3s ease}
+.card:hover{transform:translateY(-7px) scale(1.008)}
+.ai-feat{transition:transform .3s cubic-bezier(.22,.61,.36,1),box-shadow .3s ease}
+.ai-feat:hover{transform:translateY(-4px)}
+/* Fine arête spéculaire en haut des cartes (bord de verre) */
+.card,.hero-card,#chat-panel,#modal-c,.ai-band{border-top-color:rgba(255,255,255,.5) !important}
+:root[data-theme="dark"] .card,:root[data-theme="dark"] .hero-card,:root[data-theme="dark"] #chat-panel,:root[data-theme="dark"] #modal-c,:root[data-theme="dark"] .ai-band{border-top-color:rgba(255,255,255,.22) !important}
+@media (prefers-reduced-motion:reduce){#ambient .orb{transition:none}.card:hover,.ai-feat:hover{transform:none}}
+
+/* ===================================================================
+   Fond d'écran travaillé — dégradés de noirs, halos, vignette, texture
+   (le sombre n'est plus un noir plat). Monochrome.
+   =================================================================== */
+html{background:var(--bg)}
+body{background:transparent}
+/* Halos ambiants plus présents en sombre pour animer le noir */
+:root[data-theme="dark"]{ --orb1:rgba(255,255,255,.09); --orb2:rgba(120,150,200,.08); }
+@media (prefers-color-scheme:dark){ :root{ --orb1:rgba(255,255,255,.09); --orb2:rgba(120,150,200,.08); } }
+/* Couche de fond principale (re-activée) : dégradés superposés + vignette */
+body::before{content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;display:block;
+  background:
+    radial-gradient(1200px 820px at 18% -8%, #ffffff, transparent 60%),
+    radial-gradient(900px 700px at 92% 6%, #f2f5f9, transparent 55%),
+    linear-gradient(180deg,#fbfcfe 0%,#f4f6f9 100%)}
+:root[data-theme="dark"] body::before{
+  background:
+    radial-gradient(1150px 780px at 20% -10%, #1b1f27, transparent 58%),
+    radial-gradient(980px 720px at 88% 4%, #151b25, transparent 54%),
+    radial-gradient(1250px 900px at 50% 122%, #10151e, transparent 60%),
+    linear-gradient(180deg,#0e1015 0%,#0b0d12 55%,#070809 100%),
+    radial-gradient(150% 130% at 50% 26%, transparent 52%, rgba(0,0,0,.6) 100%)}
+@media (prefers-color-scheme:dark){ body::before{
+  background:
+    radial-gradient(1150px 780px at 20% -10%, #1b1f27, transparent 58%),
+    radial-gradient(980px 720px at 88% 4%, #151b25, transparent 54%),
+    radial-gradient(1250px 900px at 50% 122%, #10151e, transparent 60%),
+    linear-gradient(180deg,#0e1015 0%,#0b0d12 55%,#070809 100%),
+    radial-gradient(150% 130% at 50% 26%, transparent 52%, rgba(0,0,0,.6) 100%)} }
+/* Texture fine (points) — visible surtout en sombre, fondue vers les bords */
+body::after{content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;opacity:0;
+  background-image:radial-gradient(circle, rgba(255,255,255,.05) 1px, transparent 1.4px);
+  background-size:24px 24px;
+  -webkit-mask-image:radial-gradient(130% 100% at 50% 22%, #000 30%, transparent 78%);
+          mask-image:radial-gradient(130% 100% at 50% 22%, #000 30%, transparent 78%)}
+:root[data-theme="dark"] body::after{opacity:.6}
+@media (prefers-color-scheme:dark){ body::after{opacity:.6} }
+</style>
+<!-- ============ HEADER ============ -->
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="#top" aria-label="LAST, accueil">
+      <span class="logo"><svg viewBox="0 0 88 88" xmlns="http://www.w3.org/2000/svg" aria-label="LAST"><rect width="88" height="88" fill="var(--logo-bg)"/><text x="44" y="59" font-family="Georgia,'Times New Roman',serif" font-size="47" font-weight="600" fill="var(--logo-fg)" text-anchor="middle">L</text><rect x="30" y="65" width="28" height="3.5" rx="1.75" fill="var(--logo-fg)"/></svg></span>
+      <span>LAST<small>Accompagnement libéral</small></span>
+    </a>
+    <nav class="nav-links" id="navLinks">
+      <a href="#services">Services</a>
+      <a href="#pour-qui">Pour qui</a>
+      <a href="#process">Méthode</a>
+      <a href="#ia">Assistant IA</a>
+      <a href="#tarifs">Tarifs</a>
+      <a href="#contact">Contact</a>
+    </nav>
+    <div class="nav-cta">
+      <a class="btn btn-ghost btn-sm" href="#contact">Être rappelé</a>
+      <button class="btn btn-pri btn-sm" onclick="Chat.open()">💬 Démarrer</button>
+      <button class="burger" onclick="document.getElementById('navLinks').classList.toggle('open')" aria-label="Menu">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<a id="top"></a>
+
+<!-- ============ HERO ============ -->
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <span class="eyebrow">Dédié aux professions libérales</span>
+      <h1>Votre société créée et gérée,<br>sans la charge administrative.</h1>
+      <p class="lede">LAST accompagne les métiers libéraux dans la <strong>création</strong> et la <strong>modification</strong> de leur société, et prend en main leur <strong>gestion administrative</strong>. Un conseiller dédié — épaulé par notre assistant IA — qualifie votre besoin et confirme votre demande en quelques minutes.</p>
+      <div class="hero-actions">
+        <button class="btn btn-gold btn-lg" onclick="Chat.open()">💬 Décrire mon besoin à l'assistant</button>
+        <a class="btn btn-ghost btn-lg" href="#services">Voir les services</a>
+      </div>
+      <div class="hero-trust">
+        <div><b>48 h</b><span>Première réponse d'un conseiller</span></div>
+        <div><b>100 %</b><span>Dossier suivi en ligne</span></div>
+        <div><b>24/7</b><span>Assistant IA disponible</span></div>
+      </div>
+    </div>
+    <div class="hero-card" aria-hidden="true">
+      <div class="hero-card-top">
+        <span class="av">✦</span>
+        <div><b style="font-family:var(--serif)">Assistant LAST</b><br><span style="font-size:.76rem;color:var(--muted)">Qualifie votre demande</span></div>
+        <span class="live"><i></i> en ligne</span>
+      </div>
+      <div class="hero-card-body">
+        <div class="bub ai">Bonjour 👋 Je suis l'assistant LAST. Souhaitez-vous <b>créer</b> ou <b>modifier</b> une société ?</div>
+        <div class="bub chips"><span>Créer une société</span><span>Modifier ma société</span><span>Accompagnement</span></div>
+        <div class="bub me">Créer une SELARL, je suis médecin.</div>
+        <div class="bub ai">Parfait. Une <b>SELARL</b> est adaptée à votre profession réglementée. Je note votre demande et un conseiller vous rappelle sous 48 h. 📞</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TRUST STRIP ============ -->
+<div class="logos">
+  <div class="wrap">
+    <div class="logos-lead">Ils nous font confiance au quotidien</div>
+    <div class="logos-row">
+      <span>⚕ Professions de santé</span>
+      <span>⚖ Professions juridiques</span>
+      <span>📐 Architectes</span>
+      <span>📊 Experts &amp; consultants</span>
+      <span>🎨 Créatifs indépendants</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SERVICES ============ -->
+<section class="section" id="services">
+  <div class="wrap">
+    <div class="shead">
+      <span class="eyebrow">Nos services</span>
+      <h2>Un accompagnement de bout en bout</h2>
+      <p class="lede center">De la création juridique au suivi administratif courant, nous prenons en charge la partie qui n'est pas votre métier.</p>
+    </div>
+    <div class="grid g3">
+      <div class="card">
+        <div class="ic">🏛️</div>
+        <h3>Création de société</h3>
+        <p>Choix de la forme, rédaction des statuts, immatriculation et publication — tout est piloté pour vous.</p>
+        <ul>
+          <li>Conseil sur la forme (SELARL, SELAS, SASU, EI…)</li>
+          <li>Rédaction &amp; dépôt des statuts</li>
+          <li>Immatriculation au Guichet unique</li>
+          <li>Ouverture des comptes &amp; formalités</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="ic">✍️</div>
+        <h3>Modification de société</h3>
+        <p>Un changement dans votre structure ? Nous gérons chaque formalité statutaire de A à Z.</p>
+        <ul>
+          <li>Transfert de siège, changement d'objet</li>
+          <li>Changement de dirigeant / gérant</li>
+          <li>Augmentation ou réduction de capital</li>
+          <li>Transformation, cession de parts</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="ic">🗂️</div>
+        <h3>Gestion administrative</h3>
+        <p>Le suivi courant de votre société, centralisé et sécurisé, pour vous libérer l'esprit.</p>
+        <ul>
+          <li>Suivi des obligations &amp; échéances</li>
+          <li>Collecte et classement des pièces</li>
+          <li>Interface avec expert-comptable</li>
+          <li>Coffre-fort numérique des documents</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ POUR QUI ============ -->
+<section class="section" id="pour-qui" style="background:var(--bg-2)">
+  <div class="wrap">
+    <div class="shead">
+      <span class="eyebrow">Pour qui</span>
+      <h2>Pensé pour les professions libérales</h2>
+      <p class="lede center">Réglementées ou non, nous connaissons les spécificités de votre exercice.</p>
+    </div>
+    <div class="aud">
+      <div class="pill"><span>⚕</span> Médecins &amp; paramédicaux</div>
+      <div class="pill"><span>⚖</span> Avocats &amp; juristes</div>
+      <div class="pill"><span>🦷</span> Chirurgiens-dentistes</div>
+      <div class="pill"><span>📐</span> Architectes</div>
+      <div class="pill"><span>💊</span> Pharmaciens</div>
+      <div class="pill"><span>📊</span> Consultants</div>
+      <div class="pill"><span>🧮</span> Experts-comptables</div>
+      <div class="pill"><span>🎨</span> Créatifs &amp; designers</div>
+      <div class="pill"><span>🧠</span> Psychologues</div>
+      <div class="pill"><span>🏗️</span> Géomètres &amp; ingénieurs</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PROCESS ============ -->
+<section class="section" id="process">
+  <div class="wrap">
+    <div class="shead">
+      <span class="eyebrow">Notre méthode</span>
+      <h2>Simple, guidé, transparent</h2>
+    </div>
+    <div class="steps">
+      <div class="step"><h3>Vous décrivez</h3><p>Chat, formulaire ou téléphone : l'assistant IA recueille et qualifie votre demande en quelques questions.</p></div>
+      <div class="step"><h3>On qualifie</h3><p>Votre besoin est trié, priorisé et transmis au bon conseiller avec les informations clés déjà structurées.</p></div>
+      <div class="step"><h3>Vous confirmez</h3><p>Vous validez le récapitulatif proposé par l'agent. Un conseiller vous rappelle sous 48 h avec un devis clair.</p></div>
+      <div class="step"><h3>On exécute</h3><p>Formalités, dépôts et suivi : vous gardez la main via votre espace, nous gérons l'administratif.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ AI BAND ============ -->
+<section class="section" id="ia">
+  <div class="wrap">
+    <div class="ai-band">
+      <span class="eyebrow" style="background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2);color:var(--gold)">Intelligence artificielle</span>
+      <h2>Un agent IA au service de votre demande</h2>
+      <p class="lede">Notre assistant ne se contente pas de répondre : il <strong>reçoit</strong> votre demande, la <strong>trie</strong>, la <strong>qualifie</strong>, repère les <strong>informations décisives</strong> et vous aide à <strong>confirmer</strong> votre besoin avant qu'un conseiller ne prenne le relais.</p>
+      <div class="ai-feats">
+        <div class="ai-feat"><div class="ic">📥</div><h3>Réception &amp; tri</h3><p>Chaque demande — chat ou formulaire — est captée et classée automatiquement par type et par profession.</p></div>
+        <div class="ai-feat"><div class="ic">🎯</div><h3>Qualification</h3><p>L'agent évalue la maturité du besoin (chaud / tiède / à cultiver) et extrait les données utiles.</p></div>
+        <div class="ai-feat"><div class="ic">✅</div><h3>Confirmation</h3><p>Un récapitulatif clair est proposé au client, qui confirme sa demande en un clic.</p></div>
+        <div class="ai-feat"><div class="ic">🔎</div><h3>Détection d'opportunités</h3><p>Urgence, forme juridique, volume : les signaux importants sont mis en avant pour le conseiller.</p></div>
+        <div class="ai-feat"><div class="ic">🗄️</div><h3>Stockage sécurisé</h3><p>Les données client sont conservées de façon structurée, prêtes pour le suivi et la relance.</p></div>
+        <div class="ai-feat"><div class="ic">🔗</div><h3>Extensible</h3><p>Branchable sur un vrai modèle (Claude) et une base cloud dès la mise en production.</p></div>
+      </div>
+      <div style="margin-top:32px;position:relative;z-index:2">
+        <button class="btn btn-gold btn-lg" onclick="Chat.open()">Essayer l'assistant maintenant</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TARIFS ============ -->
+<section class="section" id="tarifs" style="background:var(--bg-2)">
+  <div class="wrap">
+    <div class="shead">
+      <span class="eyebrow">Tarifs</span>
+      <h2>Des offres lisibles, sans surprise</h2>
+      <p class="lede center">Honoraires indicatifs, hors frais légaux et débours. Un devis précis vous est adressé après qualification.</p>
+    </div>
+    <div class="grid g3">
+      <div class="card">
+        <div class="ic">🏛️</div>
+        <h3>Création</h3>
+        <p>Constitution complète de votre société libérale.</p>
+        <div class="price">à partir de 390 € <small>/ dossier</small></div>
+        <ul>
+          <li>Conseil sur la structure</li>
+          <li>Statuts &amp; immatriculation</li>
+          <li>Guichet unique &amp; publication</li>
+        </ul>
+        <button class="btn btn-pri btn-sm" style="margin-top:18px;width:100%" onclick="Chat.start('creation')">Demander ce service</button>
+      </div>
+      <div class="card" style="border-color:var(--gold);box-shadow:0 14px 40px rgba(20,23,28,.2)">
+        <span class="tag warm" style="margin-bottom:8px">Le plus demandé</span>
+        <div class="ic">🗂️</div>
+        <h3>Accompagnement</h3>
+        <p>Gestion administrative courante, mensualisée.</p>
+        <div class="price">à partir de 79 € <small>/ mois</small></div>
+        <ul>
+          <li>Suivi des échéances &amp; obligations</li>
+          <li>Collecte &amp; classement des pièces</li>
+          <li>Coffre-fort &amp; interface comptable</li>
+          <li>Conseiller dédié</li>
+        </ul>
+        <button class="btn btn-gold btn-sm" style="margin-top:18px;width:100%" onclick="Chat.start('accompagnement')">Demander ce service</button>
+      </div>
+      <div class="card">
+        <div class="ic">✍️</div>
+        <h3>Modification</h3>
+        <p>Formalité statutaire ponctuelle.</p>
+        <div class="price">à partir de 190 € <small>/ formalité</small></div>
+        <ul>
+          <li>Rédaction des actes</li>
+          <li>Dépôt &amp; publication</li>
+          <li>Mise à jour du Kbis</li>
+        </ul>
+        <button class="btn btn-pri btn-sm" style="margin-top:18px;width:100%" onclick="Chat.start('modification')">Demander ce service</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CONTACT / INTAKE ============ -->
+<section class="section" id="contact">
+  <div class="wrap">
+    <div class="intake">
+      <div class="contact-side">
+        <span class="eyebrow">Contact</span>
+        <h2>Parlons de votre projet</h2>
+        <p class="lede">Laissez vos coordonnées : l'assistant qualifie votre demande et un conseiller vous rappelle sous 48 h ouvrées.</p>
+        <div class="card" style="margin-top:20px">
+          <h3 class="mt0">💬 Le plus rapide</h3>
+          <p>Discutez avec l'assistant IA, il structure tout pour vous.</p>
+          <button class="btn btn-pri btn-sm" style="margin-top:8px" onclick="Chat.open()">Ouvrir l'assistant</button>
+        </div>
+        <div class="card">
+          <h3 class="mt0">📞 Nous joindre</h3>
+          <p>📧 <a href="mailto:contact@last.fr" style="color:var(--navy-3)">contact@last.fr</a></p>
+          <p>☎️ 01 23 45 67 89 — Lun–Ven, 9 h–18 h</p>
+          <p>📍 Paris &amp; à distance, partout en France</p>
+        </div>
+      </div>
+      <div>
+        <form id="intakeForm" class="card" onsubmit="return Intake.submit(event)">
+          <div class="field-row">
+            <div class="field"><label for="f-nom">Nom complet *</label><input id="f-nom" required placeholder="Dr. Camille Martin"></div>
+            <div class="field"><label for="f-prof">Profession</label><input id="f-prof" placeholder="Médecin, avocat…"></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label for="f-email">E-mail *</label><input id="f-email" type="email" required placeholder="vous@exemple.fr"></div>
+            <div class="field"><label for="f-tel">Téléphone</label><input id="f-tel" placeholder="06 12 34 56 78"></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label for="f-type">Votre demande *</label>
+              <select id="f-type" required>
+                <option value="">— Sélectionner —</option>
+                <option value="creation">Créer une société</option>
+                <option value="modification">Modifier ma société</option>
+                <option value="accompagnement">Gestion administrative</option>
+                <option value="autre">Autre / je ne sais pas</option>
+              </select>
+            </div>
+            <div class="field"><label for="f-forme">Forme envisagée</label>
+              <select id="f-forme">
+                <option value="">— Indifférent —</option>
+                <option>SELARL</option><option>SELAS</option><option>SASU</option><option>SAS</option>
+                <option>EURL</option><option>SARL</option><option>EI</option><option>Micro-entreprise</option>
+                <option>SCM / SCP</option><option>Je ne sais pas</option>
+              </select>
+            </div>
+          </div>
+          <div class="field"><label for="f-msg">Décrivez votre besoin</label>
+            <textarea id="f-msg" placeholder="Ex. : Je m'installe en libéral et souhaite créer ma structure avant septembre…"></textarea>
+          </div>
+          <div class="field">
+            <label style="display:flex;gap:9px;align-items:flex-start;font-weight:400;font-size:.85rem;color:var(--muted)">
+              <input type="checkbox" id="f-rgpd" required style="width:auto;margin-top:3px">
+              <span>J'accepte que LAST traite mes données pour être recontacté(e). Vos données sont conservées de manière sécurisée et ne sont jamais revendues. <a href="#" style="color:var(--navy-3)">Confidentialité</a>.</span>
+            </label>
+          </div>
+          <button class="btn btn-gold" type="submit" style="width:100%">Envoyer ma demande</button>
+          <p class="form-note">L'assistant qualifie automatiquement votre demande à l'envoi.</p>
+        </form>
+        <div class="ok-box" id="intakeOk">
+          <div class="big">✅</div>
+          <h3>Demande bien reçue !</h3>
+          <p>Votre référence : <span class="ref" id="okRef">—</span></p>
+          <p id="okQual" style="color:var(--muted)"></p>
+          <button class="btn btn-ghost btn-sm" onclick="Intake.reset()">Envoyer une autre demande</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FAQ ============ -->
+<section class="section" style="background:var(--bg-2)">
+  <div class="wrap">
+    <div class="shead"><span class="eyebrow">FAQ</span><h2>Questions fréquentes</h2></div>
+    <div class="faq">
+      <details><summary>Combien de temps pour créer ma société ?</summary><div class="a">Une fois votre dossier complet, l'immatriculation est généralement obtenue sous 3 à 10 jours ouvrés selon le greffe et la profession réglementée concernée.</div></details>
+      <details><summary>Travaillez-vous avec les professions réglementées ?</summary><div class="a">Oui. Nous maîtrisons les spécificités des SEL (SELARL, SELAS…) et des ordres professionnels (médecins, avocats, architectes, pharmaciens…).</div></details>
+      <details><summary>Mes données sont-elles en sécurité ?</summary><div class="a">Vos informations sont stockées de façon structurée et sécurisée, utilisées uniquement pour traiter votre demande, et ne sont jamais revendues. Vous pouvez demander leur suppression à tout moment.</div></details>
+      <details><summary>L'assistant IA remplace-t-il un conseiller ?</summary><div class="a">Non. L'assistant reçoit, trie et qualifie votre demande pour vous faire gagner du temps ; un conseiller humain valide et vous accompagne ensuite personnellement.</div></details>
+      <details><summary>Puis-je juste être accompagné sans créer de société ?</summary><div class="a">Bien sûr. Notre offre d'accompagnement administratif s'adresse aussi aux professionnels déjà installés qui veulent déléguer le suivi courant.</div></details>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FINAL CTA ============ -->
+<section class="section center">
+  <div class="wrap">
+    <h2>Prêt à déléguer l'administratif ?</h2>
+    <p class="lede center">Décrivez votre besoin à l'assistant — il s'occupe de le qualifier et de le transmettre.</p>
+    <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:26px">
+      <button class="btn btn-gold btn-lg" onclick="Chat.open()">💬 Démarrer avec l'assistant</button>
+      <a class="btn btn-ghost btn-lg" href="#contact">Remplir le formulaire</a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <a class="brand" href="#top"><span class="logo"><svg viewBox="0 0 88 88" xmlns="http://www.w3.org/2000/svg" aria-label="LAST"><rect width="88" height="88" fill="var(--logo-bg)"/><text x="44" y="59" font-family="Georgia,'Times New Roman',serif" font-size="47" font-weight="600" fill="var(--logo-fg)" text-anchor="middle">L</text><rect x="30" y="65" width="28" height="3.5" rx="1.75" fill="var(--logo-fg)"/></svg></span><span>LAST<small>Accompagnement libéral</small></span></a>
+        <p style="margin-top:14px;color:#9db4cb;font-size:.92rem;max-width:280px">L'accompagnement administratif des professions libérales : création, modification et gestion de société.</p>
+      </div>
+      <div>
+        <h4>Services</h4>
+        <a href="#services">Création de société</a>
+        <a href="#services">Modification statutaire</a>
+        <a href="#services">Gestion administrative</a>
+        <a href="#tarifs">Tarifs</a>
+      </div>
+      <div>
+        <h4>Société</h4>
+        <a href="#pour-qui">Pour qui</a>
+        <a href="#process">Notre méthode</a>
+        <a href="#ia">Assistant IA</a>
+        <a href="#contact">Contact</a>
+      </div>
+      <div>
+        <h4>Ressources</h4>
+        <a href="#" onclick="CRM.open();return false">Espace conseiller</a>
+        <a href="#">Confidentialité</a>
+        <a href="#">Mentions légales</a>
+        <a href="#">CGV</a>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© <span id="year"></span> LAST — Tous droits réservés.</span>
+      <span>Fait avec soin pour les indépendants.</span>
+    </div>
+  </div>
+</footer>
+
+<!-- ============ CHAT WIDGET ============ -->
+<button id="chat-fab" onclick="Chat.toggle()" aria-label="Ouvrir l'assistant">
+  💬<span class="badge" id="fabBadge" hidden>1</span>
+</button>
+<div id="chat-panel" role="dialog" aria-label="Assistant LAST">
+  <div class="chat-head">
+    <span class="av">✦</span>
+    <div><b>Assistant LAST</b><span><i></i> Répond en quelques secondes</span></div>
+    <button class="x" onclick="Chat.close()" aria-label="Fermer">×</button>
+  </div>
+  <div class="chat-log" id="chatLog"></div>
+  <div class="chat-chips" id="chatChips"></div>
+  <div class="chat-input">
+    <input id="chatInput" placeholder="Écrivez votre message…" onkeydown="if(event.key==='Enter')Chat.userSend()">
+    <button onclick="Chat.userSend()" aria-label="Envoyer">➤</button>
+  </div>
+</div>
+
+<!-- ============ CRM / ESPACE CONSEILLER ============ -->
+<div id="crm">
+  <div class="crm-head">
+    <span class="brand"><span class="logo"><svg viewBox="0 0 88 88" xmlns="http://www.w3.org/2000/svg" aria-label="LAST"><rect width="88" height="88" fill="var(--logo-bg)"/><text x="44" y="59" font-family="Georgia,'Times New Roman',serif" font-size="47" font-weight="600" fill="var(--logo-fg)" text-anchor="middle">L</text><rect x="30" y="65" width="28" height="3.5" rx="1.75" fill="var(--logo-fg)"/></svg></span></span>
+    <h2>Espace conseiller — demandes qualifiées</h2>
+    <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="CRM.exportCSV()">⬇ Export CSV</button>
+    <button class="btn btn-ghost btn-sm" onclick="CRM.close()">Fermer ✕</button>
+  </div>
+  <div class="crm-body">
+    <div class="crm-kpis" id="crmKpis"></div>
+    <div class="crm-filters" id="crmFilters"></div>
+    <div id="crmList"></div>
+  </div>
+</div>
+
+<script>
+/* ================================================================
+   LAST — logique du site vitrine
+   Assistant IA de qualification + mini-CRM + adaptateur de stockage.
+   Tout fonctionne hors-ligne (démo). Branchement LLM + base cloud :
+   voir window.LAST_CONFIG et le README.
+   ================================================================ */
+'use strict';
+
+/* -------- Configuration (surcharger avant chargement pour la prod) -------- */
+window.LAST_CONFIG = Object.assign({
+  brand:'LAST',
+  storageKey:'last-leads',
+  // Endpoint LLM (proxy Claude). Vide => moteur local par règles.
+  // Doit accepter POST {messages:[{role,content}], context} et renvoyer {reply, tags?, score?}.
+  llmEndpoint:'',
+  // Endpoint de persistance des demandes (ex. Supabase Edge Function). Vide => localStorage.
+  leadsEndpoint:'',
+  crmPin:'0000'        // code d'accès de l'espace conseiller (démo)
+}, window.LAST_CONFIG||{});
+
+document.getElementById('year').textContent = new Date().getFullYear();
+
+/* =========================================================
+   STORE — adaptateur de stockage (local par défaut, cloud si configuré)
+   ========================================================= */
+const Store = {
+  all(){ try{ return JSON.parse(localStorage.getItem(LAST_CONFIG.storageKey)||'[]'); }catch(e){ return []; } },
+  _saveLocal(list){ localStorage.setItem(LAST_CONFIG.storageKey, JSON.stringify(list)); },
+  async add(lead){
+    const list = this.all(); list.unshift(lead); this._saveLocal(list);
+    // Envoi cloud optionnel (n'interrompt jamais l'UX en cas d'échec réseau)
+    if(LAST_CONFIG.leadsEndpoint){
+      try{
+        await fetch(LAST_CONFIG.leadsEndpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(lead)});
+      }catch(e){ console.warn('[LAST] Envoi cloud échoué, conservé en local.',e); }
+    }
+    return lead;
+  },
+  update(ref,patch){ const l=this.all(); const i=l.findIndex(x=>x.ref===ref); if(i>=0){ Object.assign(l[i],patch); this._saveLocal(l);} }
+};
+
+/* =========================================================
+   QUALIF — moteur de qualification (le "cerveau" IA local)
+   Reçoit, trie, qualifie, repère les données intéressantes.
+   ========================================================= */
+const Qualif = {
+  professions:{
+    'medecin':['médecin','medecin','docteur','généraliste','generaliste','cardiologue','radiologue','dermatologue'],
+    'infirmier':['infirmier','infirmière','idel','ide'],
+    'kine':['kiné','kine','kinésithérapeute','kinesitherapeute','osteopathe','ostéopathe'],
+    'dentiste':['dentiste','chirurgien-dentiste','orthodontiste'],
+    'avocat':['avocat','juriste','barreau'],
+    'architecte':['architecte'],
+    'pharmacien':['pharmacien','pharmacie','officine'],
+    'expert-comptable':['comptable','expert-comptable'],
+    'consultant':['consultant','conseil','coach'],
+    'psychologue':['psychologue','psychologie','psy','psychothérapeute'],
+    'sage-femme':['sage-femme','sage femme','maïeuticien']
+  },
+  reglementees:['medecin','infirmier','kine','dentiste','avocat','architecte','pharmacien','sage-femme'],
+  formes:['selarl','selas','sasu','sas','eurl','sarl','sci','scm','scp','ei','micro'],
+  detectProfession(t){ t=t.toLowerCase(); for(const k in this.professions){ if(this.professions[k].some(w=>t.includes(w))) return k; } return null; },
+  detectForme(t){ t=t.toLowerCase().replace(/[^a-z ]/g,''); for(const f of this.formes){ if(t.includes(f)) return f.toUpperCase(); } return null; },
+  detectType(t){ t=t.toLowerCase();
+    if(/(cré|cree|créa|constitu|monter|lancer|ouvrir|immatricul|install)/.test(t)) return 'creation';
+    if(/(modif|changer|transfert|siège|siege|gérant|gerant|capital|cession|transform|objet social)/.test(t)) return 'modification';
+    if(/(accompagn|gestion|administrat|suivi|déléguer|deleguer|paperasse|formalit)/.test(t)) return 'accompagnement';
+    return null;
+  },
+  detectUrgence(t){ t=t.toLowerCase(); return /(urgen|rapide|vite|au plus vite|avant|deadline|délai|delai|dès que|des que|ce mois|semaine)/.test(t); },
+  // Score de maturité : chaud / tiède / à cultiver
+  score(lead){
+    let s=0;
+    if(lead.type && lead.type!=='autre') s+=25;
+    if(lead.forme) s+=12;
+    if(lead.profession) s+=12;
+    if(lead.email) s+=20;
+    if(lead.tel) s+=16;
+    if(lead.urgent) s+=20;
+    if((lead.message||'').length>40) s+=10;
+    s=Math.min(100,s);
+    const niveau = s>=70?'hot': s>=40?'warm':'cold';
+    return {points:s, niveau};
+  },
+  // Tags = "données intéressantes" repérées, pour le tri conseiller
+  tags(lead){
+    const t=[];
+    if(lead.type) t.push({k:lead.type,c:'info'});
+    if(lead.forme) t.push({k:lead.forme,c:'info'});
+    if(lead.profession){ t.push({k:lead.profession,c:'info'});
+      if(this.reglementees.includes(lead.profession)) t.push({k:'profession réglementée',c:'warm'}); }
+    if(lead.urgent) t.push({k:'⚡ urgent',c:'hot'});
+    const sc=this.score(lead);
+    t.push({k: sc.niveau==='hot'?'🔥 chaud': sc.niveau==='warm'?'tiède':'à cultiver', c:sc.niveau});
+    return t;
+  },
+  // Analyse d'un texte libre pour pré-remplir un lead
+  analyze(text){
+    return {
+      type:this.detectType(text),
+      forme:this.detectForme(text),
+      profession:this.detectProfession(text),
+      urgent:this.detectUrgence(text)
+    };
+  }
+};
+
+/* =========================================================
+   CHAT — assistant conversationnel qui qualifie et confirme
+   ========================================================= */
+const Chat = {
+  panel:null, log:null, chips:null, input:null,
+  state:'idle', draft:{}, started:false,
+  labels:{creation:'Créer une société',modification:'Modifier ma société',accompagnement:'Gestion administrative',autre:'Autre demande'},
+  init(){
+    this.panel=document.getElementById('chat-panel');
+    this.log=document.getElementById('chatLog');
+    this.chips=document.getElementById('chatChips');
+    this.input=document.getElementById('chatInput');
+    setTimeout(()=>{ if(!this.started){ const b=document.getElementById('fabBadge'); if(b) b.hidden=false; } },9000);
+  },
+  toggle(){ this.panel.classList.contains('open')?this.close():this.open(); },
+  open(){ this.panel.classList.add('open'); document.getElementById('fabBadge').hidden=true;
+    if(!this.started){ this.started=true; this.greet(); } setTimeout(()=>this.input.focus(),200); },
+  close(){ this.panel.classList.remove('open'); },
+  start(type){ this.open(); this.draft.type=type; setTimeout(()=>{ this.pickType(type,true); },400); },
+
+  add(role,html,cls=''){ const d=document.createElement('div'); d.className='msg '+role+(cls?' '+cls:''); d.innerHTML=html; this.log.appendChild(d); this.log.scrollTop=this.log.scrollHeight; return d; },
+  sys(t){ this.add('sys',t); },
+  setChips(arr){ this.chips.innerHTML=''; (arr||[]).forEach(c=>{ const b=document.createElement('button'); b.textContent=c.label; b.onclick=c.fn; this.chips.appendChild(b); }); },
+  typing(){ return this.add('ai','<span class="typing"><i></i><i></i><i></i></span>'); },
+  async ai(html,delay=650){ const t=this.typing(); await new Promise(r=>setTimeout(r,delay)); t.remove(); return this.add('ai',html); },
+
+  async greet(){
+    await this.ai('Bonjour 👋 Je suis l\'assistant <b>LAST</b>. Je vous aide à préciser votre besoin pour qu\'un conseiller vous rappelle avec la bonne réponse.',400);
+    await this.ai('Que souhaitez-vous faire ?',500);
+    this.state='type';
+    this.setChips([
+      {label:'🏛️ Créer une société',fn:()=>this.pickType('creation')},
+      {label:'✍️ Modifier ma société',fn:()=>this.pickType('modification')},
+      {label:'🗂️ Gestion administrative',fn:()=>this.pickType('accompagnement')},
+      {label:'🤔 Autre / je ne sais pas',fn:()=>this.pickType('autre')}
+    ]);
+  },
+  async pickType(type,silent){
+    this.draft.type=type;
+    if(!silent) this.add('me',this.labels[type]||type);
+    this.setChips([]);
+    if(type==='autre'){
+      await this.ai('Pas de souci, dites-moi simplement en quelques mots ce dont vous avez besoin, je m\'occupe de bien l\'orienter. ✍️');
+      this.state='free';
+      return;
+    }
+    const msg={
+      creation:'Excellent choix. Pour bien préparer votre création, quelle <b>forme juridique</b> envisagez-vous ?',
+      modification:'Très bien. Quel type de <b>modification</b> souhaitez-vous réaliser ?',
+      accompagnement:'Avec plaisir. Pour vous accompagner, quelle est votre <b>profession</b> et où en êtes-vous (déjà installé·e ou en projet) ?'
+    }[type];
+    await this.ai(msg);
+    if(type==='creation'){
+      this.state='forme';
+      this.setChips([
+        {label:'SELARL',fn:()=>this.pickForme('SELARL')},
+        {label:'SELAS',fn:()=>this.pickForme('SELAS')},
+        {label:'SASU',fn:()=>this.pickForme('SASU')},
+        {label:'EURL',fn:()=>this.pickForme('EURL')},
+        {label:'EI / Micro',fn:()=>this.pickForme('EI')},
+        {label:'Je ne sais pas',fn:()=>this.pickForme('à conseiller')}
+      ]);
+    } else if(type==='modification'){
+      this.state='modif';
+      this.setChips([
+        {label:'Transfert de siège',fn:()=>this.pickModif('Transfert de siège')},
+        {label:'Changement de gérant',fn:()=>this.pickModif('Changement de dirigeant')},
+        {label:'Capital',fn:()=>this.pickModif('Modification de capital')},
+        {label:'Objet social',fn:()=>this.pickModif('Changement d\'objet social')},
+        {label:'Autre',fn:()=>this.pickModif('Autre modification')}
+      ]);
+    } else {
+      this.state='prof';
+    }
+  },
+  async pickForme(f){ this.draft.forme=(f==='à conseiller'?null:f); this.add('me',f); this.setChips([]);
+    if(f==='à conseiller') await this.ai('Aucun problème : un conseiller vous orientera vers la forme la plus adaptée (fiscalité, protection, profession réglementée). 👍');
+    else if(Qualif.reglementees.length && ['SELARL','SELAS'].includes(f)) await this.ai('La <b>'+f+'</b> est bien adaptée aux professions réglementées. 👌');
+    else await this.ai('Noté : <b>'+f+'</b>.');
+    await this.askProfession();
+  },
+  async pickModif(m){ this.draft.detail=m; this.draft.forme=null; this.add('me',m); this.setChips([]);
+    await this.ai('C\'est noté : <b>'+m+'</b>. Nous préparerons l\'acte et la formalité correspondante.');
+    await this.askProfession();
+  },
+  async askProfession(){
+    await this.ai('Quelle est votre <b>profession</b> ? (ex. médecin, avocat, architecte…)',500);
+    this.state='prof';
+  },
+  async askContact(){
+    await this.ai('Parfait, j\'ai l\'essentiel. Pour qu\'un conseiller vous rappelle, quel est votre <b>e-mail</b> (et un <b>téléphone</b> si vous voulez être appelé) ?',500);
+    this.state='contact';
+  },
+
+  async userSend(){
+    const v=this.input.value.trim(); if(!v) return; this.input.value='';
+    this.add('me',v);
+    this.setChips([]);
+    await this.route(v);
+  },
+  async route(v){
+    // Branchement LLM réel si configuré (sinon règles locales)
+    if(LAST_CONFIG.llmEndpoint && ['free','open'].includes(this.state)){
+      const ok=await this.llm(v); if(ok) return;
+    }
+    const a=Qualif.analyze(v);
+    switch(this.state){
+      case 'free':
+        if(a.type) this.draft.type=a.type;
+        if(a.forme) this.draft.forme=a.forme;
+        if(a.profession) this.draft.profession=a.profession;
+        if(a.urgent) this.draft.urgent=true;
+        this.draft.message=(this.draft.message?this.draft.message+' ':'')+v;
+        if(!this.draft.type){ await this.ai('Merci. S\'agit-il plutôt d\'une <b>création</b>, d\'une <b>modification</b> ou d\'un <b>accompagnement</b> ?'); this.state='type';
+          this.setChips([{label:'Création',fn:()=>this.pickType('creation')},{label:'Modification',fn:()=>this.pickType('modification')},{label:'Accompagnement',fn:()=>this.pickType('accompagnement')}]); return; }
+        if(!this.draft.profession){ await this.ai('Compris 👍 Et quelle est votre <b>profession</b> ?'); this.state='prof'; return; }
+        await this.askContact(); break;
+      case 'prof':{
+        const p=Qualif.detectProfession(v)|| (v.length<40? v : null);
+        this.draft.profession=p||v; this.draft.professionLibre=v;
+        if(Qualif.reglementees.includes(p)) await this.ai('Profession réglementée bien identifiée. 👌');
+        else await this.ai('Merci !');
+        await this.askContact(); break; }
+      case 'contact':{
+        const em=(v.match(/[\w.+-]+@[\w-]+\.[\w.-]+/)||[])[0];
+        const tel=(v.match(/(?:\+33|0)[\s.\-]?[1-9](?:[\s.\-]?\d{2}){4}/)||[])[0];
+        if(em) this.draft.email=em; if(tel) this.draft.tel=tel;
+        if(!this.draft.email){ await this.ai('Il me manque juste un <b>e-mail</b> valide pour vous transmettre le suivi. 🙏'); return; }
+        await this.recap(); break; }
+      case 'confirmed':
+        this.draft.message=(this.draft.message?this.draft.message+' ':'')+v;
+        await this.ai('C\'est bien noté, je l\'ajoute à votre dossier. Un conseiller reviendra vers vous très vite. 🙌'); break;
+      default:
+        // état type/forme/modif : traiter le texte libre comme intention
+        if(a.type){ await this.pickType(a.type,true); }
+        else { this.draft.message=(this.draft.message?this.draft.message+' ':'')+v;
+          await this.ai('Merci pour ces précisions. Souhaitez-vous <b>créer</b>, <b>modifier</b> ou être <b>accompagné·e</b> ?');
+          this.state='type';
+          this.setChips([{label:'Création',fn:()=>this.pickType('creation')},{label:'Modification',fn:()=>this.pickType('modification')},{label:'Accompagnement',fn:()=>this.pickType('accompagnement')}]); }
+    }
+  },
+  async llm(v){
+    try{
+      const t=this.typing();
+      const res=await fetch(LAST_CONFIG.llmEndpoint,{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({messages:[{role:'user',content:v}],context:this.draft})});
+      const data=await res.json(); t.remove();
+      if(data.reply){ this.add('ai',data.reply); if(data.context) Object.assign(this.draft,data.context); return true; }
+    }catch(e){ console.warn('[LAST] LLM indisponible, repli local.',e); }
+    return false;
+  },
+  async recap(){
+    const d=this.draft; d.message=d.message||'';
+    const sc=Qualif.score(d); const tags=Qualif.tags(d);
+    const line=(l,v)=> v?`<div class="row"><span>${l}</span><b>${v}</b></div>`:'';
+    const html=`<div class="recap">
+      <b>Récapitulatif de votre demande</b>
+      ${line('Demande', this.labels[d.type]||d.type)}
+      ${line('Détail', d.detail)}
+      ${line('Forme', d.forme)}
+      ${line('Profession', d.professionLibre||d.profession)}
+      ${line('E-mail', d.email)}
+      ${line('Téléphone', d.tel)}
+      <div style="margin-top:8px">${tags.map(t=>`<span class="tag ${t.c}">${t.k}</span>`).join('')}</div>
+    </div>`;
+    await this.ai('Voici ce que j\'ai compris — pouvez-vous <b>confirmer</b> ?',500);
+    this.add('ai',html);
+    this.state='review';
+    this.setChips([
+      {label:'✅ Je confirme',fn:()=>this.confirm()},
+      {label:'✏️ Modifier',fn:()=>this.edit()}
+    ]);
+  },
+  async edit(){ this.setChips([]); await this.ai('Bien sûr. Dites-moi ce que je dois corriger ou ajouter, je mets à jour. ✍️'); this.state='free'; },
+  async confirm(){
+    this.setChips([]);
+    const d=this.draft; const sc=Qualif.score(d);
+    const lead={
+      ref:'LA-'+Date.now().toString(36).toUpperCase().slice(-6),
+      date:new Date().toISOString(), source:'chat',
+      nom:d.nom||'', profession:d.professionLibre||d.profession||'', email:d.email||'', tel:d.tel||'',
+      type:d.type||'', forme:d.forme||'', detail:d.detail||'', message:d.message||'',
+      urgent:!!d.urgent, score:sc.points, niveau:sc.niveau, statut:'nouveau'
+    };
+    await Store.add(lead);
+    this.add('me','✅ Je confirme');
+    await this.ai(`Merci ! Votre demande est enregistrée sous la référence <b>${lead.ref}</b>. 🎉<br>Un conseiller LAST vous rappelle sous <b>48 h ouvrées</b>.`,600);
+    await this.ai('Vous pouvez ajouter une précision si besoin, sinon à très vite ! 🙌',500);
+    this.state='confirmed';
+    this.sys('Demande '+lead.ref+' transmise au conseiller');
+  }
+};
+
+/* =========================================================
+   INTAKE — formulaire de contact (qualifié à l'envoi)
+   ========================================================= */
+const Intake = {
+  async submit(e){
+    e.preventDefault();
+    const g=id=>document.getElementById(id).value.trim();
+    const d={
+      nom:g('f-nom'), profession:g('f-prof'), email:g('f-email'), tel:g('f-tel'),
+      type:g('f-type'), forme:g('f-forme'), message:g('f-msg')
+    };
+    const a=Qualif.analyze(d.message||'');
+    if(!d.type||d.type==='autre'){ if(a.type) d.type=a.type; }
+    if(!d.forme && a.forme) d.forme=a.forme;
+    if(!d.profession && a.profession) d.profession=a.profession;
+    d.urgent=a.urgent;
+    const pkey=Qualif.detectProfession(d.profession||'');
+    const leadForScore=Object.assign({},d,{profession:pkey||d.profession});
+    const sc=Qualif.score(leadForScore);
+    const lead={
+      ref:'LA-'+Date.now().toString(36).toUpperCase().slice(-6),
+      date:new Date().toISOString(), source:'formulaire',
+      nom:d.nom, profession:d.profession, email:d.email, tel:d.tel,
+      type:d.type, forme:d.forme, message:d.message, urgent:d.urgent,
+      score:sc.points, niveau:sc.niveau, statut:'nouveau'
+    };
+    await Store.add(lead);
+    document.getElementById('intakeForm').classList.add('hide');
+    const ok=document.getElementById('intakeOk'); ok.classList.add('show');
+    document.getElementById('okRef').textContent=lead.ref;
+    const niveauTxt={hot:'Votre demande est prioritaire',warm:'Votre demande est bien qualifiée',cold:'Nous avons noté votre projet'}[sc.niveau];
+    document.getElementById('okQual').textContent=niveauTxt+' — un conseiller vous recontacte sous 48 h ouvrées.';
+    return false;
+  },
+  reset(){ document.getElementById('intakeForm').reset(); document.getElementById('intakeForm').classList.remove('hide');
+    document.getElementById('intakeOk').classList.remove('show'); }
+};
+
+/* =========================================================
+   CRM — espace conseiller (tri / qualification / export)
+   ========================================================= */
+const CRM = {
+  filter:'all',
+  open(){
+    const pin=LAST_CONFIG.crmPin;
+    if(pin){ const p=prompt('Espace conseiller — code d\'accès :'); if(p!==pin){ if(p!==null) alert('Code incorrect.'); return; } }
+    document.getElementById('crm').classList.add('open'); document.body.style.overflow='hidden'; this.render();
+  },
+  close(){ document.getElementById('crm').classList.remove('open'); document.body.style.overflow=''; },
+  render(){
+    const list=Store.all();
+    const k=document.getElementById('crmKpis');
+    const hot=list.filter(l=>l.niveau==='hot').length, warm=list.filter(l=>l.niveau==='warm').length;
+    const urg=list.filter(l=>l.urgent).length;
+    k.innerHTML=`
+      <div class="kpi"><b>${list.length}</b><span>Demandes reçues</span></div>
+      <div class="kpi"><b style="color:var(--hot)">${hot}</b><span>🔥 Chaudes (prioritaires)</span></div>
+      <div class="kpi"><b style="color:var(--warn)">${warm}</b><span>Tièdes</span></div>
+      <div class="kpi"><b style="color:var(--navy-3)">${urg}</b><span>⚡ Urgentes</span></div>`;
+    const f=document.getElementById('crmFilters');
+    const filters=[['all','Toutes'],['hot','🔥 Chaudes'],['warm','Tièdes'],['cold','À cultiver'],['creation','Créations'],['modification','Modifications'],['accompagnement','Accompagnement']];
+    f.innerHTML=filters.map(([v,l])=>`<button class="${this.filter===v?'on':''}" onclick="CRM.setFilter('${v}')">${l}</button>`).join('');
+    const el=document.getElementById('crmList');
+    let items=list;
+    if(['hot','warm','cold'].includes(this.filter)) items=list.filter(l=>l.niveau===this.filter);
+    else if(['creation','modification','accompagnement'].includes(this.filter)) items=list.filter(l=>l.type===this.filter);
+    if(!items.length){ el.innerHTML='<div class="empty">Aucune demande pour ce filtre.<br><small>Les demandes captées par le chat et le formulaire apparaissent ici.</small></div>'; return; }
+    const lbl={creation:'Création',modification:'Modification',accompagnement:'Accompagnement',autre:'Autre'};
+    const scoreColor={hot:'var(--hot)',warm:'var(--warn)',cold:'var(--cold)'};
+    el.innerHTML=items.map(l=>{
+      const tags=Qualif.tags({type:l.type,forme:l.forme,profession:Qualif.detectProfession(l.profession||'')||l.profession,urgent:l.urgent,email:l.email,tel:l.tel,message:l.message});
+      return `<div class="lead">
+        <div class="lead-top">
+          <span class="ref">${l.ref} · ${new Date(l.date).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})} · via ${l.source}</span>
+          <span class="score" style="color:${scoreColor[l.niveau]}">${l.score}/100 · ${l.niveau==='hot'?'🔥 chaud':l.niveau==='warm'?'tiède':'à cultiver'}</span>
+        </div>
+        <h4>${l.nom||'(sans nom)'} ${l.profession?'— '+l.profession:''}</h4>
+        <div class="meta">${lbl[l.type]||l.type||'—'}${l.forme?' · '+l.forme:''}${l.detail?' · '+l.detail:''} · ✉️ ${l.email||'—'}${l.tel?' · 📞 '+l.tel:''}</div>
+        <div>${tags.map(t=>`<span class="tag ${t.c}">${t.k}</span>`).join('')}</div>
+        ${l.message?`<div class="msg-body">${l.message}</div>`:''}
+      </div>`;
+    }).join('');
+  },
+  setFilter(v){ this.filter=v; this.render(); },
+  exportCSV(){
+    const list=Store.all(); if(!list.length){ alert('Aucune demande à exporter.'); return; }
+    const cols=['ref','date','source','nom','profession','type','forme','detail','email','tel','urgent','score','niveau','statut','message'];
+    const esc=s=>'"'+String(s==null?'':s).replace(/"/g,'""')+'"';
+    const csv=[cols.join(',')].concat(list.map(l=>cols.map(c=>esc(l[c])).join(','))).join('\n');
+    const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+    a.download='last-demandes-'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
+  }
+};
+
+/* Accès espace conseiller par ancre #conseiller */
+if(location.hash==='#conseiller') setTimeout(()=>CRM.open(),300);
+
+/* Fermer le menu mobile au clic sur un lien */
+document.querySelectorAll('#navLinks a').forEach(a=>a.addEventListener('click',()=>document.getElementById('navLinks').classList.remove('open')));
+
+/* Init */
+Chat.init();
+</script>
+
+<script>
+/* Spatial UI + liquid glass — parallaxe ambiante & reflet curseur (additif) */
+(function(){
+  'use strict';
+  var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // Couche ambiante
+  var amb=document.createElement('div'); amb.id='ambient';
+  amb.innerHTML='<div class="orb orb-a"></div><div class="orb orb-b"></div><div class="orb orb-c"></div>';
+  document.body.insertBefore(amb, document.body.firstChild);
+  var orbs=amb.querySelectorAll('.orb');
+  var px=0,py=0,sy=0,raf=0;
+  var amp=[[28,18,0.03],[-34,22,-0.02],[20,-26,0.025]];
+  function paint(){ raf=0;
+    for(var i=0;i<orbs.length;i++){ var a=amp[i];
+      orbs[i].style.transform='translate3d('+(px*a[0]).toFixed(1)+'px,'+((py*a[1])+(sy*a[2])).toFixed(1)+'px,0)'; } }
+  function req(){ if(!raf) raf=requestAnimationFrame(paint); }
+  if(!reduce){
+    addEventListener('pointermove',function(e){ px=e.clientX/innerWidth-0.5; py=e.clientY/innerHeight-0.5; req(); },{passive:true});
+    addEventListener('scroll',function(){ sy=scrollY; req(); },{passive:true});
+  }
+  // Reflet spéculaire suivant le curseur sur les cartes de verre
+  var SEL='.card,.kpi,.hero-card,.ai-feat';
+  addEventListener('pointermove',function(e){
+    var el=e.target.closest?e.target.closest(SEL):null; if(!el) return;
+    var r=el.getBoundingClientRect();
+    el.style.setProperty('--mx',((e.clientX-r.left)/r.width*100).toFixed(1)+'%');
+    el.style.setProperty('--my',((e.clientY-r.top)/r.height*100).toFixed(1)+'%');
+  },{passive:true});
+})();
+</script>
