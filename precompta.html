@@ -11083,7 +11083,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v631';
+    b.textContent='YADA · v632';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -24598,7 +24598,7 @@ ${lignes}
       +'<span class="ea-hint">Cliquer pour ouvrir</span></summary>'
       +'<div class="sub" style="margin:8px 0 10px">Cochez chaque mois traité par tâche. La colonne <b>À jour</b> indique jusqu’où le dossier est à jour (mois consécutifs cochés sur <i>toutes</i> les tâches). Les dossiers attribués sont repris du logiciel ; toutes les cases sont vides au départ.</div>'
       +'<div class="ea-actions"><button class="btn btn-ghost" onclick="eaReset()">↺ Tout décocher</button>'
-      +'<span class="ea-leg"><i class="ea-lg-ok"></i> à jour <i class="ea-lg-late"></i> en retard <i class="ea-lg-none"></i> non commencé</span></div>'
+      +'<span class="ea-leg"><span class="ea-lgp"><i class="ea-lg-ok"></i>à jour</span><span class="ea-lgp"><i class="ea-lg-late"></i>en retard</span><span class="ea-lgp"><i class="ea-lg-none"></i>non commencé</span></span></div>'
       +'<div class="ea-scroll"><table class="ea-tbl">'+thead+'<tbody>'+rows+'</tbody></table></div>'
       +'</details>';
   }
@@ -24707,8 +24707,9 @@ ${lignes}
     +'.ea-badge{background:#0d2740;border:1px solid #1e90ff;color:#cfe0ff;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:700}'
     +'.ea-hint{color:#9fb6d0;font-size:12px;margin-left:auto}'
     +'.ea-actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:0 0 10px}'
-    +'.ea-leg{display:flex;align-items:center;gap:8px;color:#9fb6d0;font-size:11.5px}'
-    +'.ea-leg i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:middle;margin-right:2px}'
+    +'.ea-leg{display:flex;align-items:center;gap:18px;color:#9fb6d0;font-size:11.5px}'
+    +'.ea-leg .ea-lgp{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}'
+    +'.ea-leg i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:middle;margin-right:0}'
     +'.ea-lg-ok{background:#1e7a3a}.ea-lg-late{background:#b9821f}.ea-lg-none{background:#3a4657}'
     +'.ea-scroll{overflow:auto;max-height:72vh;border:1px solid rgba(130,185,255,.18);border-radius:10px;background:#0a1626}'
     +'.ea-tbl{border-collapse:separate;border-spacing:0;font-size:11px;white-space:nowrap;color:#dbe9ff}'
@@ -32068,9 +32069,10 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       +'#yada-tvar .tvas-m.tvs-on .tvas-ml,#yada-tvar .tvas-m.tvs-on .tvas-mst{color:#0a0a0b}'
       +'#yada-tvar .tvas-kv{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:8px 12px;border-bottom:1px solid #171719}'
       +'#yada-tvar .tvas-kv:last-child{border-bottom:0}'
-      +'#yada-tvar .tvas-kv span{flex:0 0 auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:#616166}'
-      +'#yada-tvar .tvas-kv b{min-width:0;font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:400;font-size:11px;color:#f5f5f6;text-align:right;overflow-wrap:anywhere}'
-      +'#yada-tvar .tvas-kv b.num{font-family:Georgia,"Times New Roman",serif;font-size:14px;color:#fff;font-variant-numeric:tabular-nums}'
+      +'#yada-tvar .tvas-kv span{flex:1 1 auto;min-width:0;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:#616166;overflow-wrap:anywhere}'
+      +'#yada-tvar .tvas-kv b{flex:0 1 auto;min-width:0;font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:400;font-size:11px;color:#f5f5f6;text-align:right;overflow-wrap:anywhere}'
+      /* le MONTANT ne se comprime jamais et ne déborde jamais : c'est le libellé qui cède */
+      +'#yada-tvar .tvas-kv b.num{flex:0 0 auto;white-space:nowrap;font-family:Georgia,"Times New Roman",serif;font-size:14px;color:#fff;font-variant-numeric:tabular-nums}'
       +'#yada-tvar .tvas-kv.net{background:#121214}'
       +'#yada-tvar .tvas-kv.net b.num{font-size:16px}'
       +'html body:not(#_yz) #yada-tvar .tvas-h,html body:not(#_yz) #yada-tvar .tvas-it,html body:not(#_yz) #yada-tvar .tvas-ml,html body:not(#_yz) #yada-tvar .tvas-mst,html body:not(#_yz) #yada-tvar .tvas-kv span,html body:not(#_yz) #yada-tvar .tvas-kv b{font-family:ui-monospace,Menlo,Consolas,monospace!important;font-weight:400!important;font-style:normal!important;text-decoration:none!important}'
@@ -33919,7 +33921,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     +'#yada-rc .rc-k{background:#0b0b0c;border:1px solid #242427;border-radius:8px;padding:14px 16px}'
     +'#yada-rc .rc-kv{font-size:26px;font-weight:400;font-variant-numeric:tabular-nums}'
     +'#yada-rc .rc-kl{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10.5px;letter-spacing:.06em;color:#8b8b90;margin-top:3px}'
-    +'#yada-rc .rc-body{display:grid;grid-template-columns:290px 1fr;gap:12px;align-items:start}'
+    +'#yada-rc .rc-body{display:grid;grid-template-columns:290px 1fr;gap:12px;align-items:stretch}'
     +'#yada-rc .rc-rail{background:#0b0b0c;border:1px solid #242427;border-radius:8px;overflow:hidden}'
     +'#yada-rc .rc-railh{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid #242427}'
     +'#yada-rc .rc-railh .rc-btn{margin-left:auto}'
@@ -35321,6 +35323,153 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
   }catch(e){}
   try{ setInterval(sweep,1500); }catch(e){}
   try{ sweep(); setTimeout(sweep,300); setTimeout(sweep,1200); }catch(e){}
+})();
+</script>
+<script id="yada-addon-registre-nb-final">
+/* v632 — DERNIÈRES COULEURS DE L'ANCIENNE VERSION retirées (palette Registre N&B).
+ *
+ * Constat mesuré (balayage des 23 modules sur un dossier peuplé : 5 846 éléments,
+ * 70 074 propriétés) : 26 éléments chromatiques, dont 19 sont du BLEU hérité de la
+ * refonte v529/v530 — il survit sur les TROIS modules qui utilisent encore les
+ * primitives GÉNÉRIQUES .card / .kpi / .btn (Pilotage, Salarié, Fournisseurs),
+ * les autres ayant leurs propres classes (.rc-btn, .rg-btn, .fe-btn…).
+ *
+ *   - .card h2::before et .kpi::before  → barre d'accent BLEUE #2f8fff  (3)
+ *   - .btn                              → filet dégradé bleu + soulignement bleu
+ *                                         + halo bleu + remplissage bleu au clic  (15)
+ *   - td.ea-fix                         → fond bleu nuit #0d1c30                  (1)
+ *
+ * La source est `yada-addon-registre-unify` (v609) : malgré son nom, il pose la
+ * palette BLEUE (#0f1626 / rgba(47,143,255,.28) / #2f8fff) et non les jetons
+ * Registre N&B annoncés. Cet addon la corrige pour ces primitives, SANS toucher :
+ *   - le VERT/ROUGE comptable (td.cre / td.deb) — sens comptable, conservé ;
+ *   - la LÉGENDE d'état d'avancement (.ea-lg-ok / .ea-lg-late) — couleur fonctionnelle ;
+ *   - les éditions imprimables (.doc-page, .inv, #print-area) — convention papier ;
+ *   - l'accueil, la connexion et le lanceur (tout est scopé #main).
+ *
+ * Spécificité : préfixe `html body:not(#_yz)[data-theme="noir"] #main` → DEUX ID
+ * (`:not(#_yz)` + `#main`), ce qui bat `html body[data-theme="noir"] .card h2::before`
+ * (0,2,4) et `html body[data-theme] .btn` (0,2,2) sans surenchère.
+ */
+(function(){
+  var PANEL='#0b0b0c', HEAD='#121214', LINE='#242427', LINE2='#35353a',
+      GREY='#8b8b90', INK='#f5f5f6';
+  var P='html body:not(#_yz)[data-theme="noir"] #main ';
+  var Q='html body:not(#_yz) #main ';
+  var B=Q+'.btn.btn';   /* un cran au-dessus de registre-unify-mod (v609) — voir plus bas */
+  var css=[
+    /* Cartes & KPI : panneau Registre, filet sombre, accent BLANC */
+    P+'.card{background:'+PANEL+' !important;background-image:none !important;border:1px solid '+LINE+' !important;box-shadow:none !important}',
+    P+'.card h2{color:'+INK+' !important}',
+    P+'.card h2::before{background:'+INK+' !important;box-shadow:none !important}',
+    P+'.card .sub,'+P+'.card .meta,'+P+'.card .mini,'+P+'.card .hint{color:'+GREY+' !important}',
+    P+'.kpi{background:'+PANEL+' !important;background-image:none !important;border:1px solid '+LINE+' !important;box-shadow:none !important}',
+    P+'.kpi::before{background:'+INK+' !important;box-shadow:none !important}',
+    P+'.kpi .val{color:'+INK+' !important}',
+    P+'.kpi .lbl,'+P+'.kpi .meta{color:'+GREY+' !important}',
+    /* En-tête de page */
+    P+'.page-head h1{color:'+INK+' !important}',
+    P+'.page-head p{color:'+GREY+' !important}',
+    /* Boutons génériques : jetons Registre (fond sombre, filet et encre clairs).
+       `registre-unify-mod` (v609) pose déjà `html body[data-theme="noir"]:not(#_yz) #main .btn`
+       à (2,2,2) : à spécificité ÉGALE il l'emportait par l'ordre source, et le bouton
+       principal se retrouvait en encre NOIRE sur fond SOMBRE (contraste 1,1:1, illisible).
+       D'où le `.btn.btn` — une classe de plus, (2,3,2) — qui tranche sans `!important` en plus. */
+    B+'{background:'+HEAD+' !important;background-image:none !important;'+
+      'border:1px solid '+LINE2+' !important;color:'+INK+' !important;'+
+      'box-shadow:none !important;text-shadow:none !important}',
+    /* reflet bleu balayant (feuille statique l.1125, body[data-theme="noir"] .btn::before) :
+       le Registre marque le survol par une INVERSION, pas par un balayage coloré */
+    B+'::before{background:none !important;background-image:none !important;opacity:0 !important}',
+    B+'::after{background:'+INK+' !important}',
+    B+':hover{background:'+INK+' !important;color:#000 !important;border-color:'+INK+' !important}',
+    B+'.yada-fill{background:'+INK+' !important;color:#000 !important;box-shadow:none !important}',
+    /* Bouton principal : pastille inversée, comme partout ailleurs en Registre */
+    B+'.btn-pri{background:'+INK+' !important;color:#000 !important;border-color:'+INK+' !important}',
+    B+'.btn-pri:hover{background:#fff !important;color:#000 !important;border-color:#fff !important}',
+    /* Grille « état d'avancement » : colonne figée au jeton panneau */
+    P+'.ea-fix{background:'+PANEL+' !important}',
+    P+'.ea-tbl thead .ea-fix{background:'+HEAD+' !important}',
+    /* Fournisseurs — pastille inversée : l'encre des enfants doit suivre le fond clair.
+       La règle du module (#yada-four .four-li.on .four-li-nm, (1,3,0)) est écrasée par la
+       couche globale qui repeint tous les `span` en blanc → nom, compte et montant du
+       fournisseur SÉLECTIONNÉ étaient blancs sur blanc (contraste 1,1:1). Même parade qu'en v615. */
+    'html body:not(#_yz) #yada-four .four-li.on .four-li-nm,'+
+    'html body:not(#_yz) #yada-four .four-li.on .four-li-amt{color:#0a0a0b !important}',
+    'html body:not(#_yz) #yada-four .four-li.on .four-li-mt{color:#3a3a3f !important}'
+  ].join('');
+
+  /* ---- Filet de LISIBILITÉ (générique, idempotent) -------------------------------
+   * Le piège s'est répété (v612, v615, v616, et ici) : un module pose une PASTILLE
+   * INVERSÉE (fond clair) mais une couche globale repeint ses `span` en blanc → le
+   * texte disparaît. Plutôt qu'une règle par module — et une de plus à chaque module
+   * futur — on mesure le rendu : toute feuille de texte dont le contraste avec son
+   * fond effectif tombe sous 3:1 reçoit l'encre opposée (jeton Registre), en style
+   * en ligne `!important`. Idempotent : une fois l'encre posée le contraste remonte
+   * et plus rien n'est écrit. Éditions imprimables exclues (convention papier). */
+  function parseCol(v){
+    var i=String(v).indexOf('('); if(i<0) return null;
+    var p=String(v).slice(i+1,String(v).lastIndexOf(')')).split(',').map(parseFloat);
+    if(p.length<3||isNaN(p[0])) return null;
+    return {c:[p[0],p[1],p[2]], a:(p.length>3?p[3]:1)};
+  }
+  function lum(c){
+    var a=c.map(function(x){ x=x/255; return x<=0.03928 ? x/12.92 : Math.pow((x+0.055)/1.055,2.4); });
+    return 0.2126*a[0]+0.7152*a[1]+0.0722*a[2];
+  }
+  function lisibilite(){
+    try{
+      var root=document.getElementById('main'); if(!root) return;
+      var els=root.querySelectorAll('span,b,i,em,small,td,th,div,button,a,label');
+      for(var n=0;n<els.length;n++){
+        var el=els[n];
+        if(el.closest('.doc-page,.inv,#print-area')) continue;
+        /* uniquement les FEUILLES de texte : un conteneur dont les enfants portent
+           leur propre encre donnerait une mesure fausse */
+        var leaf=false, k;
+        for(k=0;k<el.childNodes.length;k++){
+          var nd=el.childNodes[k];
+          if(nd.nodeType===3 && String(nd.textContent).trim()){ leaf=true; break; }
+        }
+        if(!leaf) continue;
+        var r=el.getBoundingClientRect(); if(r.width<2||r.height<2) continue;
+        var cs=getComputedStyle(el); if(cs.visibility==='hidden') continue;
+        var fq=parseCol(cs.color); if(!fq||fq.a<0.5) continue;
+        var p=el, bg=null;
+        while(p && p!==document.documentElement){
+          var q=parseCol(getComputedStyle(p).backgroundColor);
+          if(q && q.a>0.5){ bg=q.c; break; }
+          p=p.parentElement;
+        }
+        if(!bg) bg=[0,0,0];
+        var L1=lum(fq.c), L2=lum(bg);
+        var ratio=(Math.max(L1,L2)+0.05)/(Math.min(L1,L2)+0.05);
+        if(ratio>=3) continue;
+        el.style.setProperty('color', L2>0.5 ? '#0a0a0b' : INK, 'important');
+        el.style.setProperty('-webkit-text-fill-color', L2>0.5 ? '#0a0a0b' : INK, 'important');
+      }
+    }catch(e){}
+  }
+  function ensure(){
+    try{
+      if(document.getElementById('registre-nb-final')) return;
+      var st=document.createElement('style');
+      st.id='registre-nb-final'; st.textContent=css;
+      (document.head||document.documentElement).appendChild(st);
+    }catch(e){}
+  }
+  ensure();
+  if(typeof window.render==='function'){
+    var _r=window.render;
+    window.render=function(){
+      var x=_r.apply(this,arguments);
+      try{ ensure(); }catch(e){}
+      try{ setTimeout(lisibilite,0); }catch(e){}
+      return x;
+    };
+  }
+  window.yadaLisibilite=lisibilite;
+  setInterval(function(){ ensure(); lisibilite(); },1500);
 })();
 </script>
 </body>
