@@ -11084,7 +11084,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v635';
+    b.textContent='YADA · v636';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -33258,6 +33258,8 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
   };
   window.ctlRefresh=function(){ if(typeof render==='function') render(); };
   window.ctlFermer=function(){ try{current='compta';}catch(e){} if(typeof render==='function') render(); };
+  /* l'audit est exposé pour l'automatisme de contrôle en continu (étape 4) */
+  window.ctlAnalyse=function(){ return analyse(); };
 
   try{ var st=document.createElement('style'); st.id='controles-mod'; st.textContent=
      '.mod-wrap:has(#yada-ctl){padding:0!important;max-width:none!important}'
@@ -36293,6 +36295,210 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       window.pageAutomatismes=function(){
         var h=_pa.apply(this,arguments);
         try{ var i=h.lastIndexOf('</div></div>'); if(i>0) return h.slice(0,i)+carteReleves()+h.slice(i); }catch(e){}
+        return h;
+      };
+    }
+  }catch(e){}
+})();
+</script>
+<script id="yada-addon-controles-continu">
+/* ═══ ÉTAPE 4 — CONTRÔLES DE COHÉRENCE EN CONTINU ═══
+   Le module Contrôles (v610) est un audit en LECTURE SEULE : il ne corrige rien, il constate.
+   Cette étape le fait TOURNER TOUT SEUL — après chaque passage d'automatisme — et remonter ses
+   anomalies dans le journal des passages. L'action d'un contrôle n'est donc pas une correction
+   mais un SIGNALEMENT : seules les anomalies NOUVELLES depuis le dernier passage sont comptées,
+   pour que le journal dise ce qui a changé et non ce qui traîne depuis le début.
+   Une anomalie corrigée est oubliée ; si elle revient, elle est re-signalée.
+   100% ADDITIF — aucune écriture n'est créée, modifiée ni supprimée : le seul écrit est le
+   registre des anomalies déjà vues (db.parametres.controlesContinu.vues). */
+(function(){
+  function e2(x){ return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+  function SAVE(){ try{ if(typeof save==='function') save(); }catch(e){} }
+  function RENDER(){ try{ if(typeof render==='function') render(); }catch(e){} }
+  function TOAST(m){ try{ if(typeof toast==='function') toast(m); }catch(e){} }
+  function frd(d){ d=String(d||''); var m=d.match(/^(\d{4})-(\d{2})-(\d{2})/); return m?(m[3]+'/'+m[2]+'/'+m[1].slice(2)):d; }
+  function horodate(ts){ if(!ts) return '—'; var d=new Date(ts); if(isNaN(d)) return '—';
+    function p2(n){ return ('0'+n).slice(-2); }
+    return p2(d.getDate())+'/'+p2(d.getMonth()+1)+'/'+String(d.getFullYear()).slice(2)+' à '+p2(d.getHours())+':'+p2(d.getMinutes()); }
+
+  /* ---------- les 7 familles du module Contrôles, par gravité ---------- */
+  var SEVLBL={crit:'CRITIQUE',warn:'AVERTISSEMENT',info:'À VÉRIFIER'};
+  var FAM=[
+    {cle:'deseq',   sev:'crit', nom:'Écritures déséquilibrées (Débit ≠ Crédit)'},
+    {cle:'sansCpt', sev:'crit', nom:'Lignes sans compte valide'},
+    {cle:'debCred', sev:'crit', nom:'Débit ET crédit sur une même ligne'},
+    {cle:'horsExo', sev:'warn', nom:'Écritures hors exercice'},
+    {cle:'dup',     sev:'warn', nom:'Doublons de pièce probables'},
+    {cle:'sansLib', sev:'warn', nom:'Écritures sans libellé'},
+    {cle:'tiersInv',sev:'info', nom:'Comptes de tiers au solde inversé'}
+  ];
+
+  /* ---------- registre des anomalies déjà signalées ---------- */
+  function etatC(){
+    try{
+      db.parametres=db.parametres||{};
+      var c=db.parametres.controlesContinu;
+      if(!c||typeof c!=='object'){ c={vues:{}}; db.parametres.controlesContinu=c; }
+      if(!c.vues||typeof c.vues!=='object') c.vues={};
+      return c;
+    }catch(e){ return {vues:{}}; }
+  }
+  /* L'empreinte porte le DÉTAIL de l'anomalie (donc les montants) : une écriture corrigée puis
+     re-déséquilibrée d'un autre montant est bien re-signalée. */
+  function emp(fam,it){
+    var k='';
+    if(it&&it.ec) k=it.ec.id||((it.ec.journal||'')+'|'+(it.ec.date||'')+'|'+(it.ec.numero||it.ec.piece||''));
+    else if(it) k=it.compte||'';
+    return fam+'|'+k+'|'+String((it&&it.note)||'');
+  }
+
+  function scan(){
+    var a=null;
+    try{ a=(typeof window.ctlAnalyse==='function')?window.ctlAnalyse():null; }catch(e){ a=null; }
+    if(!a) return null;
+    var c=etatC(), vues=c.vues, presentes={};
+    var out={a:a, fam:[], nouv:[], total:0, presentes:presentes};
+    FAM.forEach(function(F){
+      var items=(a[F.cle]||[]), nouv=0;
+      items.forEach(function(it){
+        var k=emp(F.cle,it); presentes[k]=1;
+        if(!vues[k]){ nouv++; out.nouv.push({F:F,it:it,k:k}); }
+      });
+      out.fam.push({F:F,n:items.length,nouv:nouv});
+      out.total+=items.length;
+    });
+    return out;
+  }
+
+  function autoControles(sim){
+    var res={n:0,det:[]};
+    var S=scan(); if(!S) return res;
+    res.n=S.nouv.length;
+    if(!sim){
+      var c=etatC(), ts=Date.now();
+      S.nouv.forEach(function(x){ c.vues[x.k]=ts; });
+      /* une anomalie corrigée sort du registre — si elle revient, elle sera re-signalée */
+      Object.keys(c.vues).forEach(function(k){ if(!S.presentes[k]) delete c.vues[k]; });
+      c.dernier=ts;
+      SAVE();
+    }
+    if(res.n){
+      S.fam.forEach(function(f){ if(f.nouv) res.det.push(f.F.nom+' : '+f.nouv); });
+    }else{
+      res.det.push(S.total?('Aucune anomalie nouvelle — '+S.total+' déjà signalée'+(S.total>1?'s':'')):'Dossier sain — aucune anomalie');
+    }
+    return res;
+  }
+  window.ctlControler=function(sim){ return autoControles(!!sim); };
+
+  /* ---------- inscription dans le module Automatismes (étape 1) ---------- */
+  window.YADA_AUTOS=window.YADA_AUTOS||[];
+  if(!window.YADA_AUTOS.filter(function(a){return a.cle==='controles';}).length){
+    window.YADA_AUTOS.push({
+      cle:'controles',
+      nom:'Contrôles de cohérence',
+      desc:'Passe tout le dossier au crible après chaque passage : écritures déséquilibrées, lignes sans compte, débit et crédit sur une même ligne, écritures hors exercice, doublons de pièce, écritures sans libellé, comptes de tiers au solde inversé. Ne corrige jamais rien — il signale, et ne compte que ce qui est nouveau.',
+      unite:'signalement',
+      run:function(sim){ return autoControles(sim); }
+    });
+  }
+
+  /* ---------- le contrôle tourne APRÈS CHAQUE PASSAGE ---------- */
+  function etatA(){
+    try{
+      db.parametres=db.parametres||{};
+      var a=db.parametres.automatismes;
+      if(!a||typeof a!=='object'){ a={actifs:{},passages:[],totaux:{}}; db.parametres.automatismes=a; }
+      if(!a.actifs||typeof a.actifs!=='object') a.actifs={};
+      if(!Array.isArray(a.passages)) a.passages=[];
+      if(!a.totaux||typeof a.totaux!=='object') a.totaux={};
+      return a;
+    }catch(e){ return {actifs:{},passages:[],totaux:{}}; }
+  }
+  function estActif(cle){ return etatA().actifs[cle]!==false; }
+  function journaliser(cle,nom,n,det){
+    var a=etatA();
+    a.totaux[cle]=(+a.totaux[cle]||0)+n;
+    a.passages.unshift({cle:cle,nom:nom,ts:Date.now(),n:n,det:(det||[]).slice(0,8)});
+    if(a.passages.length>40) a.passages.length=40;
+  }
+  function passageControle(){
+    if(!estActif('controles')) return null;
+    var r=autoControles(false);
+    journaliser('controles','Contrôles de cohérence',r.n,r.det);
+    SAVE();
+    return r;
+  }
+  window.ctlPasse=function(){ return passageControle(); };
+
+  /* « Exécuter maintenant » sur un AUTRE automatisme déclenche le contrôle dans la foulée.
+     « Lancer tous les automatismes actifs » parcourt déjà le registre, où le contrôle est
+     inscrit EN DERNIER : il y auditera donc l'état d'après-passage, sans double exécution. */
+  try{
+    if(typeof window.auLancer==='function'){
+      var _al=window.auLancer;
+      window.auLancer=function(cle){
+        var x=_al.apply(this,arguments);
+        try{
+          if(cle!=='controles'){
+            var r=passageControle();
+            if(r&&r.n) TOAST(r.n+' anomalie'+(r.n>1?'s':'')+' relevée'+(r.n>1?'s':'')+' — Contrôles de cohérence');
+            if(r) RENDER();
+          }
+        }catch(e){}
+        return x;
+      };
+    }
+  }catch(e){}
+
+  /* ---------- carte « Contrôles de cohérence », greffée sous le module Automatismes ---------- */
+  window.ctlOuvrirModule=function(){ try{ current='controles'; }catch(e){} RENDER(); };
+
+  function carteControles(){
+    var S=scan();
+    if(!S){
+      return '<div class="au-card">'
+        +'<div class="au-cardh"><span class="au-ttl">Contrôles de cohérence</span><span class="au-tag au-off">INDISPONIBLE</span></div>'
+        +'<div class="au-pad"><div class="au-note">Le module Contrôles n’est pas chargé.</div></div></div>';
+    }
+    var c=etatC();
+    var nouv=S.nouv.length;
+    var rows=S.fam.map(function(f){
+      return '<tr><td>'+e2(f.F.nom)+'</td><td>'+e2(SEVLBL[f.F.sev]||'')+'</td>'
+        +'<td class="r">'+f.n+'</td><td class="r">'+f.nouv+'</td></tr>';
+    }).join('');
+    var liste=S.nouv.slice(0,24).map(function(x){
+      var it=x.it, ec=it.ec;
+      var d = ec ? frd(ec.date) : '—';
+      var j = ec ? (ec.journal||'—') : '—';
+      var p = ec ? (ec.numero||ec.piece||'—') : e2(it.compte||'—');
+      var l = ec ? (ec.libelle||'—') : '—';
+      return '<tr><td>'+e2(x.F.nom)+'</td><td>'+e2(d)+'</td><td>'+e2(j)+'</td><td>'+e2(p)+'</td>'
+        +'<td>'+e2(l)+'</td><td>'+e2(it.note||'—')+'</td></tr>';
+    }).join('');
+    return '<div class="au-card">'
+      +'<div class="au-cardh"><span class="au-ttl">Contrôles de cohérence — état du dossier</span>'
+      +'<span class="au-tag'+(nouv?' au-due':(S.total?' au-ok':' au-ok'))+'">'+(nouv?(nouv+' NOUVELLE'+(nouv>1?'S':'')):(S.total?(S.total+' SIGNALÉE'+(S.total>1?'S':'')):'DOSSIER SAIN'))+'</span></div>'
+      +'<div class="au-pad">'
+      +'<table class="au-t"><thead><tr><th>Contrôle</th><th>Gravité</th><th class="r">Anomalies</th><th class="r">Nouvelles</th></tr></thead><tbody>'+rows+'</tbody></table>'
+      +(nouv
+        ? '<div class="au-note">Anomalies apparues depuis le dernier passage — elles seront inscrites au journal au prochain contrôle :</div>'
+          +'<table class="au-t"><thead><tr><th>Contrôle</th><th>Date</th><th>Journal</th><th>Pièce / Compte</th><th>Libellé</th><th>Détail</th></tr></thead><tbody>'+liste+'</tbody></table>'
+          +(nouv>24?'<div class="au-note">… et '+(nouv-24)+' de plus.</div>':'')
+        : '<div class="au-note">'+(S.total
+            ? 'Aucune anomalie nouvelle. Les '+S.total+' anomalie'+(S.total>1?'s':'')+' restante'+(S.total>1?'s':'')+' '+(S.total>1?'ont':'a')+' déjà été signalée'+(S.total>1?'s':'')+' — la correction se fait à la main, dans la Consultation ou le Journal.'
+            : 'Aucune anomalie sur l’ensemble du dossier.')+'</div>')
+      +'<div class="au-note">Dernier contrôle : '+e2(horodate(c.dernier))+'. Ce contrôle ne modifie jamais une écriture — il constate.</div>'
+      +'<div class="au-acts"><button class="au-btn" onclick="ctlOuvrirModule()">Ouvrir le détail des contrôles</button></div>'
+      +'</div></div>';
+  }
+
+  try{
+    if(typeof window.pageAutomatismes==='function'){
+      var _pa=window.pageAutomatismes;
+      window.pageAutomatismes=function(){
+        var h=_pa.apply(this,arguments);
+        try{ var i=h.lastIndexOf('</div></div>'); if(i>0) return h.slice(0,i)+carteControles()+h.slice(i); }catch(e){}
         return h;
       };
     }

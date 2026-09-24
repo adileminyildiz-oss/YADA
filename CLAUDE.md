@@ -36,7 +36,43 @@
 
 ---
 
-## 🟢 Dernière mise à jour — ÉTAPE 3 de l'automatisation : RAPPROCHEMENT BANCAIRE automatique (pointage relevé ↔ écritures) — v635
+## 🟢 Dernière mise à jour — ÉTAPE 4 de l'automatisation : CONTRÔLES DE COHÉRENCE EN CONTINU (le dossier s'audite tout seul après chaque passage) — v636
+**Quoi :** suite de *« Développement de tout le système étape par étape pour automatiser et rapidement »*. **Étape 4 : le contrôle ne s'ouvre plus, il tourne.** Le module **Contrôles de cohérence** (v610) existait déjà, mais il fallait **aller le voir** : il ne disait rien tant qu'on ne l'ouvrait pas, et il redisait la même chose à chaque ouverture. Il est désormais inscrit comme **cinquième automatisme** et **passe tout le dossier au crible après chaque passage**, en remontant ses anomalies dans le **journal des passages**.
+
+**Ce qu'il compte : ce qui est NOUVEAU.** Le module Contrôles est en **lecture seule** — il ne corrige rien, par construction. L'action d'un contrôle n'est donc pas une correction mais un **signalement** ; et un journal qui répéterait « 7 anomalies » à chaque passage ne dirait rien. L'automatisme ne compte donc que les anomalies **apparues depuis le dernier contrôle** : le journal dit **ce qui a changé**, pas ce qui traîne depuis le début. Une anomalie **corrigée est oubliée** ; si elle **revient**, elle est **re-signalée** — et comme l'empreinte porte le **détail** (donc les montants), une écriture corrigée puis re-déséquilibrée d'un **autre** montant compte bien pour une anomalie neuve.
+
+**Les 7 contrôles, inchangés (module v610) :**
+
+| Gravité | Contrôle |
+| --- | --- |
+| **CRITIQUE** | écritures déséquilibrées (Débit ≠ Crédit) · lignes sans compte valide · débit **et** crédit sur une même ligne |
+| **AVERTISSEMENT** | écritures hors exercice · doublons de pièce probables · écritures sans libellé |
+| **À VÉRIFIER** | comptes de tiers au solde inversé (fournisseur débiteur / client créditeur) |
+
+**Quand il tourne.** (1) **« Lancer tous les automatismes actifs »** : le contrôle est inscrit **en dernier** dans le registre, il audite donc l'état **d'après-passage** — et une seule fois. (2) **« Exécuter maintenant »** sur **un autre** automatisme : le contrôle enchaîne aussitôt, et signale par une notification s'il a trouvé du neuf. (3) **« Exécuter maintenant »** sur le contrôle lui-même. Comme tout automatisme, il se **suspend** d'un interrupteur.
+
+**Comment — nouvel addon `yada-addon-controles-continu` (100% ADDITIF) + 1 édition chirurgicale :** dans `yada-addon-controles`, une ligne gardée expose l'audit — `window.ctlAnalyse=function(){ return analyse(); }` — la fonction vivant jusque-là dans une IIFE. L'addon s'inscrit dans **`window.YADA_AUTOS`** (registre ouvert en v634) et greffe sous le module Automatismes une carte **« Contrôles de cohérence — état du dossier »** : les 7 familles avec leur gravité, le **nombre d'anomalies** et le **nombre de nouvelles**, puis la **liste nominative** des anomalies apparues depuis le dernier passage (contrôle · date · journal · pièce/compte · libellé · détail), l'horodatage du dernier contrôle et un bouton **« Ouvrir le détail des contrôles »**. **Points techniques :** (1) **aucune écriture n'est créée, modifiée ni supprimée** — le seul écrit est le registre des anomalies déjà vues (`db.parametres.controlesContinu.vues`) ; (2) l'empreinte d'une anomalie est `famille + identifiant (écriture ou compte) + détail`, d'où la re-détection d'une anomalie de même nature mais de montant différent ; (3) le registre est **purgé** de ce qui a disparu à chaque passage, donc il ne gonfle pas et une anomalie revenue est bien re-signalée ; (4) le déclenchement « après chaque passage » passe par une **enveloppe de `auLancer`** (et **pas** de `auLancerTout`, qui parcourt déjà le registre — sinon le contrôle tournerait deux fois). Rendu **Registre N&B** (classes `au-*`, aucun nouveau CSS). `sw.js` yada-v231, badge v636, `version.json` 636.
+
+**Validé :** `node --check` (**307 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS statiques équilibrées + balises `</head>`/`</body>`/`</html>` inchangées (3/5/3) + **filet d'équilibre** (`YADA_CHROME=… node tests/equilibre-ecritures.mjs` : vente 1200=1200, achat 600=600 ✅) + **rendu Playwright** sur un dossier d'essai portant **une anomalie de chacune des 7 familles** :
+
+| Mesure | Résultat |
+| --- | --- |
+| Familles détectées | **7 / 7** (1 par famille) |
+| Simulation · passage réel | **7** · **7** (identiques) |
+| **Second passage** (idempotence) | **0 action** — « Aucune anomalie nouvelle — 7 déjà signalées » |
+| Anomalie **corrigée** | **oubliée** (registre 7 → 6), 0 action |
+| Anomalie **revenue** (autre montant) | **re-signalée** (1) |
+| « Exécuter maintenant » sur le **lettrage** | contrôle enchaîné → **2 passages** au journal |
+| « **Lancer tout** » | contrôle **une seule fois**, **en dernier** du registre |
+| Écritures créées ou modifiées par le passage | **0** (JSON identique avant / après) |
+
++ **routage 25/25** + module Automatismes : **5 automatismes** + journal + 3 cartes (règles d'imputation · relevés mémorisés · contrôles), **1 sortie « Fermer »**, **0 en-tête vide**, **0 bouton vide**, **0 bouton sans action**, **0 gras**, **0 débordement** + **0 pageerror**, **0 console.error**. Badge → **v636**.
+
+**Reste des étapes :** **5.** traitements périodiques (OD de TVA, dotations en lot, relances, clôture).
+
+---
+
+## 🟢 MAJ précédente — ÉTAPE 3 de l'automatisation : RAPPROCHEMENT BANCAIRE automatique (pointage relevé ↔ écritures) — v635
 **Quoi :** suite de *« Développement de tout le système étape par étape pour automatiser et rapidement »*. **Étape 3 : le relevé se pointe tout seul contre les écritures.** Deux choses manquaient pour cela : (1) le **relevé n'existait nulle part** — l'Import bancaire (v611) lisait le fichier OFX/CSV dans une variable volatile puis l'oubliait ; (2) le module **Rapprochement bancaire** ne savait pointer qu'à la main, case par case, ou tout d'un coup (« Tout rapprocher », qui coche **aussi les écritures absentes du relevé** — donc faux).
 
 **1. Le relevé est désormais MÉMORISÉ.** Au dépôt d'un fichier dans l'Import bancaire, ses lignes sont retenues dans **`db.parametres.relevesLignes`** (`{compte, date, lib, montant, fitid, src, ecritureId}`). Le message de lecture le dit : « Fichier OFX lu : 2 opération(s). **Relevé mémorisé : 2 ligne(s).** » La mémorisation est **idempotente** — re-déposer le même fichier ajoute **0 ligne** (dédoublonnage par **FITID**, sinon par compte + date + montant + libellé normalisé).
