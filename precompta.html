@@ -7439,11 +7439,18 @@ function immoPlan(im){
     const ds=imMax(im.miseEnService, y+'-01-01'); const de=imMin(fin, y+'-12-31');
     let dot;
     if(im.type==='degressif'){
-      const tx=immoTauxAnnuel(im)/100; const lin=crd/Math.max((imAnnee_remainingMonths(im,y))/12,0.0001);
-      let deg=imTrunc2(crd*tx*imJours360(ds,de)/360);
-      // bascule vers linéaire quand plus avantageux
-      const restAns=(imJours360(im.miseEnService,fin) )/360 - (imJours360(im.miseEnService,de))/360;
-      dot = deg; if(y===yE) dot=r2(base-cumul);
+      /* Amortissement dégressif (art. 39 A du CGI) : l'annuité vaut VNC × taux dégressif,
+         MAIS dès qu'elle tombe SOUS l'annuité linéaire calculée sur la DURÉE RESTANTE,
+         la bascule vers le linéaire est OBLIGATOIRE — et définitive (une fois passée,
+         le linéaire reste supérieur). Avant v645 la bascule était calculée puis jamais
+         appliquée (`dot = deg` dans tous les cas) : le plan était faux sur la fin. */
+      const tx=immoTauxAnnuel(im)/100;
+      const joursPeriode=imJours360(ds,de);
+      const restJours=Math.max(imJours360(ds,fin),1);
+      const deg=imTrunc2(crd*tx*joursPeriode/360);
+      const lin=imTrunc2(crd*joursPeriode/restJours);   /* linéaire sur la durée restante */
+      dot=Math.max(deg,lin);
+      if(y===yE) dot=r2(base-cumul);
     } else {
       if(y===yE) dot=r2(base-cumul);
       else if(y===y0) dot=r2(annual*imJours360(ds,de)/360);
@@ -11085,7 +11092,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v644';
+    b.textContent='YADA · v645';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }

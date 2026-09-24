@@ -36,7 +36,34 @@
 
 ---
 
-## 🟢 Dernière mise à jour — INVENTAIRE & CUT-OFF : le résultat devient un RÉSULTAT D'EXERCICE — v644
+## 🟢 Dernière mise à jour — AMORTISSEMENT DÉGRESSIF : la bascule vers le linéaire est enfin APPLIQUÉE — v645
+**Quoi :** dans `immoPlan` (ligne 7433), la bascule du dégressif vers le linéaire était **calculée puis jamais appliquée** — `dot = deg` dans tous les cas, les variables `lin` et `restAns` n'étant utilisées nulle part. Le plan d'amortissement était donc **faux sur les dernières annuités** (dotations qui continuent de décroître au lieu de se stabiliser), et c'est **obligatoire** au sens de l'article 39 A du CGI : dès que l'annuité dégressive tombe **sous** l'annuité linéaire calculée sur la **durée restante**, on bascule — et la bascule est définitive, puisque le linéaire reste ensuite supérieur.
+
+**Le correctif :** `lin` est désormais calculé sur la **durée restante du plan** (`VNC × jours de la période / jours restants`) — et non sur les mois de l'année en cours, ce que faisait `imAnnee_remainingMonths` — puis `dot = max(deg, lin)`. La dernière annuité solde exactement la base (`base − cumul`), donc la somme des dotations tombe au centime.
+
+**Comment — 1 édition chirurgicale** de la branche `if(im.type==='degressif')` de `immoPlan`. La valeur résiduelle était déjà gérée par `immoBase` (`montantHT − valResiduelle`) ; elle est vérifiée ici. Le linéaire n'est pas touché. `sw.js` yada-v240, badge v645, `version.json` 645.
+
+**Validé :** `node --check` (**314 scripts inline, 0 erreur**) + **filet d'équilibre** ✅ + sonde Playwright sur le **cas d'école** (10 000 €, 5 ans, mise en service au 01/01 → coefficient 1,75, **taux 35 %**) :
+
+| Exercice | Dotation | Cumul | VNC |
+| --- | --- | --- | --- |
+| 2026 | **3 500,00** (10 000 × 35 %) | 3 500,00 | 6 500,00 |
+| 2027 | **2 275,00** (6 500 × 35 %) | 5 775,00 | 4 225,00 |
+| 2028 | **1 478,75** (4 225 × 35 %) | 7 253,75 | 2 746,25 |
+| 2029 | **1 373,12** — **bascule** (dégressif 961,19 < linéaire 1 373,12 sur 2 ans restants) | 8 626,87 | 1 373,13 |
+| 2030 | **1 373,13** | **10 000,00** | **0,00** |
+
+| Mesure | Résultat |
+| --- | --- |
+| Somme des dotations | **10 000,00** — exactement la base |
+| Deux dernières annuités **égales** (donc linéaire) | **oui** (avant : décroissance jusqu'au bout) |
+| Valeur résiduelle 1 000 € | somme des dotations **9 000,00**, **VNC finale 1 000,00** |
+| Plan **linéaire** (non touché) | 5 × **2 000,00** |
+| pageerror | **0** |
+
+---
+
+## 🟢 MAJ précédente — INVENTAIRE & CUT-OFF : le résultat devient un RÉSULTAT D'EXERCICE — v644
 **Quoi :** sans travaux d'inventaire, un résultat n'est qu'un **résultat de trésorerie déguisé** : une charge engagée mais non facturée n'y figure pas, un produit acquis non facturé non plus, une assurance payée d'avance y pèse en entier, et tout ce qui a été acheté est passé en charge — même ce qui dort encore en magasin. Le fichier ne contenait **aucune** de ces écritures (0 occurrence de FNP, CCA, PCA, variation de stock ou provision fonctionnelle ; le `418` n'existait que comme libellé de plan). Nouveau module **« Inventaire & cut-off »** (rubrique **Traitements**) : **8 travaux**, chacun avec sa saisie, l'**aperçu de son écriture en direct** et son bouton de génération.
 
 | Travail | Écriture | Extourne |
