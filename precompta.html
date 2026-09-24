@@ -11084,7 +11084,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v636';
+    b.textContent='YADA · v637';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -36295,6 +36295,325 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       window.pageAutomatismes=function(){
         var h=_pa.apply(this,arguments);
         try{ var i=h.lastIndexOf('</div></div>'); if(i>0) return h.slice(0,i)+carteReleves()+h.slice(i); }catch(e){}
+        return h;
+      };
+    }
+  }catch(e){}
+})();
+</script>
+<script id="yada-addon-periodiques">
+/* ═══ ÉTAPE 5 — TRAITEMENTS PÉRIODIQUES ═══
+   Les quatre traitements qui reviennent à date fixe et que personne n'aime refaire à la main :
+   l'OD de TVA de chaque mois clos, les dotations d'amortissement de l'exercice, les relances
+   des clients échus, et la clôture (OD de résultat + à-nouveaux).
+   Chacun s'inscrit dans window.YADA_AUTOS — une ligne de plus dans le module Automatismes.
+   Chacun REFUSE ce qui n'est pas encore acquis : un mois en cours peut recevoir des écritures,
+   un exercice en cours n'a pas de dotation due, une facture non échue ne se relance pas, et
+   un exercice ne se clôture pas tant qu'il porte une anomalie critique ou une CA3 non déposée.
+   100% ADDITIF — aucune fonction existante n'est réécrite ; les écritures sont posées par
+   posterODTVA / posterOD, avec les mêmes libellés (donc les mêmes anti-doublons) que les
+   boutons des modules TVA, Immobilisations et Éditions. */
+(function(){
+  function e2(x){ return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+  function SAVE(){ try{ if(typeof save==='function') save(); }catch(e){} }
+  function RENDER(){ try{ if(typeof render==='function') render(); }catch(e){} }
+  function r2x(n){ return Math.round(((+n)||0)*100)/100; }
+  function today(){ try{ return (typeof todayStr==='function')?todayStr():new Date().toISOString().slice(0,10); }catch(e){ return new Date().toISOString().slice(0,10); } }
+  function moisCourant(){ return today().slice(0,7); }
+  function SOC(){ try{ return (db&&db.societe)||{}; }catch(e){ return {}; } }
+  function exoDeb(){ return String(SOC().exoDebut||''); }
+  function exoFin(){ return String(SOC().exoFin||''); }
+  function exoClos(){ var f=exoFin(); return !!f && f<today(); }
+  function anSuivant(){ var f=exoFin(); if(!f) return ''; var d=new Date(f+'T00:00:00'); if(isNaN(d)) return ''; d.setDate(d.getDate()+1); return d.toISOString().slice(0,10); }
+  function moisExo(){ try{ return (typeof moisExoListe==='function')?(moisExoListe()||[]):[]; }catch(e){ return []; } }
+  function franchise(){ return String(SOC().tvaRegime||'CA3')==='franchise'; }
+  function eurx(n){ try{ return (typeof eur==='function')?eur(n):(r2x(n)+' €'); }catch(e){ return r2x(n)+' €'; } }
+  function frd(d){ d=String(d||''); var m=d.match(/^(\d{4})-(\d{2})-(\d{2})/); return m?(m[3]+'/'+m[2]+'/'+m[1]):d; }
+  function mlbl(m){ try{ return (typeof moisLabel==='function')?moisLabel(m):m; }catch(e){ return m; } }
+  function jours(iso){ try{ var a=new Date(String(iso)+'T00:00:00'), b=new Date(today()+'T00:00:00');
+    if(isNaN(a)||isNaN(b)) return 999; return Math.round((b-a)/86400000); }catch(e){ return 999; } }
+
+  /* ════════ 1 · OD DE TVA DES MOIS CLOS ════════
+     Un mois EN COURS peut encore recevoir des factures : on ne déclare que ce qui est clos. */
+  function tvaAttente(){
+    if(franchise()) return {mois:[], motif:'Régime de franchise en base — aucune CA3 à établir.'};
+    if(typeof posterODTVA!=='function') return {mois:[], motif:'Module TVA indisponible.'};
+    var mc=moisCourant(), out=[];
+    moisExo().forEach(function(m){
+      if(!(m<mc)) return;                                   /* mois en cours ou à venir */
+      try{ if(typeof odTvaDejaPostee==='function' && odTvaDejaPostee(m)) return; }catch(e){}
+      var d=null; try{ d=tvaDetailMois(m); }catch(e){ d=null; }
+      if(!d) return;
+      if((d.col||0)<=0.005 && (d.ded||0)<=0.005) return;    /* mois Néant : rien à solder */
+      out.push({m:m, d:d});
+    });
+    return {mois:out, motif:''};
+  }
+  function autoTVA(sim){
+    var res={n:0,det:[]}, A=tvaAttente();
+    if(A.motif){ res.det.push(A.motif); return res; }
+    if(!A.mois.length){ res.det.push('Aucun mois clos en attente d’OD de TVA'); return res; }
+    if(sim){ res.n=A.mois.length; return res; }
+    A.mois.forEach(function(x){
+      var ok=false; try{ ok=!!posterODTVA(x.m); }catch(e){ ok=false; }
+      if(ok){ res.n++;
+        res.det.push('OD TVA '+mlbl(x.m)+' — '+(((x.d.aDecaisser||0)>0.005)?('à décaisser '+eurx(x.d.aDecaisser)):('crédit à reporter '+eurx(x.d.credit||0)))); }
+    });
+    if(!res.n) res.det.push('Aucune OD de TVA générée');
+    return res;
+  }
+
+  /* ════════ 2 · DOTATIONS D'AMORTISSEMENT DE L'EXERCICE ════════
+     La dotation d'une année se pose au 31/12 : tant que l'exercice court, elle n'est pas due. */
+  function dotAn(){ try{ return (typeof imYear==='function')?imYear():+(exoDeb().slice(0,4)); }catch(e){ return +(exoDeb().slice(0,4)); } }
+  function dotAttente(){
+    if(typeof immoRowAnnee!=='function' || typeof posterOD!=='function') return {ims:[], motif:'Module Immobilisations indisponible.', an:dotAn()};
+    var an=dotAn();
+    if(!exoClos()) return {ims:[], motif:'Exercice en cours jusqu’au '+frd(exoFin())+' — les dotations se posent à la clôture.', an:an};
+    var out=[];
+    try{
+      (db.immos||[]).forEach(function(im){
+        if(im.sortie) return;                               /* cédée : la sortie a soldé les amortissements */
+        var row=null; try{ row=immoRowAnnee(im, an); }catch(e){ row=null; }
+        var dot=row?r2x(row.dotation):0;
+        if(dot<=0.005) return;
+        try{ if(typeof window.imDotFaite==='function' && window.imDotFaite(im,an)) return; }catch(e){}
+        out.push({im:im, an:an, dot:dot});
+      });
+    }catch(e){}
+    return {ims:out, motif:'', an:an};
+  }
+  function autoDotations(sim){
+    var res={n:0,det:[]}, A=dotAttente();
+    if(A.motif){ res.det.push(A.motif); return res; }
+    if(!A.ims.length){ res.det.push('Aucune dotation '+A.an+' à générer'); return res; }
+    if(sim){ res.n=A.ims.length; return res; }
+    A.ims.forEach(function(x){
+      var im=x.im, an=x.an, dot=x.dot;
+      try{
+        var cptDot=c9(im.compteDot||'681120000');
+        var cptAm=c9(im.compteAmort||compteAmortDe(im.compte));
+        posterOD({ date:an+'-12-31', libelle:'DOTATION IMMO '+im.numero+' '+an, journal:'OD',
+          lignes:[{compte:cptDot, lib:'Dotation '+im.numero, debit:dot, credit:0},
+                  {compte:cptAm,  lib:'Amort. '+im.numero,  debit:0,   credit:dot}] });
+        res.n++; res.det.push(im.numero+(im.nature?(' · '+im.nature):'')+' — '+eurx(dot));
+      }catch(e){}
+    });
+    return res;
+  }
+
+  /* ════════ 3 · RELANCES DES CLIENTS ÉCHUS ════════
+     Une facture non échue ne se relance pas ; une relance ne se répète pas avant 15 jours ;
+     un client sans adresse e-mail est laissé à la main (on ne relance pas dans le vide). */
+  var DELAI_RELANCE=15;
+  function relAttente(){
+    var t0=today(), map={};
+    try{
+      (db.reglements||[]).forEach(function(r){
+        if(r.sens!=='a_encaisser' || r.statut==='regle') return;
+        if(!(String(r.echeance||'')<t0)) return;             /* pas encore échue */
+        var f=(db.factures||[]).find(function(x){ return x.id===r.factureId; }); if(!f) return;
+        var tid=f.tiersId; if(!tid) return;
+        var v=map[tid]||(map[tid]={tid:tid, restant:0, nb:0});
+        v.restant=r2x(v.restant+((+r.restant)||0)); v.nb++;
+      });
+    }catch(e){}
+    var rows=[];
+    try{ db.relances=db.relances||{}; }catch(e){}
+    Object.keys(map).forEach(function(tid){
+      var v=map[tid], t=null;
+      try{ t=(db.tiers||[]).find(function(x){ return x.id===tid; }); }catch(e){}
+      v.nom=t?(t.nom||'—'):'—'; v.email=(t&&t.email)||'';
+      var rel=null; try{ rel=(db.relances||{})[tid]; }catch(e){}
+      v.le=rel?rel.le:null; v.count=rel?((+rel.n)||0):0;
+      if(!v.email) v.motif='adresse e-mail absente — laissé à la main';
+      else if(v.le && jours(v.le)<DELAI_RELANCE) v.motif='relancé il y a '+jours(v.le)+' jour'+(jours(v.le)>1?'s':'');
+      else v.ok=true;
+      rows.push(v);
+    });
+    rows.sort(function(a,b){ return b.restant-a.restant; });
+    return {rows:rows, aFaire:rows.filter(function(x){ return x.ok; })};
+  }
+  function autoRelances(sim){
+    var res={n:0,det:[]}, A=relAttente();
+    if(!A.aFaire.length){
+      res.det.push(A.rows.length?('Aucune relance due — '+A.rows.length+' client'+(A.rows.length>1?'s':'')+' échu'+(A.rows.length>1?'s':'')+' écarté'+(A.rows.length>1?'s':''))
+                                :'Aucune facture client échue');
+      return res;
+    }
+    if(sim){ res.n=A.aFaire.length; return res; }
+    try{ db.relances=db.relances||{}; }catch(e){ return res; }
+    A.aFaire.forEach(function(v){
+      var cur=db.relances[v.tid]||{le:null,n:0};
+      cur.le=today(); cur.n=((+cur.n)||0)+1; db.relances[v.tid]=cur;
+      res.n++;
+      res.det.push(v.nom+' — '+eurx(v.restant)+' sur '+v.nb+' facture'+(v.nb>1?'s':'')+(cur.n>1?(' · '+cur.n+'ᵉ relance'):''));
+    });
+    return res;
+  }
+
+  /* ════════ 4 · CLÔTURE DE L'EXERCICE ════════
+     Trois conditions, toutes lues dans les données : l'exercice est terminé, le dossier ne porte
+     AUCUNE anomalie critique (étape 4), et chaque mois taxable a sa CA3 déposée — la déclaration
+     de chaque mois faisant foi que l'exercice a été passé en revue. */
+  function critiques(){
+    try{
+      var a=(typeof window.ctlAnalyse==='function')?window.ctlAnalyse():null; if(!a) return 0;
+      return ((a.deseq||[]).length)+((a.sansCpt||[]).length)+((a.debCred||[]).length);
+    }catch(e){ return 0; }
+  }
+  function ca3Manquantes(){
+    if(franchise()) return [];
+    var decl={}; try{ decl=(SOC().tvaDeclaree)||{}; }catch(e){ decl={}; }
+    var out=[];
+    moisExo().forEach(function(m){
+      var d=null; try{ d=tvaDetailMois(m); }catch(e){ d=null; }
+      if(!d) return;
+      if((d.col||0)<=0.005 && (d.ded||0)<=0.005) return;     /* mois Néant : rien à déposer */
+      if(!decl[m]) out.push(m);
+    });
+    return out;
+  }
+  function clotureEtat(){
+    var st={peut:false, motif:'', resPoste:false, anPoste:false};
+    if(typeof window.t1ResultatLignes!=='function' || typeof window.t1ANLignes!=='function'){ st.motif='Module de clôture indisponible.'; return st; }
+    try{ st.resPoste=!!window.t1ResultatPoste(); }catch(e){}
+    try{ st.anPoste=!!window.t1ANPoste(); }catch(e){}
+    if(st.resPoste && st.anPoste){ st.motif='Exercice déjà clôturé — OD de résultat et à-nouveaux générés.'; return st; }
+    if(!exoClos()){ st.motif='Exercice en cours jusqu’au '+frd(exoFin())+' — la clôture ne s’ouvre qu’ensuite.'; return st; }
+    var nc=critiques();
+    if(nc>0){ st.motif=nc+' anomalie'+(nc>1?'s':'')+' critique'+(nc>1?'s':'')+' au dossier — on ne clôture pas un exercice qui ne tient pas.'; return st; }
+    var nd=ca3Manquantes();
+    if(nd.length){ st.motif=nd.length+' mois sans CA3 déposée ('+nd.slice(0,3).map(mlbl).join(', ')+(nd.length>3?'…':'')+') — chaque déclaration fait foi que le mois a été passé en revue.'; return st; }
+    st.peut=true; return st;
+  }
+  function autoCloture(sim){
+    var res={n:0,det:[]}, st=clotureEtat();
+    if(!st.peut){ res.det.push(st.motif); return res; }
+    if(sim){
+      var n=0, det=[];
+      if(!st.resPoste){ n++; det.push('OD de résultat '+exoDeb().slice(0,4)); }
+      if(!st.anPoste){ n++; det.push('À-nouveaux '+anSuivant().slice(0,4)); }
+      res.n=n; res.det=det; return res;
+    }
+    /* 1 · OD de résultat — solde les classes 6 et 7 dans le résultat */
+    if(!st.resPoste){
+      try{
+        var R=window.t1ResultatLignes();
+        if(R && R.lignes && R.lignes.length){
+          posterOD({ date:exoFin(), libelle:'OD RÉSULTAT '+exoDeb().slice(0,4), lignes:R.lignes, journal:'OD' });
+          res.n++; res.det.push('OD de résultat '+exoDeb().slice(0,4)+' — '+((R.res>=0)?'bénéfice ':'perte ')+eurx(Math.abs(R.res||0)));
+        }else res.det.push('Aucun compte de charge ou de produit à solder');
+      }catch(e){ res.det.push('OD de résultat : échec'); }
+    }
+    /* 2 · à-nouveaux — lus APRÈS l'OD de résultat, donc résultat compris */
+    if(!st.anPoste){
+      try{
+        var A=window.t1ANLignes();
+        if(A && A.lignes && A.lignes.length){
+          if(Math.abs((A.td||0)-(A.tc||0))>0.01) res.det.push('Report déséquilibré ('+eurx(A.td)+' contre '+eurx(A.tc)+') — à-nouveaux non reportés');
+          else{
+            posterOD({ date:anSuivant(), libelle:'À-NOUVEAUX '+anSuivant().slice(0,4), lignes:A.lignes, journal:'OD' });
+            res.n++; res.det.push('À-nouveaux '+anSuivant().slice(0,4)+' — '+eurx(A.td||0));
+          }
+        }else res.det.push('Aucun solde de bilan à reporter');
+      }catch(e){ res.det.push('À-nouveaux : échec'); }
+    }
+    return res;
+  }
+
+  /* ---------- inscription dans le module Automatismes (étape 1) ----------
+     Inscrits AVANT les contrôles de cohérence (étape 4), qui doivent rester en dernier
+     du registre pour auditer l'état d'après-passage. */
+  window.perTVA=function(sim){ return autoTVA(!!sim); };
+  window.perDotations=function(sim){ return autoDotations(!!sim); };
+  window.perRelances=function(sim){ return autoRelances(!!sim); };
+  window.perCloture=function(sim){ return autoCloture(!!sim); };
+
+  window.YADA_AUTOS=window.YADA_AUTOS||[];
+  [
+    { cle:'tvaod', nom:'OD de TVA des mois clos', unite:'écriture',
+      desc:'Génère l’écriture de TVA (journal OD TVA) de chaque mois CLOS de l’exercice : solde la TVA collectée et la TVA déductible, et porte le solde en TVA à décaisser ou en crédit à reporter. Un mois en cours n’est jamais déclaré — il peut encore recevoir des factures.',
+      run:autoTVA },
+    { cle:'dotations', nom:'Dotations d’amortissement', unite:'écriture',
+      desc:'Pose au 31/12 la dotation de l’exercice de chaque immobilisation, d’après son plan d’amortissement. Refuse une immobilisation cédée, une dotation nulle, une dotation déjà générée — et l’exercice tant qu’il court.',
+      run:autoDotations },
+    { cle:'relances', nom:'Relances des clients échus', unite:'relance',
+      desc:'Relance les clients dont une facture est ÉCHUE et non réglée. Une relance ne se répète pas avant '+DELAI_RELANCE+' jours ; un client sans adresse e-mail est laissé à la main.',
+      run:autoRelances },
+    { cle:'cloture', nom:'Clôture de l’exercice', unite:'écriture',
+      desc:'Solde les classes 6 et 7 dans le résultat (OD de résultat), puis reporte les à-nouveaux sur l’exercice suivant. Ne s’ouvre que si l’exercice est terminé, que le dossier ne porte aucune anomalie critique, et que chaque mois taxable a sa CA3 déposée.',
+      run:autoCloture }
+  ].forEach(function(A){
+    if(!window.YADA_AUTOS.filter(function(x){ return x.cle===A.cle; }).length) window.YADA_AUTOS.push(A);
+  });
+
+  /* ---------- carte « Traitements périodiques », greffée sous le module Automatismes ---------- */
+  window.perOuvrirTVA=function(){ try{ current='tva'; }catch(e){} RENDER(); };
+  window.perOuvrirImmos=function(){ try{ current='immos'; }catch(e){} RENDER(); };
+  window.perOuvrirReglements=function(){ try{ current='reglements'; }catch(e){} RENDER(); };
+  window.perOuvrirEditions=function(){ try{ current='editions'; }catch(e){} RENDER(); };
+
+  function ligne(nom, periode, n, etat){
+    return '<tr><td>'+e2(nom)+'</td><td>'+e2(periode)+'</td><td class="r">'+n+'</td><td>'+e2(etat)+'</td></tr>';
+  }
+  function cartePeriodiques(){
+    var T=tvaAttente(), D=dotAttente(), R=relAttente(), C=clotureEtat();
+    var nT=T.mois.length, nD=D.ims.length, nR=R.aFaire.length;
+    var nC=0; if(C.peut){ if(!C.resPoste) nC++; if(!C.anPoste) nC++; }
+    var total=nT+nD+nR+nC;
+    var an=exoDeb().slice(0,4)||'—';
+
+    var rows=''
+      +ligne('OD de TVA', 'mois clos de l’exercice', nT, T.motif || (nT?(nT+' mois à solder'):'à jour'))
+      +ligne('Dotations d’amortissement', '31/12/'+an, nD, D.motif || (nD?(nD+' immobilisation'+(nD>1?'s':'')+' à doter'):'à jour'))
+      +ligne('Relances clients', 'factures échues', nR, nR?(nR+' client'+(nR>1?'s':'')+' à relancer')
+              :(R.rows.length?(R.rows.length+' client'+(R.rows.length>1?'s':'')+' échu'+(R.rows.length>1?'s':'')+' écarté'+(R.rows.length>1?'s':'')):'aucune facture échue'))
+      +ligne('Clôture de l’exercice', frd(exoFin()), nC, C.peut?('prête — '+(C.resPoste?'':'OD de résultat')+((!C.resPoste&&!C.anPoste)?' puis ':'')+(C.anPoste?'':'à-nouveaux')):C.motif);
+
+    var det='';
+    if(nT){
+      det+='<div class="au-note">Mois clos en attente d’OD de TVA :</div>'
+        +'<table class="au-t"><thead><tr><th>Mois</th><th class="r">Collectée</th><th class="r">Déductible</th><th class="r">À décaisser</th><th class="r">Crédit</th></tr></thead><tbody>'
+        +T.mois.slice(0,14).map(function(x){ return '<tr><td>'+e2(mlbl(x.m))+'</td><td class="r">'+e2(eurx(x.d.col||0))+'</td><td class="r">'+e2(eurx(x.d.ded||0))
+          +'</td><td class="r">'+e2((x.d.aDecaisser||0)>0.005?eurx(x.d.aDecaisser):'—')+'</td><td class="r">'+e2((x.d.credit||0)>0.005?eurx(x.d.credit):'—')+'</td></tr>'; }).join('')
+        +'</tbody></table>'+(nT>14?('<div class="au-note">… et '+(nT-14)+' de plus.</div>'):'');
+    }
+    if(nD){
+      det+='<div class="au-note">Dotations '+e2(D.an)+' à générer :</div>'
+        +'<table class="au-t"><thead><tr><th>Immobilisation</th><th>Nature</th><th>Compte</th><th class="r">Dotation</th></tr></thead><tbody>'
+        +D.ims.slice(0,14).map(function(x){ return '<tr><td>'+e2(x.im.numero||'—')+'</td><td>'+e2(x.im.nature||'—')+'</td><td>'+e2(x.im.compte||'—')+'</td><td class="r">'+e2(eurx(x.dot))+'</td></tr>'; }).join('')
+        +'</tbody></table>'+(nD>14?('<div class="au-note">… et '+(nD-14)+' de plus.</div>'):'');
+    }
+    if(R.rows.length){
+      det+='<div class="au-note">Clients dont une facture est échue :</div>'
+        +'<table class="au-t"><thead><tr><th>Client</th><th class="r">Factures</th><th class="r">Restant dû</th><th>Dernière relance</th><th>État</th></tr></thead><tbody>'
+        +R.rows.slice(0,14).map(function(v){ return '<tr><td>'+e2(v.nom)+'</td><td class="r">'+v.nb+'</td><td class="r">'+e2(eurx(v.restant))
+          +'</td><td>'+e2(v.le?(frd(v.le)+(v.count>1?(' · '+v.count+' relances'):'')):'—')+'</td><td>'+e2(v.ok?'à relancer':(v.motif||'—'))+'</td></tr>'; }).join('')
+        +'</tbody></table>'+(R.rows.length>14?('<div class="au-note">… et '+(R.rows.length-14)+' de plus.</div>'):'');
+    }
+
+    return '<div class="au-card">'
+      +'<div class="au-cardh"><span class="au-ttl">Traitements périodiques — état de l’exercice</span>'
+      +'<span class="au-tag'+(total?' au-due':' au-ok')+'">'+(total?(total+' EN ATTENTE'):'À JOUR')+'</span></div>'
+      +'<div class="au-pad">'
+      +'<table class="au-t"><thead><tr><th>Traitement</th><th>Période</th><th class="r">En attente</th><th>État</th></tr></thead><tbody>'+rows+'</tbody></table>'
+      +det
+      +'<div class="au-note">Un traitement périodique ne s’exécute que sur ce qui est acquis : un mois clos, un exercice terminé, une facture échue. Ce qui court encore est laissé de côté jusqu’à son terme.</div>'
+      +'<div class="au-acts">'
+      +'<button class="au-btn" onclick="perOuvrirTVA()">Ouvrir le module TVA</button>'
+      +'<button class="au-btn" onclick="perOuvrirImmos()">Ouvrir les immobilisations</button>'
+      +'<button class="au-btn" onclick="perOuvrirReglements()">Ouvrir le suivi des règlements</button>'
+      +'<button class="au-btn" onclick="perOuvrirEditions()">Ouvrir la clôture</button>'
+      +'</div></div></div>';
+  }
+
+  try{
+    if(typeof window.pageAutomatismes==='function'){
+      var _pa=window.pageAutomatismes;
+      window.pageAutomatismes=function(){
+        var h=_pa.apply(this,arguments);
+        try{ var i=h.lastIndexOf('</div></div>'); if(i>0) return h.slice(0,i)+cartePeriodiques()+h.slice(i); }catch(e){}
         return h;
       };
     }

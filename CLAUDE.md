@@ -36,7 +36,46 @@
 
 ---
 
-## 🟢 Dernière mise à jour — ÉTAPE 4 de l'automatisation : CONTRÔLES DE COHÉRENCE EN CONTINU (le dossier s'audite tout seul après chaque passage) — v636
+## 🟢 Dernière mise à jour — ÉTAPE 5 (dernière) de l'automatisation : TRAITEMENTS PÉRIODIQUES (OD de TVA · dotations · relances · clôture) — v637
+**Quoi :** fin de *« Développement de tout le système étape par étape pour automatiser et rapidement »*. **Étape 5 : les quatre traitements qui reviennent à date fixe** — et que personne n'aime refaire à la main — s'inscrivent dans le module **Automatismes**, qui compte désormais **9 automatismes** :
+
+| Automatisme | Période | Ce qu'il fait | Ce qu'il refuse de faire |
+| --- | --- | --- | --- |
+| **OD de TVA des mois clos** | mois clos de l'exercice | Génère l'écriture de TVA (journal **OD TVA**) de chaque mois **clos** : solde la **collectée** (4457x) et la **déductible** (4456x), porte le solde en **TVA à décaisser** (44551) ou en **crédit à reporter** (44567). | Le **mois en cours** (il peut encore recevoir des factures), les mois **Néant**, les mois **déjà soldés**, le régime de **franchise en base**. |
+| **Dotations d'amortissement** | 31/12 de l'exercice | Pose la dotation de l'exercice de **chaque immobilisation**, d'après son **plan d'amortissement** (681x au débit / 28x au crédit). | L'exercice **tant qu'il court**, une immobilisation **cédée** (la sortie a déjà soldé les amortissements), une dotation **nulle**, une dotation **déjà générée**. |
+| **Relances des clients échus** | factures échues | Relance les clients dont une facture est **échue et non réglée**, et mémorise la relance (date + rang). | Une facture **non encore échue**, une relance **répétée avant 15 jours**, un client **sans adresse e-mail** (on ne relance pas dans le vide). |
+| **Clôture de l'exercice** | fin d'exercice | Solde les **classes 6 et 7** dans le résultat (**OD de résultat**, 120/129), puis reporte les **à-nouveaux** sur l'exercice suivant (classes 1 à 5). | Un exercice **en cours**, un exercice **déjà clôturé**, un **report déséquilibré** — et les deux gardes ci-dessous. |
+
+**La clôture ne s'ouvre qu'à trois conditions, toutes lues dans les données.** C'est l'acte comptable le plus lourd du logiciel : il ne se déclenche que si (1) l'exercice est **terminé** (date de fin dépassée), (2) le dossier ne porte **aucune anomalie critique** — écriture déséquilibrée, ligne sans compte, débit **et** crédit sur une même ligne, telles que les relève l'**étape 4** : *on ne clôture pas un exercice qui ne tient pas* —, et (3) **chaque mois taxable a sa CA3 déposée**, la déclaration de chaque mois faisant foi que l'exercice a été passé en revue. Les trois étapes se tiennent ainsi : la TVA se déclare, les contrôles constatent, la clôture s'autorise. À défaut, le motif du refus est écrit en clair dans la carte et dans le journal.
+
+**Le fil commun des cinq étapes :** un automatisme n'agit que sur ce qui est **acquis**. Un mois clos, un exercice terminé, une facture échue. Ce qui court encore est laissé de côté jusqu'à son terme — comme l'étape 1 refusait un lettrage non strictement équilibré et l'étape 2 refusait de deviner un compte.
+
+**Comment — nouvel addon `yada-addon-periodiques` (100% ADDITIF, aucune édition chirurgicale) :** quatre `push` sur **`window.YADA_AUTOS`** (registre ouvert en v634), injectés **avant** l'addon des contrôles pour que celui-ci **reste en dernier** du registre (invariant v636 : il audite l'état d'après-passage). **Points techniques :** (1) les écritures sont posées par **`posterODTVA`** et **`posterOD`** avec **exactement les mêmes libellés** que les boutons des modules TVA, Immobilisations et Éditions (`OD TVA CA3 MM/AAAA`, `DOTATION IMMO <n°> <an>`, `OD RÉSULTAT <an>`, `À-NOUVEAUX <an>`) — donc **les anti-doublons existants s'appliquent tels quels** (`odTvaDejaPostee`, `imDotFaite`, `t1ResultatPoste`, `t1ANPoste`) et le passage est **idempotent** ; (2) les fonctions à bouton (`tvaGenererOD`, `imGenererDotation`, `relancerClient`, `t1GenererResultat`/`t1GenererAN`) ne sont **pas réutilisées en boucle** — elles appellent `save()` + `render()` + `toast()` à chaque élément : les lignes sont reconstruites à l'identique et on **enregistre une seule fois** en fin de passage (même parade qu'en v633 avec `lzLettrer`) ; (3) les **à-nouveaux sont lus APRÈS** l'OD de résultat, donc résultat compris, et **refusés si le report ne s'équilibre pas** ; (4) la relance n'écrit que `db.relances[tiers]` (date + rang) — **aucune écriture comptable**. Carte **« Traitements périodiques — état de l'exercice »** greffée sous le module Automatismes : les 4 traitements avec leur période, ce qui les attend et **le motif du refus en clair**, puis le détail des mois de TVA, des dotations et des clients échus (avec, pour chacun, `à relancer` ou la raison de l'écart). Rendu **Registre N&B** (classes `au-*`, aucun nouveau CSS). `sw.js` yada-v232, badge v637, `version.json` 637.
+
+**Validé :** `node --check` (**308 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS statiques (2014/2014) + balises `</head>`/`</body>`/`</html>` inchangées (3/5/3) + **filet d'équilibre** (`YADA_CHROME=… node tests/equilibre-ecritures.mjs` : vente 1200=1200, achat 600=600 ✅) + **rendu Playwright sur deux dossiers d'essai** — un **exercice en cours** (2026) et un **exercice clos** (2025) :
+
+| Mesure | Résultat |
+| --- | --- |
+| Registre | **9 automatismes**, contrôles **en dernier** |
+| **Exercice en cours** — OD de TVA | **1** mois clos généré (mars) · **mois en cours refusé** |
+| **Exercice en cours** — dotations · clôture | **refusées** — « Exercice en cours jusqu'au 31/12/2026 » |
+| **Exercice en cours** — relances | **1 sur 4** — écartés : e-mail absent · relancé il y a 3 j · échéance future |
+| Second passage (idempotence) | **0 action** (TVA · relances) |
+| **Exercice clos** — dotations | **1** (1 200,00 €) · **immobilisation cédée exclue** |
+| **Exercice clos** — clôture refusée (CA3) | « 1 mois sans CA3 déposée (févr. 2025) » |
+| **Exercice clos** — clôture refusée (critique) | « 1 anomalie critique au dossier — on ne clôture pas un exercice qui ne tient pas » |
+| **Exercice clos** — clôture exécutée | **OD RÉSULTAT 2025** + **À-NOUVEAUX 2026**, les deux **équilibrées** |
+| Écritures déséquilibrées après passage | **0** |
+| « **Lancer tout** » | ordre respecté, contrôles **une seule fois** et **en dernier** |
+| **Second passage** global | **0 action**, **0 écriture créée** |
+
++ **routage 25/25** + module Automatismes : **9 automatismes** + journal + 4 cartes (règles d'imputation · relevés mémorisés · **traitements périodiques** · contrôles), **1 sortie « Fermer »**, **0 en-tête vide**, **0 bouton vide**, **0 gras**, **0 débordement** + **0 pageerror**, **0 console.error**. Badge → **v637**.
+
+**Les cinq étapes sont livrées.** Le dossier se lettre, apprend ses imputations, se pointe contre le relevé, s'audite et passe ses traitements périodiques — d'un seul bouton, chacun refusant ce qui n'est pas acquis.
+
+---
+
+## 🟢 MAJ précédente — ÉTAPE 4 de l'automatisation : CONTRÔLES DE COHÉRENCE EN CONTINU (le dossier s'audite tout seul après chaque passage) — v636
 **Quoi :** suite de *« Développement de tout le système étape par étape pour automatiser et rapidement »*. **Étape 4 : le contrôle ne s'ouvre plus, il tourne.** Le module **Contrôles de cohérence** (v610) existait déjà, mais il fallait **aller le voir** : il ne disait rien tant qu'on ne l'ouvrait pas, et il redisait la même chose à chaque ouverture. Il est désormais inscrit comme **cinquième automatisme** et **passe tout le dossier au crible après chaque passage**, en remontant ses anomalies dans le **journal des passages**.
 
 **Ce qu'il compte : ce qui est NOUVEAU.** Le module Contrôles est en **lecture seule** — il ne corrige rien, par construction. L'action d'un contrôle n'est donc pas une correction mais un **signalement** ; et un journal qui répéterait « 7 anomalies » à chaque passage ne dirait rien. L'automatisme ne compte donc que les anomalies **apparues depuis le dernier contrôle** : le journal dit **ce qui a changé**, pas ce qui traîne depuis le début. Une anomalie **corrigée est oubliée** ; si elle **revient**, elle est **re-signalée** — et comme l'empreinte porte le **détail** (donc les montants), une écriture corrigée puis re-déséquilibrée d'un **autre** montant compte bien pour une anomalie neuve.
