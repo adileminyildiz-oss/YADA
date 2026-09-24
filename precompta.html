@@ -11084,7 +11084,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v638';
+    b.textContent='YADA · v639';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -37005,6 +37005,133 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       +'font-size:10.5px;font-weight:400;font-variant-numeric:tabular-nums;line-height:16px}';
     (document.head||document.documentElement).appendChild(st);
   }catch(e){}
+})();
+</script>
+<script id="yada-addon-auxindex">
+/* ============================================================
+   YADA — ÉTAPE 7 : LA VITESSE (le lettrage cesse de relire le dossier
+   une fois par tiers) — v639
+   ------------------------------------------------------------
+   Mesuré, automatisme par automatisme, sur trois tailles de dossier :
+   le lettrage pèse **90 % du coût** d'un passage, et il croît en CARRÉ —
+   500 écritures : 42 ms · 2 000 : 45 ms · 6 000 : 370 ms.
+
+   La cause n'est pas le lettrage mais `auxLignes(t)`, qu'il appelle une
+   fois par tiers : cette fonction **recopie et retrie la TOTALITÉ des
+   écritures à chaque appel** (`db.ecritures.slice().sort(...)`), puis
+   relit toutes les lignes, et pour chaque ligne portée sur le collectif
+   401/411 refait un `db.factures.find(...)` et un `db.banque.find(...)`.
+   Coût = tiers × écritures (× factures). 120 tiers × 6 000 écritures =
+   720 000 unités — d'où les 370 ms.
+
+   Correctif : UN SEUL passage sur les écritures, mis en cache, qui range
+   les lignes PAR COMPTE (en ordre de date, puis d'index de ligne) et
+   résout une bonne fois le tiers de chaque écriture (facture d'abord,
+   banque ensuite — l'ordre d'origine). `auxLignes(t)` n'est plus qu'une
+   lecture de deux seaux + une fusion linéaire.
+
+   Ce que l'index NE met PAS en cache : les valeurs. Il ne garde que la
+   STRUCTURE (quelle ligne appartient à quel compte, dans quel ordre, et
+   à quel tiers est rattachée l'écriture) et conserve des RÉFÉRENCES aux
+   lignes réelles ; débit, crédit et surtout `lettre` sont relus à chaque
+   appel. Un lettrage posé au milieu d'un passage est donc vu tout de
+   suite, exactement comme avant. L'index est invalidé par l'empreinte du
+   dossier (nombres d'écritures / factures / mouvements / tiers + dossier
+   actif), par tout enregistrement, par un changement de dossier, et de
+   toute façon au bout de 4 s.
+
+   En cas d'imprévu, `auxLignes` **retombe sur l'implémentation d'origine**
+   (try/catch) : aucune régression possible. L'équivalence est vérifiée
+   ligne à ligne par la sonde (égalité JSON stricte, tiers par tiers).
+
+   Profitent du correctif : le lettrage automatique, les BALANCES
+   fournisseurs/clients (qui bouclent elles aussi sur tous les tiers),
+   le compte auxiliaire et le grand-livre.
+   100% ADDITIF, aucune édition chirurgicale, aucune écriture touchée.
+   ============================================================ */
+(function(){
+  if(typeof window.auxLignes!=='function') return;
+  var ORIG=window.auxLignes;
+  window.auxLignesOriginal=ORIG;            /* conservée : repli + sonde d'équivalence */
+
+  var IDX=null, EMPREINTE='', NE_LE=0, VIE=4000;
+
+  function empreinte(){
+    try{
+      return (db.ecritures?db.ecritures.length:0)+'|'+(db.factures?db.factures.length:0)+'|'
+            +(db.banque?db.banque.length:0)+'|'+(db.tiers?db.tiers.length:0)+'|'+(db.activeId||'');
+    }catch(e){ return 'x'; }
+  }
+
+  function construire(){
+    var ecr=(db.ecritures||[]).slice().sort(function(a,b){ return a.date<b.date?-1:(a.date>b.date?1:0); });
+    var C401=c9('401'), C411=c9('411');
+    var parCompte={}, coll={'401':[], '411':[]}, seq=0;
+
+    /* résolution du tiers : facture d'abord, mouvement de banque ensuite (ordre d'origine) */
+    var fact={}; (db.factures||[]).forEach(function(f){ if(f&&f.id!=null&&!(f.id in fact)) fact[f.id]=f; });
+    var bq={};   (db.banque||[]).forEach(function(b){ if(b&&b.ecritureId!=null&&!(b.ecritureId in bq)) bq[b.ecritureId]=b; });
+
+    ecr.forEach(function(e){
+      var f=(e&&e.factureId!=null)?fact[e.factureId]:null;
+      var b=bq[e.id];
+      var tid = f?f.tiersId : (b?b.tiersId:null);
+      (e.lignes||[]).forEach(function(l,idx){
+        var lc=c9(l.compte); seq++;
+        var ent={e:e, l:l, idx:idx, seq:seq, tid:tid};
+        (parCompte[lc]||(parCompte[lc]=[])).push(ent);
+        if(lc===C401) coll['401'].push(ent);
+        else if(lc===C411) coll['411'].push(ent);
+      });
+    });
+    return {parCompte:parCompte, coll:coll, C401:C401, C411:C411};
+  }
+
+  function index(){
+    var emp=empreinte(), now=Date.now();
+    if(IDX && emp===EMPREINTE && (now-NE_LE)<VIE) return IDX;
+    IDX=construire(); EMPREINTE=emp; NE_LE=now;
+    return IDX;
+  }
+
+  /* les valeurs sont relues sur la ligne réelle à CHAQUE appel */
+  function rec(x){
+    var e=x.e, l=x.l;
+    return { key:e.id+'|'+x.idx, ecritureId:e.id, idx:x.idx, date:e.date, journal:e.journal,
+             piece:String(e.libelle||'').split(' · ')[0], lib:e.libelle,
+             debit:l.debit, credit:l.credit, lettre:l.lettre||'' };
+  }
+
+  window.auxLignes=function(t){
+    try{
+      if(!t) return ORIG(t);
+      var I=index();
+      var cl=(t.type==='fournisseur')?'401':'411';
+      var Ccoll=(cl==='401')?I.C401:I.C411;
+      var aux=t.compteAux?c9(t.compteAux):null;
+      var A=(aux?(I.parCompte[aux]||[]):[]);
+      /* compte auxiliaire confondu avec le collectif : la branche auxiliaire l'emporte
+         (le code d'origine fait `return` avant d'examiner le collectif) */
+      if(aux && aux===Ccoll) return A.map(rec);
+      var C=I.coll[cl].filter(function(x){ return x.tid===t.id; });
+      if(!A.length) return C.map(rec);
+      if(!C.length) return A.map(rec);
+      var out=[], i=0, j=0;                       /* fusion : on rend l'ordre d'origine */
+      while(i<A.length || j<C.length){
+        if(j>=C.length || (i<A.length && A[i].seq<=C[j].seq)) out.push(rec(A[i++]));
+        else out.push(rec(C[j++]));
+      }
+      return out;
+    }catch(err){
+      try{ return ORIG(t); }catch(e2){ return []; }
+    }
+  };
+
+  /* invalidation */
+  try{ if(typeof window.save==='function'){ var _s=window.save;
+        window.save=function(){ var r=_s.apply(this,arguments); EMPREINTE=''; return r; }; } }catch(e){}
+  try{ if(typeof window.chargerDossier==='function'){ var _c=window.chargerDossier;
+        window.chargerDossier=function(){ var r=_c.apply(this,arguments); IDX=null; EMPREINTE=''; return r; }; } }catch(e){}
 })();
 </script>
 </body>

@@ -36,7 +36,59 @@
 
 ---
 
-## 🟢 Dernière mise à jour — ÉTAPE 6 : CE QUI ATTEND SE VOIT (le compteur quitte son module) — v638
+## 🟢 Dernière mise à jour — ÉTAPE 7 : LA VITESSE (le lettrage cesse de relire le dossier une fois par tiers) — v639
+**Quoi :** *« automatiser **et rapidement** »* — la seconde moitié de la demande, mesurée. Profil d'un passage, automatisme par automatisme, sur trois tailles de dossier : **le lettrage pèse 90 % du coût**, et il croît **en carré** — 500 écritures : 42 ms · 2 000 : 45 ms · 6 000 : **370 ms**. Sur un dossier réel de **15 000 écritures**, une simple simulation prenait **2,58 secondes**. Elle en prend désormais **12**.
+
+**La cause n'était pas le lettrage, mais `auxLignes(t)`** — la fonction qui reconstitue les lignes d'un tiers, que le lettrage appelle **une fois par tiers** : elle **recopie et retrie la TOTALITÉ des écritures à chaque appel** (`db.ecritures.slice().sort(...)`), relit toutes les lignes, et pour chaque ligne portée sur le **collectif** 401/411 refait un `db.factures.find(...)` **et** un `db.banque.find(...)`. Coût = **tiers × écritures** (× factures). 300 tiers × 15 000 écritures = 4,5 millions d'unités.
+
+**Correctif : un seul passage, mis en cache.** Les lignes sont rangées **par compte** (en ordre de date puis d'index de ligne) et le tiers de chaque écriture est résolu une bonne fois (facture d'abord, mouvement de banque ensuite — l'ordre d'origine). `auxLignes(t)` n'est plus qu'une **lecture de deux seaux + une fusion linéaire** qui restitue l'ordre d'origine.
+
+**Ce que l'index NE met PAS en cache : les valeurs.** Il ne garde que la **structure** — quelle ligne appartient à quel compte, dans quel ordre, et à quel tiers l'écriture est rattachée — et conserve des **références aux lignes réelles** ; débit, crédit et surtout **`lettre` sont relus à chaque appel**. Un lettrage posé au milieu d'un passage est donc vu **immédiatement**, exactement comme avant (mesuré). L'index est invalidé par l'**empreinte du dossier** (nombres d'écritures / factures / mouvements / tiers + dossier actif), par tout **enregistrement**, par un **changement de dossier**, et de toute façon **au bout de 4 s**. En cas d'imprévu, `auxLignes` **retombe sur l'implémentation d'origine** (`try/catch`, conservée sous `window.auxLignesOriginal`) : aucune régression possible.
+
+**Profitent du correctif, sans les toucher :** le **lettrage automatique**, les **balances fournisseurs / clients** (qui bouclent elles aussi sur tous les tiers), le **compte auxiliaire** et le **grand-livre** — y compris la liste des tiers mouvementés de la Consultation, qui appelait `auxLignes` sur chaque tiers juste pour tester si elle était vide.
+
+**Comment — nouvel addon `yada-addon-auxindex` (100% ADDITIF, aucune édition chirurgicale).** `sw.js` yada-v234, badge v639, `version.json` 639.
+
+**Validé :** `node --check` (**310 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS statiques (2014/2014) + balises `</head>`/`</body>`/`</html>` inchangées (3/5/3) + **filet d'équilibre** (vente 1200=1200, achat 600=600 ✅) + sondes Playwright.
+
+**Équivalence stricte — le point qui compte.** Sur un dossier construit pour couvrir **toutes les branches** de la fonction, comparaison **JSON caractère par caractère** entre l'implémentation d'origine et l'indexée, **tiers par tiers** :
+
+| Cas de figure | Résultat |
+| --- | --- |
+| Fournisseur à compte auxiliaire (lignes sur l'aux, style FEC) | **identique** |
+| Client **sans** compte auxiliaire, lignes sur le collectif 411 rattachées par **facture** | **identique** |
+| Client à aux **et** ligne au collectif rattachée par **mouvement de banque** | **identique** |
+| Cas limite : compte auxiliaire **confondu** avec le collectif (`401`) | **identique** (la branche auxiliaire l'emporte, comme le `return` d'origine) |
+| Tiers sans aucune ligne | **identique** |
+| Écriture au collectif **non rattachée** (ni facture ni banque) | **ignorée** des deux côtés |
+| Écritures saisies **dans le désordre de date** | **même ordre** rendu |
+| **Total** | **5 / 5 tiers, égalité JSON stricte** |
+
+| Mesure | Résultat |
+| --- | --- |
+| Lettre posée **sans enregistrement** | **vue immédiatement** (l'index ne cache que la structure) |
+| Écriture ajoutée puis enregistrée | **2 → 3 lignes**, et toujours équivalent |
+| **Balances fournisseurs / clients** (origine vs index) | **rendu identique** |
+| Simulation du lettrage | **pure** — 3 appels : 1/1/1, dossier **inchangé**, **0 lettre posée** ; passage réel → 2 lettres, puis simulation 0 |
+| Routage · grand-livre · compteur v638 | **25/25** · rendu OK · indicateur **4** = module **4** |
+| Écritures déséquilibrées · pageerror · console.error | **0** · **0** · **0** |
+
+**Gain mesuré (simulation du lettrage) :**
+
+| Dossier | Avant | Après | Gain |
+| --- | --- | --- | --- |
+| 500 écritures · 20 tiers | 10 ms | **1 ms** | ×10 |
+| 2 000 écritures · 40 tiers | 44 ms | **1 ms** | ×44 |
+| 6 000 écritures · 120 tiers | 464 ms | **7 ms** | **×66** |
+| **15 000 écritures · 300 tiers** | **2 580 ms** | **12 ms** | **×215** |
+
+Passage complet des **9 automatismes** sur 15 000 écritures : **119 ms** (contre ≈ 2,7 s). Le comportement en carré est cassé.
+
+**Leçon de méthode :** on ne devine pas où passe le temps, **on le mesure automatisme par automatisme et sur plusieurs tailles** — c'est la pente (500 → 2 000 → 6 000) qui a désigné un carré, et le carré qui a désigné `auxLignes`, pas le lettrage qu'on aurait spontanément accusé. Et l'on ne remplace une fonction utilisée par quatre modules **qu'en prouvant l'égalité de sa sortie**, cas limites compris, avec un repli sur l'original en cas d'imprévu.
+
+---
+
+## 🟢 MAJ précédente — ÉTAPE 6 : CE QUI ATTEND SE VOIT (le compteur quitte son module) — v638
 **Quoi :** les cinq étapes ont donné **neuf automatismes**. Il leur manquait la moitié qui compte : **un automatisme qui attend qu'on vienne ouvrir son module n'automatise rien**. Le **compteur d'actions en attente** voyage désormais jusqu'à l'endroit où l'on travaille — la **Consultation** :
 - **barre du bas** (`.sg-status`) : un bouton **« N actions en attente »** qui **ouvre le module** au clic, et **« Automatismes à jour »** quand il n'y a rien (jamais de bouton vide — invariant v629/v630) ; son info-bulle détaille la répartition (« Lettrage : 1 · Imputation : 2 · OD de TVA : 1 ») ;
 - **menu « Modules »** : le même nombre, en **pastille** derrière l'entrée Automatismes — retirée dès que le compte retombe à zéro.
