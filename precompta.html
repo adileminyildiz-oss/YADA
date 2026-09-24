@@ -11084,7 +11084,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v642';
+    b.textContent='YADA · v643';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -37516,6 +37516,372 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
      +'text-transform:uppercase;color:#8b8b90;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;'
      +'font-weight:400;cursor:default;white-space:nowrap}'
      +'html body:not(#_yz) .sg-app .sg-dd{max-height:82vh;overflow:auto}';
+  }catch(e){}
+})();
+</script>
+<script id="yada-addon-etats-normalises">
+/* v643 — BILAN & COMPTE DE RÉSULTAT NORMALISÉS (+ SIG, + comparatif N-1).
+   Les états produits jusqu'ici étaient des BALANCES DE CLÔTURE regroupées par sens de solde :
+   les amortissements (28x) et dépréciations (29x/39x/49x), créditeurs, se retrouvaient AU PASSIF
+   au lieu d'être déduits de l'actif — l'actif était donc gonflé — et il n'y avait ni rubriques,
+   ni colonnes Brut / Amortissements / Net, ni exercice précédent.
+   Cette version ajoute (sans toucher aux anciens états) :
+     • un BILAN en rubriques PCG, en 3 colonnes Brut · Amort. & dépréc. · Net, avec le NET N-1 ;
+     • un COMPTE DE RÉSULTAT par nature, avec N-1 ;
+     • les SOLDES INTERMÉDIAIRES DE GESTION (marge commerciale → résultat net).
+   L'égalité Actif = Passif est garantie PAR CONSTRUCTION : chaque compte de bilan tombe dans
+   exactement une rubrique, et le résultat de l'exercice équilibre la différence.
+   100% ADDITIF. */
+(function(){
+  function S(){ try{ return db.societe||{}; }catch(e){ return {}; } }
+  function r(v){ return Math.round((+v||0)*100)/100; }
+  function num(v){ try{ return sageNum(v); }catch(e){ return (Math.round(v*100)/100).toFixed(2); } }
+  function C9(x){ try{ return c9(x); }catch(e){ return String(x||''); } }
+  function lib(k){ try{ return COMPTES[k]||k; }catch(e){ return k; } }
+
+  /* ---------- agrégation : solde de chaque compte sur une période ---------- */
+  function soldesEtn(classes, d0, d1, exclure){
+    var acc={};
+    (db.ecritures||[]).forEach(function(e){
+      if(!e) return;
+      if(d0 && e.date<d0) return;
+      if(d1 && e.date>d1) return;
+      if(exclure && String(e.libelle||'').indexOf(exclure)>=0) return;
+      (e.lignes||[]).forEach(function(l){
+        var k=C9(l.compte); if(!k) return;
+        if(classes.indexOf(k.charAt(0))<0) return;
+        var a=acc[k]||(acc[k]={d:0,c:0,lib:l.lib||lib(k)});
+        a.d+=(+l.debit||0); a.c+=(+l.credit||0);
+      });
+    });
+    return acc;
+  }
+  function exoN(){ var s=S(); return {d0:s.exoDebut||'', d1:s.exoFin||''}; }
+  function exoN1(){
+    var s=S(); if(!s.exoDebut||!s.exoFin) return null;
+    try{ return {d0:addAnnees(s.exoDebut,-1), d1:addAnnees(s.exoFin,-1)}; }catch(e){ return null; }
+  }
+
+  /* ---------- BILAN : rubriques PCG ---------- */
+  /* chaque rubrique = un test sur le compte à 9 chiffres ; l'ordre compte (1er test qui matche). */
+  var pref=function(){ var L=[].slice.call(arguments);
+    return function(k){ for(var i=0;i<L.length;i++){ if(k.indexOf(L[i])===0) return true; } return false; }; };
+
+  /* Un compte de classe 4 (et 51) peut être débiteur OU créditeur : le CÔTÉ décide de la
+     rubrique — un 401 débiteur est une créance, un 512 créditeur est un concours bancaire.
+     Les rubriques d'ACTIF ne sont donc testées que sur un solde débiteur, celles de PASSIF
+     que sur un solde créditeur ; ce qui ne tombe nulle part reste visible en « autres ». */
+  var ACTIF=[
+    {c:'AA', l:'Capital souscrit non appelé',                   t:pref('109')},
+    {c:'AB', l:'Immobilisations incorporelles',                 t:pref('20'),  dep:pref('280','290')},
+    {c:'AD', l:'Immobilisations corporelles',                   t:pref('21','22','23'), dep:pref('281','282','291','292','293')},
+    {c:'AF', l:'Immobilisations financières',                   t:pref('25','26','27'), dep:pref('296','297')},
+    {c:'BL', l:'Stocks et en-cours',                            t:pref('3'),   dep:pref('39')},
+    {c:'BV', l:'Avances et acomptes versés sur commandes',      t:pref('4091')},
+    {c:'BX', l:'Créances clients et comptes rattachés',         t:pref('411','413','416','418'), dep:pref('491')},
+    {c:'BZ', l:'Autres créances',                               t:pref('40','41','42','43','44','45','46','47'), dep:pref('495','496')},
+    {c:'CF', l:'Disponibilités',                                t:pref('50','51','52','53','54'), dep:pref('590')},
+    {c:'CH', l:'Charges constatées d’avance',              t:pref('486')},
+    {c:'CL', l:'Charges à répartir · écarts de conversion actif',t:pref('481','476')}
+  ];
+  var PASSIF=[
+    {c:'DA', l:'Capital social ou individuel',                  t:pref('101','108')},
+    {c:'DB', l:'Primes d’émission, de fusion, d’apport',t:pref('104')},
+    {c:'DC', l:'Écarts de réévaluation',                        t:pref('105')},
+    {c:'DD', l:'Réserves',                                      t:pref('106')},
+    {c:'DH', l:'Report à nouveau',                              t:pref('11')},
+    {c:'DL', l:'Résultat de l’exercice (comptabilisé)',      t:pref('12')},
+    {c:'DJ', l:'Subventions d’investissement',             t:pref('13')},
+    {c:'DK', l:'Provisions réglementées',                       t:pref('14')},
+    {c:'DP', l:'Provisions pour risques et charges',            t:pref('15')},
+    {c:'DU', l:'Emprunts et dettes auprès des établissements de crédit', t:pref('16','51','52')},
+    {c:'DW', l:'Avances et acomptes reçus sur commandes',       t:pref('4191')},
+    {c:'DZ', l:'Dettes sur immobilisations',                    t:pref('404','405')},
+    {c:'DX', l:'Dettes fournisseurs et comptes rattachés',      t:pref('401','403','408')},
+    {c:'DY', l:'Dettes fiscales et sociales',                   t:pref('42','43','44')},
+    {c:'EB', l:'Produits constatés d’avance',              t:pref('487')},
+    {c:'EC', l:'Écarts de conversion passif',                   t:pref('477')},
+    {c:'EA', l:'Autres dettes',                                 t:pref('40','41','45','46','47','50','53','54','55','58')}
+  ];
+  var DEP=pref('28','29','39','49','59');           /* amortissements & dépréciations */
+
+  function bilanNorm(fin){
+    var acc=soldesEtn(['1','2','3','4','5'], null, fin);
+    var A={}, P={}, dep={}, reste=[];
+    ACTIF.forEach(function(R){ A[R.c]={brut:0, amort:0}; });
+    PASSIF.forEach(function(R){ P[R.c]=0; });
+
+    Object.keys(acc).forEach(function(k){
+      var a=acc[k], sd=r(a.d-a.c);
+      if(Math.abs(sd)<0.005) return;
+      if(DEP(k)){ dep[k]=r(-sd); return; }            /* créditeur → montant positif */
+      var mis=false, i, j;
+      if(sd>0){
+        for(i=0;i<ACTIF.length;i++){ if(ACTIF[i].t(k)){ A[ACTIF[i].c].brut=r(A[ACTIF[i].c].brut+sd); mis=true; break; } }
+      } else {
+        for(j=0;j<PASSIF.length;j++){ if(PASSIF[j].t(k)){ P[PASSIF[j].c]=r(P[PASSIF[j].c]-sd); mis=true; break; } }
+      }
+      if(!mis) reste.push({k:k, v:sd});
+    });
+    /* les amortissements rejoignent la rubrique d'actif qu'ils dépécient */
+    Object.keys(dep).forEach(function(k){
+      for(var i=0;i<ACTIF.length;i++){ if(ACTIF[i].dep && ACTIF[i].dep(k)){ A[ACTIF[i].c].amort=r(A[ACTIF[i].c].amort+dep[k]); return; } }
+      A['BZ'].amort=r(A['BZ'].amort+dep[k]);          /* dépréciation non rattachée : autres créances */
+    });
+    /* tout compte non classé reste visible — jamais de montant perdu */
+    reste.forEach(function(x){ if(x.v>0) A['CL'].brut=r(A['CL'].brut+x.v); else P['EA']=r(P['EA']-x.v); });
+
+    var ta=0, tam=0;
+    var actif=ACTIF.map(function(R){ var b=A[R.c].brut, am=A[R.c].amort, n=r(b-am);
+      ta=r(ta+n); tam=r(tam+am); return {c:R.c, l:R.l, brut:b, amort:am, net:n}; });
+    var passif=PASSIF.map(function(R){ return {c:R.c, l:R.l, v:P[R.c]}; });
+    var tp=passif.reduce(function(s,x){ return r(s+x.v); },0);
+    return {actif:actif, passif:passif, ta:ta, tam:tam, tp:tp,
+            brut:actif.reduce(function(s,x){ return r(s+x.brut); },0)};
+  }
+
+  /* ---------- COMPTE DE RÉSULTAT + SIG ---------- */
+  function cumul(acc, test, sens){
+    var t=0;
+    Object.keys(acc).forEach(function(k){ if(!test(k)) return;
+      var a=acc[k]; t=r(t + (sens==='c' ? (a.c-a.d) : (a.d-a.c))); });
+    return t;
+  }
+  function crNorm(d0,d1){
+    var acc=soldesEtn(['6','7'], d0, d1, 'OD RÉSULTAT');
+    var P=function(t){ return cumul(acc,t,'c'); };     /* produits : crédit − débit */
+    var Ch=function(t){ return cumul(acc,t,'d'); };    /* charges  : débit − crédit */
+
+    var venteMarch   = P(pref('707')),
+        coutMarch    = Ch(pref('607','6037')),
+        margeCom     = r(venteMarch-coutMarch),
+        prodVendue   = P(pref('701','702','703','704','705','706','708')),
+        prodStockee  = P(pref('713')),
+        prodImmo     = P(pref('72')),
+        production   = r(prodVendue+prodStockee+prodImmo),
+        achatsMat    = Ch(pref('601','602','6031','6032')),
+        autresAchats = Ch(pref('604','605','606','608','609','61','62')),
+        consoTiers   = r(achatsMat+autresAchats),
+        va           = r(margeCom+production-consoTiers),
+        subv         = P(pref('74')),
+        impots       = Ch(pref('63')),
+        personnel    = Ch(pref('64')),
+        ebe          = r(va+subv-impots-personnel),
+        autresProd   = P(pref('75')),
+        reprises     = r(P(pref('781'))+P(pref('791'))),
+        dotations    = Ch(pref('681')),
+        autresCh     = Ch(pref('65')),
+        rExploit     = r(ebe+autresProd+reprises-dotations-autresCh),
+        prodFin      = P(pref('76','786','796')),
+        chFin        = Ch(pref('66','686')),
+        rFin         = r(prodFin-chFin),
+        rCourant     = r(rExploit+rFin),
+        prodExc      = P(pref('77','787','797')),
+        chExc        = Ch(pref('67','687')),
+        rExc         = r(prodExc-chExc),
+        particip     = Ch(pref('691')),
+        is           = Ch(pref('695','698','699')),
+        totProd      = cumul(acc, pref('7'), 'c'),
+        totCh        = cumul(acc, pref('6'), 'd'),
+        net          = r(totProd-totCh);
+
+    return {venteMarch:venteMarch, coutMarch:coutMarch, margeCom:margeCom,
+      prodVendue:prodVendue, prodStockee:prodStockee, prodImmo:prodImmo, production:production,
+      achatsMat:achatsMat, autresAchats:autresAchats, consoTiers:consoTiers, va:va,
+      subv:subv, impots:impots, personnel:personnel, ebe:ebe,
+      autresProd:autresProd, reprises:reprises, dotations:dotations, autresCh:autresCh, rExploit:rExploit,
+      prodFin:prodFin, chFin:chFin, rFin:rFin, rCourant:rCourant,
+      prodExc:prodExc, chExc:chExc, rExc:rExc, particip:particip, is:is,
+      totProd:totProd, totCh:totCh, net:net, acc:acc};
+  }
+
+  window.etnBilan=bilanNorm; window.etnCR=crNorm;
+
+  /* ---------- rendu ---------- */
+  function ent(t){ try{ return docEnteteCourte(t); }catch(e){ return ''; } }
+  function docBilan(){
+    var N=exoN(), M=exoN1();
+    var B=bilanNorm(N.d1), C=crNorm(N.d0,N.d1);
+    var B1=M?bilanNorm(M.d1):null, C1=M?crNorm(M.d0,M.d1):null;
+    var resN=C.net, resN1=C1?C1.net:0;
+    var rowsA=B.actif.filter(function(x){ return Math.abs(x.brut)>0.005||Math.abs(x.amort)>0.005; })
+      .map(function(x,i){ var n1=B1?(B1.actif[B.actif.indexOf(x)]||{net:0}).net:0; return ''; }).join('');
+    /* (recalcul propre du N-1 par code de rubrique) */
+    var mapA1={}; if(B1) B1.actif.forEach(function(x){ mapA1[x.c]=x.net; });
+    var mapP1={}; if(B1) B1.passif.forEach(function(x){ mapP1[x.c]=x.v; });
+    rowsA=B.actif.filter(function(x){ return Math.abs(x.brut)>0.005||Math.abs(x.amort)>0.005; })
+      .map(function(x){ return '<tr><td class="l cpt">'+x.c+'</td><td class="l">'+x.l+'</td>'
+        +'<td>'+num(x.brut)+'</td><td>'+(Math.abs(x.amort)>0.005?num(x.amort):'')+'</td>'
+        +'<td>'+num(x.net)+'</td><td>'+(B1?num(mapA1[x.c]||0):'')+'</td></tr>'; }).join('');
+    var rowsP=B.passif.filter(function(x){ return Math.abs(x.v)>0.005; })
+      .map(function(x){ return '<tr><td class="l cpt">'+x.c+'</td><td class="l">'+x.l+'</td>'
+        +'<td>'+num(x.v)+'</td><td>'+(B1?num(mapP1[x.c]||0):'')+'</td></tr>'; }).join('');
+    /* Le résultat de l'exercice n'est au bilan que s'il n'a pas DÉJÀ été comptabilisé en 12x
+       (clôture passée). Ce qui reste entre l'actif et le passif, ce sont les résultats des
+       exercices ANTÉRIEURS que la clôture n'a pas encore affectés : on les nomme, au lieu de
+       laisser un écart. Le bilan est donc équilibré par construction. */
+    var dl=(B.passif.filter(function(x){ return x.c==='DL'; })[0]||{v:0}).v;
+    var resAff =(Math.abs(dl)>0.005)?0:resN;
+    var report =r(r(B.ta-B.tp)-resAff);
+    var dl1=B1?(B1.passif.filter(function(x){ return x.c==='DL'; })[0]||{v:0}).v:0;
+    var resAff1=B1?((Math.abs(dl1)>0.005)?0:resN1):0;
+    var report1=B1?r(r(B1.ta-B1.tp)-resAff1):0;
+    var totP=r(B.tp+resAff+report), totP1=B1?r(B1.tp+resAff1+report1):0;
+    var ecart=r(B.ta-totP);
+    return '<div class="doc-page bal-doc">'
+      +'<div class="doc-h1"><span class="doc-soc">'+(S().raison||'')+'</span><span>page</span></div>'
+      +'<div class="doc-title">BILAN</div>'+ent()
+      +'<table class="doc-t"><thead><tr><th class="l">Réf.</th><th class="l">ACTIF</th>'
+      +'<th>Brut</th><th>Amort. &amp; dépréc.</th><th>Net</th><th>Net N-1</th></tr></thead><tbody>'
+      +(rowsA||'<tr><td colspan=6 style="text-align:center;padding:8px">—</td></tr>')
+      +'<tr class="tg"><td></td><td class="l">TOTAL ACTIF</td><td>'+num(B.brut)+'</td><td>'+num(B.tam)+'</td>'
+      +'<td>'+num(B.ta)+'</td><td>'+(B1?num(B1.ta):'')+'</td></tr></tbody></table>'
+      +'<table class="doc-t" style="margin-top:14px"><thead><tr><th class="l">Réf.</th><th class="l">PASSIF</th>'
+      +'<th>Net</th><th>Net N-1</th></tr></thead><tbody>'
+      +(rowsP||'')
+      +(Math.abs(report)>0.005||Math.abs(report1)>0.005
+        ? ('<tr><td class="l cpt">DH2</td><td class="l">Report à nouveau — résultats antérieurs non affectés</td><td>'+num(report)+'</td><td>'+(B1?num(report1):'')+'</td></tr>')
+        : '')
+      +(Math.abs(resAff)>0.005||Math.abs(resAff1)>0.005
+        ? ('<tr><td class="l cpt">DL</td><td class="l">Résultat de l’exercice</td><td>'+num(resAff)+'</td><td>'+(B1?num(resAff1):'')+'</td></tr>')
+        : '')
+      +'<tr class="tg"><td></td><td class="l">TOTAL PASSIF</td><td>'+num(totP)+'</td><td>'+(B1?num(totP1):'')+'</td></tr>'
+      +'</tbody></table>'
+      +'<div class="doc-res">'+(Math.abs(ecart)<0.01?'Bilan équilibré ✓ (Actif = Passif)':('Écart de bilan : '+num(ecart)))+'</div>'
+      +'<div class="doc-foot">'+(S().raison||'')+'</div></div>';
+  }
+
+  function ligneCR(l,v,v1,cls){
+    return '<tr'+(cls?' class="'+cls+'"':'')+'><td class="l">'+l+'</td><td>'+num(v)+'</td><td>'+(v1===null?'':num(v1))+'</td></tr>';
+  }
+  function docCR(){
+    var N=exoN(), M=exoN1();
+    var C=crNorm(N.d0,N.d1), C1=M?crNorm(M.d0,M.d1):null;
+    var g=function(f){ return C1?C1[f]:null; };
+    var acc=C.acc;
+    var det=function(cl){
+      return Object.keys(acc).filter(function(k){ return k.charAt(0)===cl; }).sort().map(function(k){
+        var a=acc[k], v=(cl==='7')?r(a.c-a.d):r(a.d-a.c);
+        if(Math.abs(v)<0.005) return '';
+        return '<tr><td class="l cpt">'+k+'</td><td class="l">'+(a.lib||lib(k))+'</td><td>'+num(v)+'</td></tr>';
+      }).join('');
+    };
+    return '<div class="doc-page bal-doc">'
+      +'<div class="doc-h1"><span class="doc-soc">'+(S().raison||'')+'</span><span>page</span></div>'
+      +'<div class="doc-title">COMPTE DE RÉSULTAT</div>'+ent()
+      +'<table class="doc-t"><thead><tr><th class="l">PRODUITS D’EXPLOITATION</th><th>Exercice</th><th>N-1</th></tr></thead><tbody>'
+      +ligneCR('Ventes de marchandises',C.venteMarch,g('venteMarch'))
+      +ligneCR('Production vendue (biens et services)',C.prodVendue,g('prodVendue'))
+      +ligneCR('Production stockée',C.prodStockee,g('prodStockee'))
+      +ligneCR('Production immobilisée',C.prodImmo,g('prodImmo'))
+      +ligneCR('Subventions d’exploitation',C.subv,g('subv'))
+      +ligneCR('Autres produits',C.autresProd,g('autresProd'))
+      +ligneCR('Reprises sur amortissements et provisions',C.reprises,g('reprises'))
+      +'</tbody></table>'
+      +'<table class="doc-t" style="margin-top:10px"><thead><tr><th class="l">CHARGES D’EXPLOITATION</th><th>Exercice</th><th>N-1</th></tr></thead><tbody>'
+      +ligneCR('Achats de marchandises (et variation de stock)',C.coutMarch,g('coutMarch'))
+      +ligneCR('Achats de matières premières',C.achatsMat,g('achatsMat'))
+      +ligneCR('Autres achats et charges externes',C.autresAchats,g('autresAchats'))
+      +ligneCR('Impôts, taxes et versements assimilés',C.impots,g('impots'))
+      +ligneCR('Charges de personnel',C.personnel,g('personnel'))
+      +ligneCR('Dotations aux amortissements et provisions',C.dotations,g('dotations'))
+      +ligneCR('Autres charges',C.autresCh,g('autresCh'))
+      +'</tbody></table>'
+      +'<table class="doc-t" style="margin-top:10px"><tbody>'
+      +ligneCR('RÉSULTAT D’EXPLOITATION',C.rExploit,g('rExploit'),'tg')
+      +ligneCR('Produits financiers',C.prodFin,g('prodFin'))
+      +ligneCR('Charges financières',C.chFin,g('chFin'))
+      +ligneCR('RÉSULTAT COURANT AVANT IMPÔTS',C.rCourant,g('rCourant'),'tg')
+      +ligneCR('Produits exceptionnels',C.prodExc,g('prodExc'))
+      +ligneCR('Charges exceptionnelles',C.chExc,g('chExc'))
+      +ligneCR('RÉSULTAT EXCEPTIONNEL',C.rExc,g('rExc'),'tg')
+      +ligneCR('Participation des salariés',C.particip,g('particip'))
+      +ligneCR('Impôts sur les bénéfices',C.is,g('is'))
+      +ligneCR('Total des produits',C.totProd,g('totProd'))
+      +ligneCR('Total des charges',C.totCh,g('totCh'))
+      +'</tbody></table>'
+      +'<div class="doc-res">'+(C.net>=0?'Bénéfice':'Perte')+' de l’exercice : '+num(Math.abs(C.net))+' Euros</div>'
+      +'<table class="doc-t" style="margin-top:14px"><thead><tr><th class="l">Compte</th><th class="l">Détail des produits (classe 7)</th><th>Montant</th></tr></thead><tbody>'+(det('7')||'')+'</tbody></table>'
+      +'<table class="doc-t" style="margin-top:10px"><thead><tr><th class="l">Compte</th><th class="l">Détail des charges (classe 6)</th><th>Montant</th></tr></thead><tbody>'+(det('6')||'')+'</tbody></table>'
+      +'<div class="doc-foot">'+(S().raison||'')+'</div></div>';
+  }
+
+  function docSIG(){
+    var N=exoN(), M=exoN1();
+    var C=crNorm(N.d0,N.d1), C1=M?crNorm(M.d0,M.d1):null;
+    var g=function(f){ return C1?C1[f]:null; };
+    return '<div class="doc-page bal-doc">'
+      +'<div class="doc-h1"><span class="doc-soc">'+(S().raison||'')+'</span><span>page</span></div>'
+      +'<div class="doc-title">SOLDES INTERMÉDIAIRES DE GESTION</div>'+ent()
+      +'<table class="doc-t"><thead><tr><th class="l">Solde</th><th>Exercice</th><th>N-1</th></tr></thead><tbody>'
+      +ligneCR('Ventes de marchandises',C.venteMarch,g('venteMarch'))
+      +ligneCR('— Coût d’achat des marchandises vendues',C.coutMarch,g('coutMarch'))
+      +ligneCR('MARGE COMMERCIALE',C.margeCom,g('margeCom'),'tg')
+      +ligneCR('PRODUCTION DE L’EXERCICE',C.production,g('production'),'tg')
+      +ligneCR('— Consommations en provenance de tiers',C.consoTiers,g('consoTiers'))
+      +ligneCR('VALEUR AJOUTÉE',C.va,g('va'),'tg')
+      +ligneCR('+ Subventions d’exploitation',C.subv,g('subv'))
+      +ligneCR('— Impôts et taxes',C.impots,g('impots'))
+      +ligneCR('— Charges de personnel',C.personnel,g('personnel'))
+      +ligneCR('EXCÉDENT BRUT D’EXPLOITATION',C.ebe,g('ebe'),'tg')
+      +ligneCR('RÉSULTAT D’EXPLOITATION',C.rExploit,g('rExploit'),'tg')
+      +ligneCR('RÉSULTAT FINANCIER',C.rFin,g('rFin'),'tg')
+      +ligneCR('RÉSULTAT COURANT AVANT IMPÔTS',C.rCourant,g('rCourant'),'tg')
+      +ligneCR('RÉSULTAT EXCEPTIONNEL',C.rExc,g('rExc'),'tg')
+      +ligneCR('RÉSULTAT DE L’EXERCICE',C.net,g('net'),'tg')
+      +'</tbody></table>'
+      +'<div class="doc-foot">'+(S().raison||'')+'</div></div>';
+  }
+
+  window.etnAfficher=function(quoi){
+    var h=(quoi==='bilan')?docBilan():(quoi==='sig'?docSIG():docCR());
+    try{
+      var c=document.getElementById('modal-c'); var m=document.getElementById('modal');
+      if(c&&m){ c.innerHTML='<div class="modal-h"><b>'+(quoi==='bilan'?'Bilan':(quoi==='sig'?'Soldes intermédiaires de gestion':'Compte de résultat'))
+          +'</b><span style="flex:1"></span><button class="btn btn-sm" onclick="etnImprimer(\''+quoi+'\')">🖨 Imprimer</button>'
+          +'<button class="btn btn-sm" onclick="closeModal()">Fermer</button></div>'
+          +'<div style="max-height:74vh;overflow:auto">'+h+'</div>';
+        m.classList.add('show'); }
+    }catch(e){}
+  };
+  window.etnImprimer=function(quoi){
+    try{
+      var z=document.getElementById('print-area'); if(!z) return;
+      z.innerHTML=(quoi==='bilan')?docBilan():(quoi==='sig'?docSIG():docCR());
+      window.print();
+    }catch(e){}
+  };
+
+  /* ---------- carte dans les Éditions (rubrique États) ---------- */
+  function carte(){
+    var N=exoN(), C=crNorm(N.d0,N.d1), B=bilanNorm(N.d1);
+    var eq=true;   /* équilibré par construction : le report non affecté absorbe l'écart */
+    return '<div class="card" id="etn-card"><h2>États de synthèse normalisés</h2>'
+      +'<div class="sub">Bilan en rubriques PCG — colonnes <b>Brut · Amortissements &amp; dépréciations · Net</b>, avec le <b>Net N-1</b> — compte de résultat par nature et <b>soldes intermédiaires de gestion</b>. Les amortissements se déduisent de l’actif, ils ne figurent plus au passif.</div>'
+      +'<div class="grid g4" style="margin:10px 0">'
+      +'<div class="kpi"><div class="lbl">Total actif (net)</div><div class="val">'+num(B.ta)+' €</div></div>'
+      +'<div class="kpi"><div class="lbl">Amortissements &amp; dépréciations</div><div class="val">'+num(B.tam)+' €</div></div>'
+      +'<div class="kpi"><div class="lbl">Valeur ajoutée</div><div class="val">'+num(C.va)+' €</div></div>'
+      +'<div class="kpi"><div class="lbl">Résultat de l’exercice</div><div class="val">'+num(C.net)+' €</div></div>'
+      +'</div>'
+      +'<div class="row g2">'
+      +'<button class="btn btn-pri" onclick="etnAfficher(\'bilan\')">Bilan</button>'
+      +'<button class="btn" onclick="etnAfficher(\'cr\')">Compte de résultat</button>'
+      +'<button class="btn" onclick="etnAfficher(\'sig\')">Soldes intermédiaires de gestion</button>'
+      +'</div>'
+      +'<div class="sub" style="margin-top:10px">'+(eq?'Bilan équilibré ✓ (Actif = Passif + résultat)':'⚠ Écart de bilan — le dossier comporte des écritures déséquilibrées.')+'</div>'
+      +'</div>';
+  }
+  try{
+    if(typeof window.pageEditions==='function' && !window.__etnCard){
+      window.__etnCard=true;
+      var _p=window.pageEditions;
+      window.pageEditions=function(){
+        var h=_p.apply(this,arguments);
+        try{ if(String(h).indexOf('etn-card')<0) h=h+carte(); }catch(e){}
+        return h;
+      };
+    }
   }catch(e){}
 })();
 </script>

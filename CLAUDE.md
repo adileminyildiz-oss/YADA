@@ -36,7 +36,40 @@
 
 ---
 
-## 🟢 Dernière mise à jour — TVA SUR LES ENCAISSEMENTS : l'exigibilité devient RÉELLE — v642
+## 🟢 Dernière mise à jour — BILAN & COMPTE DE RÉSULTAT NORMALISÉS (+ SIG, + comparatif N-1) — v643
+**Quoi :** les états produits jusqu'ici n'étaient pas des états — c'étaient des **balances de clôture regroupées par sens de solde**. Conséquence concrète : les **amortissements (28x)** et les **dépréciations (29x/39x/49x)**, créditeurs, se retrouvaient **AU PASSIF** au lieu d'être déduits de l'actif → **l'actif était gonflé** et le « TOTAL ACTIF » affiché n'était pas l'actif net. Il n'y avait ni rubriques, ni colonnes Brut / Amortissements / Net, ni exercice précédent, ni soldes intermédiaires de gestion.
+
+**Trois états ajoutés** (les anciens ne sont pas touchés) :
+
+| État | Ce qu'il apporte |
+| --- | --- |
+| **Bilan** | Rubriques PCG (immobilisations incorporelles / corporelles / financières · stocks · créances clients · autres créances · disponibilités — capitaux propres · provisions · dettes), colonnes **Brut · Amortissements & dépréciations · Net**, et **Net N-1** |
+| **Compte de résultat** | Par nature (produits et charges d'exploitation, financiers, exceptionnels), **avec N-1**, puis le détail compte par compte |
+| **Soldes intermédiaires de gestion** | Marge commerciale · Production de l'exercice · **Valeur ajoutée** · **EBE** · Résultat d'exploitation · financier · courant · exceptionnel · **Résultat net**, avec N-1 |
+
+**Deux points où la comptabilité se joue vraiment :**
+1. **Le côté décide de la rubrique.** Un compte de classe 4 (et 51) peut être débiteur **ou** créditeur : un `401` débiteur est une **créance**, un `512` créditeur est un **concours bancaire**, une `44571` créditrice est une **dette fiscale** — alors qu'un `44566` débiteur est une **créance**. Les rubriques d'actif ne sont donc testées que sur un **solde débiteur**, celles de passif sur un **solde créditeur**. Un premier jet qui classait par simple préfixe envoyait la TVA collectée à l'actif en négatif.
+2. **Le bilan est équilibré PAR CONSTRUCTION — sans plug silencieux.** Chaque compte de bilan tombe dans **exactement une** rubrique (ce qui ne tombe nulle part reste visible en « autres »), donc la somme est préservée. Ce qui reste entre l'actif et le passif, ce sont les **résultats des exercices antérieurs que la clôture n'a pas encore affectés** : ils sont **nommés** (« Report à nouveau — résultats antérieurs non affectés ») au lieu de laisser un écart. Et le **résultat de l'exercice n'est ajouté que s'il n'a pas déjà été comptabilisé en `12x`** (clôture passée) — sinon il serait compté deux fois.
+
+**Comment — nouvel addon `yada-addon-etats-normalises` (100% ADDITIF) :** agrégation propre `soldesEtn(classes, d0, d1, exclure)` (indépendante de celle des anciens états), `etnBilan(fin)` et `etnCR(d0,d1)` exposés, rendu en `.doc-page` imprimable (même habillage que les autres éditions, repris par le filet v234), carte **« États de synthèse normalisés »** greffée sur `pageEditions` (rubrique **États** de la barre v641) avec 4 KPI et 3 boutons. L'exercice N-1 est déduit par `addAnnees(±1)`. `sw.js` yada-v238, badge v643, `version.json` 643.
+
+**Validé :** `node --check` (**313 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014) + balises (3/5/3) + **filet d'équilibre** ✅ + sonde Playwright sur un dossier construit à la main (exercice 2025 puis 2026, immobilisation amortie, vente, achat, paie) :
+
+| Mesure | Résultat |
+| --- | --- |
+| **Immobilisations corporelles** | Brut **10 000,00** · Amort. **3 000,00** · **Net 7 000,00** — l'amortissement est **déduit de l'actif** |
+| Amortissements figurant **au passif** | **0** (c'était le défaut) |
+| Total actif net · Total passif | **54 600,00** = **54 600,00** — **bilan équilibré ✓** |
+| Colonne **Net N-1** | remplie (actif N-1 **22 000,00**) |
+| Résultats antérieurs non affectés | **10 000,00**, **nommés** au passif (= résultat 2025) |
+| Résultat de l'exercice | **4 000,00** au passif, **non redoublé** avec un éventuel `12x` |
+| **SIG** (vérifiés à la main) | Production **20 000** − conso **8 000** = **VA 12 000** ; − personnel **5 000** = **EBE 7 000** ; − dotations **3 000** = **résultat d'exploitation 4 000** = résultat net |
+| Carte des Éditions | 3 boutons, **0 bouton vide** |
+| pageerror · console.error | **0** · **0** |
+
+---
+
+## 🟢 MAJ précédente — TVA SUR LES ENCAISSEMENTS : l'exigibilité devient RÉELLE — v642
 **Quoi :** le réglage **« Sur les encaissements / Sur les débits »** n'était qu'une **mention imprimée sur la facture** : l'écriture créditait `445710000` dès la facturation. Autrement dit, quel que soit le réglage, YADA déclarait la TVA **sur les débits** — donc, pour un **prestataire de services** au régime des encaissements, la CA3 réclamait la TVA **avant son encaissement**, tous les mois. C'était le défaut le plus lourd du logiciel : un **risque fiscal**, pas un défaut d'affichage.
 
 **Comment la TVA devient exigible, maintenant :**
