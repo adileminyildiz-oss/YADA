@@ -36,7 +36,55 @@
 
 ---
 
-## 🟢 Dernière mise à jour — ANALYTIQUE PAR AFFAIRE : la rentabilité chantier par chantier — v648
+## 🟢 Dernière mise à jour — ANNEXE DES COMPTES ANNUELS : la troisième pièce obligatoire, enfin produite — v649
+**Quoi :** le **bilan dit COMBIEN**, le **compte de résultat dit COMMENT** — mais **aucun des deux ne dit SELON QUELLES RÈGLES ni PAR QUELS MOUVEMENTS**. C'est le rôle de l'**annexe**, et elle est la **troisième composante obligatoire des comptes annuels** (art. L123-12 du Code de commerce) : sans elle, les comptes sont **incomplets**. YADA produisait le bilan (v643) et la liasse (v647), jamais d'annexe. Nouveau module **« Annexe des comptes annuels »** (rubrique **États**), **6 volets** :
+
+| Volet | Ce qu'il produit |
+| --- | --- |
+| **Régime & règles** | le **régime d'annexe applicable** (micro · petite · complète), calculé sur les 3 seuils, puis les **règles et méthodes comptables** (5 paragraphes pré-remplis PCG, modifiables) + les **événements postérieurs à la clôture** |
+| **Immobilisations & amortissements** | ouverture · augmentations · diminutions · clôture, en **valeurs brutes** ET en **amortissements**, avec le **contrôle de concordance avec le bilan** et le détail compte par compte |
+| **Provisions & dépréciations** | provisions réglementées (14x) · risques et charges (15x) · dépréciations des immobilisations (29x), des stocks (39x), des tiers (49x), des VMP (59x) |
+| **Créances & dettes** | **état par échéance** — à 1 an au plus / à plus d'un an |
+| **Comptes de régularisation** | factures non parvenues, factures à établir, charges à payer, CCA/PCA, intérêts courus — **les comptes du cut-off de la v644** |
+| **Capital, effectif & engagements** | composition du capital (+ valeur nominale), **effectif moyen calculé sur les bulletins de paie**, engagements hors bilan |
+
+**Trois points où cette annexe est honnête plutôt que décorative :**
+1. **L'annexe ne RECALCULE pas le bilan — elle le DÉCOMPOSE.** Un **contrôle de concordance** le prouve à l'écran : immobilisations brutes et amortissements de l'annexe à la clôture **doivent** égaler ceux du bilan v643, sinon un compte échappe au classement et l'écart est affiché. Vérifié par sonde : **conforme ✓**.
+2. **L'à-nouveau n'est PAS un mouvement de l'exercice.** Il est daté *dans* l'exercice mais il **est** le solde d'ouverture : le compter en « augmentation » **doublerait l'actif**. Il rejoint donc l'ouverture, avec le solde antérieur. Sonde : à-nouveau de 10 000 → **ouverture 10 000, augmentations 5 000** (la seule acquisition réelle).
+3. **Une seule échéance est RÉELLEMENT connue : celle de l'emprunt.** Son tableau d'amortissement dit, échéance par échéance, ce qui sera remboursé et quand — la ventilation 1 an / plus d'un an est donc **calculée**. Pour tous les autres postes, « à 1 an au plus » est une **CONVENTION** tirée de leur nature — elle est **écrite à l'écran**, pas cachée.
+
+**Corrigé par la sonde — le côté décide de la rubrique (règle v643, qui manquait ici).** Le premier jet sommait chaque famille de comptes **en net** : la famille 44x, dont le solde est créditeur (TVA collectée 4 000 − déductible 1 200), sortait en **« Autres créances : −2 800 € »** — une créance négative à l'actif, **et comptée deux fois** (en moins à l'actif, en plus au passif). Un compte de classe 4 peut être **débiteur ou créditeur** : l'état est désormais calculé **compte par compte**, chaque côté ne retenant que les comptes qui vont dans ce sens → **créances 1 200 €** (TVA déductible) et **dettes 4 000 €** (TVA collectée), chacune une seule fois.
+
+**Le régime d'annexe est calculé, pas demandé.** Une **micro-entreprise est DISPENSÉE d'annexe** (art. L123-16-1), une **petite entreprise** peut la présenter en **forme abrégée** (art. L123-16). YADA a les trois critères au dossier — total du bilan, chiffre d'affaires net, effectif moyen — il les **teste un par un** et affiche le verdict avec le détail (valeur · seuil · dépassé ou non, et « 2 seuils sur 3 pour sortir du régime »). Les **seuils du décret n° 2024-152** sont **écrits à l'écran** pour rester vérifiables, et si un critère n'est pas calculable, le module le dit.
+
+**Comment — nouvel addon `yada-addon-annexe` (100% ADDITIF) + 2 éditions chirurgicales :** clé `annexe:(typeof pageAnnexe==='function'?pageAnnexe:repli)` au **dispatch de `render()`** et `'annexe'` ajouté à la rubrique **États** de la barre v641. **Points techniques :** (1) le module est en **lecture seule stricte** sur la comptabilité — vérifié par égalité JSON des écritures avant/après ; le seul écrit est `db.parametres.annexe[exercice]` (règles, engagements, événements, effectif saisi, nombre de parts) ; (2) `mvt(test,sens)` et `detail(test,sens)` calculent **ouverture / augmentations / diminutions / clôture** directement sur `db.ecritures`, en versant les à-nouveaux à l'ouverture — donc les tableaux **tiennent au bilan par construction** ; (3) la concordance est mesurée contre **`etnBilan()`** (v643) sur les repères **AB · AD · AF** ; (4) la ventilation des emprunts lit **`empEcheancier()`** et compare chaque échéance à la clôture + 12 mois ; (5) l'**effectif moyen** est la moyenne du nombre de salariés distincts par mois, lue sur les **bulletins de paie** de l'exercice, et reste **surchargeable à la main** ; (6) l'**impression** sort l'annexe entière en `.doc-page`, **sans aucun champ de saisie** (textareas, champs et boutons retirés du tirage). Rendu **Registre N&B** scopé `#yada-anx`. La sortie s'appelle **`anxFermer()`** pour que le filet v614 la reconnaisse — **invariant v626 : exactement 1 sortie « Fermer »**. `sw.js` yada-v244, badge v649, `version.json` 649.
+
+**Validé :** `node --check` (**318 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014) + balises (3/5/3) + **filet d'équilibre** ✅ + sonde Playwright sur un dossier portant **un piège par volet** :
+
+| Mesure | Résultat |
+| --- | --- |
+| Module rendu · volets | ✓ · **6** |
+| **À-nouveau de 10 000 €** (le piège) | ouverture **10 000,00** · augmentations **5 000,00** — jamais compté en mouvement |
+| Immobilisations brutes | 10 000 + 5 000 − 2 500 = **12 500,00** |
+| Amortissements | 2 000 + 1 800 (dotation) − 1 000 (sortie sur cession) = **2 800,00** |
+| **Concordance avec le bilan v643** | **conforme ✓** — brut 12 500 = 12 500 · amort. 2 800 = 2 800 |
+| Provisions pour risques (15x) | 0 → dotation **500,00** → clôture **500,00** |
+| **Créances / dettes — le correctif** | « Autres créances » **−2 800 → +1 200** (TVA déductible) · « Dettes fiscales » **4 000** (TVA collectée) — **plus de double comptage** |
+| **Emprunt** (30 000 € sur 60 mois) | CRD **21 467,05** = **5 905,46** à 1 an au plus + **15 561,59** à plus d'un an, **lu sur le tableau d'amortissement** |
+| Comptes de régularisation (cut-off v644) | FNP **1 200,00** au passif · CCA **600,00** à l'actif |
+| Capital · effectif moyen | 101 → **8 000,00** · **2 salarié(s)**, moyenne des bulletins de l'exercice |
+| **Régime** — bascule testée | **Micro-entreprise** → (CA 1,2 M€ + bilan 912 k€) → **Petite entreprise — annexe ABRÉGÉE** → retour **Micro** |
+| Impression | **1 `.doc-page`** « ANNEXE DES COMPTES ANNUELS » · **11 sections** · **0 champ de saisie** dans le tirage |
+| **Lecture seule stricte** | écritures **identiques** avant / après (JSON), **0 écriture créée** |
+| Rubrique **États** de la barre | « Éditions comptables » · « **Annexe des comptes annuels** » — **routage réel ✓** |
+| Sorties « Fermer » · boutons vides · gras · débordement | **1** · **0** · **0** · **0** |
+| Écritures déséquilibrées · pageerror · console.error | **0** · **0** · **0** |
+
+**Les comptes annuels sont désormais complets :** bilan (v643) · compte de résultat + SIG (v643) · **annexe (v649)** — plus la liasse fiscale (v647) qui en tire le résultat fiscal.
+
+---
+
+## 🟢 MAJ précédente — ANALYTIQUE PAR AFFAIRE : la rentabilité chantier par chantier — v648
 **Quoi :** le dossier charge un **plan comptable BTP** — on y trouve `704 TRAVAUX`, `611 SOUS-TRAITANCE`, `605 MATÉRIEL DE TRAVAUX`, `621 PERSONNEL INTÉRIMAIRE`. Mais **un plan comptable dit la NATURE d'une charge, jamais l'affaire à laquelle elle appartient** — et ce n'est pas davantage lisible sur le tiers : le même fournisseur de béton livre trois chantiers. La rentabilité par affaire ne peut donc venir que d'une information **portée par la LIGNE d'écriture**. Nouveau module **« Analytique par affaire »** (rubrique **Analyse**) qui l'ajoute — `l.axe` sur la ligne, **sans toucher un seul montant, compte ou équilibre**.
 
 | Onglet | Ce qu'il fait |

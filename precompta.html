@@ -4210,6 +4210,7 @@ function render(){
   revision:(typeof pageRevision==='function'?pageRevision:function(){return'<div class="mod-wrap"><div class="card"><h2>Dossier de révision</h2></div></div>';}),
   liasse:(typeof pageLiasse==='function'?pageLiasse:function(){return'<div class="mod-wrap"><div class="card"><h2>Liasse fiscale</h2></div></div>';}),
   axes:(typeof pageAxes==='function'?pageAxes:function(){return'<div class="mod-wrap"><div class="card"><h2>Analytique par affaire</h2></div></div>';}),
+  annexe:(typeof pageAnnexe==='function'?pageAnnexe:function(){return'<div class="mod-wrap"><div class="card"><h2>Annexe des comptes annuels</h2></div></div>';}),
   importbanque:(typeof pageImportBanque==='function'?pageImportBanque:function(){return'<div class="mod-wrap"><div class="card"><h2>Import bancaire</h2></div></div>';}),
   recurrentes:(typeof pageRecurrentes==='function'?pageRecurrentes:function(){return'<div class="mod-wrap"><div class="card"><h2>Écritures récurrentes</h2></div></div>';}),
   automatismes:(typeof pageAutomatismes==='function'?pageAutomatismes:function(){return'<div class="mod-wrap"><div class="card"><h2>Automatismes</h2></div></div>';}),
@@ -11095,7 +11096,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v648';
+    b.textContent='YADA · v649';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -37428,7 +37429,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     {id:'yb-trait',   lbl:'Traitements',  prend:[['sg-util','Utilitaires']],
      mods:['automatismes','inventaire','rappro','banque','immos']},
     {id:'yb-decl',    lbl:'Déclarations', prend:[], mods:['tva','liasse']},
-    {id:'yb-etats',   lbl:'États',        prend:[], mods:['editions']},
+    {id:'yb-etats',   lbl:'États',        prend:[], mods:['editions','annexe']},
     {id:'yb-revis',   lbl:'Révision',     prend:[], mods:['revision','controles']},
     {id:'yb-analyse', lbl:'Analyse',      prend:[],
      mods:['dash','axes','analytique','reglements','pilotage','salarie']},
@@ -39817,6 +39818,610 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
      +'html body:not(#_yz) #yada-ax .ax-b.ax-pri{background:#f5f5f6;color:#0a0a0b;border-color:#f5f5f6}'
      +'html body:not(#_yz) #yada-ax .ax-b[disabled]{opacity:.4;cursor:not-allowed}'
      +'@media(max-width:820px){html body:not(#_yz) #yada-ax .ax-kpis{grid-template-columns:repeat(2,1fr)}}';
+  }catch(e){}
+})();
+</script>
+<script id="yada-addon-annexe">
+/* v649 — ANNEXE DES COMPTES ANNUELS.
+   Le bilan dit COMBIEN, le compte de résultat dit COMMENT — l'annexe dit SELON QUELLES
+   RÈGLES et PAR QUELS MOUVEMENTS. C'est la troisième composante obligatoire des comptes
+   annuels (art. L123-12 du Code de commerce) : sans elle, les comptes sont incomplets.
+   YADA produisait le bilan (v643) et la liasse (v647) mais aucune annexe.
+
+   Ce module la construit à partir des seules écritures du dossier :
+     1. RÉGIME        micro (dispensée) · petite (abrégée) · complète — calculé sur 3 seuils
+     2. RÈGLES        les méthodes comptables — écrites par l'humain, pré-remplies PCG
+     3. IMMOBILISATIONS  ouverture · augmentations · diminutions · clôture, brut ET amortissements
+     4. PROVISIONS    dépréciations (29x/39x/49x) et provisions (14x/15x), mouvements de l'exercice
+     5. ÉCHÉANCES     état des créances et des dettes à 1 an au plus / à plus d'un an
+     6. RÉGULARISATION  charges à payer, produits à recevoir, CCA/PCA — les comptes du cut-off v644
+     7. DIVERS        capital, effectif moyen, engagements donnés
+
+   Deux points d'honnêteté :
+   — les tableaux de MOUVEMENTS ne recalculent rien : ils décomposent le bilan. Un contrôle
+     de concordance le prouve à l'écran (brut et amortissements de l'annexe = ceux du bilan) ;
+   — la seule échéance RÉELLEMENT connue est celle de l'emprunt (son tableau d'amortissement
+     la donne). Pour les autres postes, « à 1 an au plus » est une CONVENTION — elle est écrite.
+   100% ADDITIF : aucune écriture n'est créée, modifiée ni supprimée. */
+(function(){
+  function S(){ try{ return db.societe||{}; }catch(e){ return {}; } }
+  function SAVE(){ try{ if(typeof save==='function') save(); }catch(e){} }
+  function RENDER(){ try{ if(typeof render==='function') render(); }catch(e){} }
+  function r(v){ return Math.round((+v||0)*100)/100; }
+  function num(v){ if(v==null||v==='') return ''; try{ return eur(v); }catch(e){ return r(v)+' €'; } }
+  function n0(v){ if(!v||Math.abs(v)<0.005) return '—'; return num(v); }
+  function C9(x){ try{ return c9(x); }catch(e){ return String(x||''); } }
+  function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function jour(d){ try{ return frDate(d); }catch(e){ return d||''; } }
+  function D0(){ return String(S().exoDebut||''); }
+  function D1(){ return String(S().exoFin||''); }
+  function libCpt(k){ k=C9(k); try{ return COMPTES[k]||(db.plan&&db.plan[k])||''; }catch(e){ return ''; } }
+  function pref(){ var L=[].slice.call(arguments);
+    return function(k){ for(var i=0;i<L.length;i++){ if(k.indexOf(L[i])===0) return true; } return false; }; }
+  function non(t){ return function(k){ return !t(k); }; }
+  function et(a,b){ return function(k){ return a(k)&&b(k); }; }
+
+  /* ---------- état persistant (le seul écrit du module) ---------- */
+  var REGLES_DEF=[
+    ['generales','Principes généraux',
+     'Les comptes annuels de l’exercice ont été établis conformément aux règles générales du Plan comptable général '
+    +'(règlement ANC n° 2014-03), dans le respect du principe de prudence et selon les hypothèses de base :\n'
+    +'— continuité de l’exploitation,\n— permanence des méthodes comptables d’un exercice à l’autre,\n'
+    +'— indépendance des exercices.\nLa méthode de base retenue pour l’évaluation des éléments inscrits en comptabilité est celle des coûts historiques.'],
+    ['immo','Immobilisations et amortissements',
+     'Les immobilisations sont évaluées à leur coût d’acquisition (prix d’achat et frais accessoires) ou à leur coût de production.\n'
+    +'Les amortissements sont calculés sur la durée d’utilisation attendue du bien, selon le mode linéaire — ou dégressif '
+    +'lorsque la nature du bien et l’article 39 A du CGI le permettent.'],
+    ['stocks','Stocks',
+     'Les stocks sont évalués à leur coût d’acquisition ou de production. Une dépréciation est constatée lorsque la valeur '
+    +'d’inventaire à la clôture est inférieure à la valeur comptable.'],
+    ['creances','Créances et dettes',
+     'Les créances et les dettes sont valorisées à leur valeur nominale. Une dépréciation est constatée lorsqu’il existe un '
+    +'risque de non-recouvrement apprécié créance par créance.'],
+    ['cutoff','Rattachement à l’exercice',
+     'Les charges et les produits sont rattachés à l’exercice auquel ils se rapportent : les factures non parvenues et les '
+    +'factures à établir sont constatées à la clôture, les charges et produits constatés d’avance sont neutralisés.']
+  ];
+  function store(){
+    db.parametres=db.parametres||{};
+    var A=db.parametres.annexe;
+    if(!A||typeof A!=='object'){ A={}; db.parametres.annexe=A; }
+    var ex=D0()+'_'+D1(), E=A[ex];
+    if(!E||typeof E!=='object'){
+      E={regles:{}, engagements:'', evenements:'', effectifSaisi:null, nbAssocies:null};
+      REGLES_DEF.forEach(function(x){ E.regles[x[0]]=x[2]; });
+      A[ex]=E;
+    }
+    if(!E.regles||typeof E.regles!=='object') E.regles={};
+    REGLES_DEF.forEach(function(x){ if(E.regles[x[0]]==null) E.regles[x[0]]=x[2]; });
+    return E;
+  }
+
+  /* ---------- MOUVEMENTS DE L'EXERCICE -------------------------------------
+     Un tableau de mouvements se lit : ouverture + augmentations − diminutions = clôture.
+     Le piège est l'À-NOUVEAU : il est daté DANS l'exercice mais il n'est pas un mouvement
+     de l'exercice — c'est le solde d'ouverture lui-même. Le compter en augmentation
+     doublerait l'actif. Il rejoint donc l'ouverture, avec le solde antérieur.
+     L'OD de résultat est hors champ (elle ne touche aucun compte de bilan mouvementé ici). */
+  function mvt(test, sens){
+    var d0=D0(), d1=D1(), o={ouv:0, aug:0, dim:0};
+    try{
+      (db.ecritures||[]).forEach(function(e){
+        if(!e) return;
+        var d=String(e.date||''), lib=String(e.libelle||'');
+        var an=(lib.indexOf('À-NOUVEAUX')>=0 || lib.indexOf('A-NOUVEAUX')>=0);
+        var avant=(d0 && d<d0);
+        var dans=(!d0||d>=d0) && (!d1||d<=d1);
+        if(!avant && !dans) return;                       /* postérieur à la clôture : hors annexe */
+        (e.lignes||[]).forEach(function(l){
+          var k=C9(l.compte); if(!k||!test(k)) return;
+          var dd=(+l.debit||0), cc=(+l.credit||0);
+          if(avant || an){ o.ouv=r(o.ouv + (sens==='C' ? (cc-dd) : (dd-cc))); return; }
+          if(sens==='C'){ o.aug=r(o.aug+cc); o.dim=r(o.dim+dd); }
+          else          { o.aug=r(o.aug+dd); o.dim=r(o.dim+cc); }
+        });
+      });
+    }catch(e){}
+    o.clo=r(o.ouv+o.aug-o.dim);
+    return o;
+  }
+  /* le même calcul, éclaté compte par compte */
+  function detail(test, sens){
+    var d0=D0(), d1=D1(), M={};
+    function get(k){ return M[k]||(M[k]={k:k, ouv:0, aug:0, dim:0}); }
+    try{
+      (db.ecritures||[]).forEach(function(e){
+        if(!e) return;
+        var d=String(e.date||''), lib=String(e.libelle||'');
+        var an=(lib.indexOf('À-NOUVEAUX')>=0 || lib.indexOf('A-NOUVEAUX')>=0);
+        var avant=(d0 && d<d0), dans=(!d0||d>=d0)&&(!d1||d<=d1);
+        if(!avant && !dans) return;
+        (e.lignes||[]).forEach(function(l){
+          var k=C9(l.compte); if(!k||!test(k)) return;
+          var a=get(k), dd=(+l.debit||0), cc=(+l.credit||0);
+          if(avant || an){ a.ouv=r(a.ouv + (sens==='C' ? (cc-dd) : (dd-cc))); return; }
+          if(sens==='C'){ a.aug=r(a.aug+cc); a.dim=r(a.dim+dd); }
+          else          { a.aug=r(a.aug+dd); a.dim=r(a.dim+cc); }
+        });
+      });
+    }catch(e){}
+    return Object.keys(M).sort().map(function(k){ var a=M[k]; a.clo=r(a.ouv+a.aug-a.dim); a.lib=libCpt(k); return a; })
+      .filter(function(a){ return Math.abs(a.ouv)>0.005||Math.abs(a.aug)>0.005||Math.abs(a.dim)>0.005||Math.abs(a.clo)>0.005; });
+  }
+
+  /* ---------- familles ---------- */
+  var T_INCORP=pref('20'), T_CORP=pref('21','22','23'), T_FIN=pref('25','26','27');
+  var T_IMMO=function(k){ return T_INCORP(k)||T_CORP(k)||T_FIN(k); };
+  var T_AMORT=pref('280','281','282','283','284','285','286','287','288','289');
+  var T_DEPIMMO=pref('290','291','292','293','294','295','296','297');
+  var T_DEPSTOCK=pref('39'), T_DEPCREA=pref('49'), T_DEPVMP=pref('59');
+  var T_PROVREG=pref('14'), T_PROVRC=pref('15');
+
+  /* ---------- CONCORDANCE AVEC LE BILAN ------------------------------------
+     L'annexe ne recalcule pas le bilan : elle le décompose. Le contrôle le prouve —
+     si un compte tombait hors des deux classements, l'écart apparaîtrait ici. */
+  function concordance(){
+    var B=null; try{ if(typeof etnBilan==='function') B=etnBilan(D1()); }catch(e){}
+    if(!B) return null;
+    var bBrut=0, bAmort=0;
+    (B.actif||[]).forEach(function(x){ if(x.c==='AB'||x.c==='AD'||x.c==='AF'){ bBrut=r(bBrut+x.brut); bAmort=r(bAmort+x.amort); } });
+    var aBrut=mvt(T_IMMO,'D').clo;
+    var aAmort=r(mvt(T_AMORT,'C').clo + mvt(T_DEPIMMO,'C').clo);
+    return {bBrut:bBrut, aBrut:aBrut, eBrut:r(aBrut-bBrut),
+            bAmort:bAmort, aAmort:aAmort, eAmort:r(aAmort-bAmort),
+            ok:(Math.abs(r(aBrut-bBrut))<0.01 && Math.abs(r(aAmort-bAmort))<0.01)};
+  }
+
+  /* ---------- ÉCHÉANCES DES EMPRUNTS ---------------------------------------
+     Le tableau d'amortissement est la SEULE source qui connaisse vraiment l'échéance :
+     il donne, échéance par échéance, ce qui sera remboursé et quand. On l'utilise. */
+  function empSplit(){
+    var d1=D1(); if(!d1) return null;
+    var dPlus1=(function(){ var y=+d1.slice(0,4)+1; return y+d1.slice(4); })();
+    var un=0, plus=0, crd=0, nb=0, ok=false;
+    try{
+      (db.emprunts||[]).forEach(function(e){
+        if(!e||!e.capital||!e.dureeMois) return;
+        var ec=empEcheancier(e); if(!ec||!ec.rows) return;
+        nb++; ok=true;
+        var reste=ec.rows.filter(function(x){ return x.date>d1; });
+        reste.forEach(function(x){ if(x.date<=dPlus1) un=r(un+x.amort); else plus=r(plus+x.amort); });
+        var pass=ec.rows.filter(function(x){ return x.date<=d1; });
+        crd=r(crd + (pass.length?pass[pass.length-1].crd:e.capital));
+      });
+    }catch(e){ return null; }
+    return ok?{un:un, plus:plus, crd:crd, nb:nb}:null;
+  }
+
+  /* ---------- EFFECTIF MOYEN ------------------------------------------------ */
+  function effectif(){
+    var E=store();
+    if(E.effectifSaisi!=null && E.effectifSaisi!=='') return {n:+E.effectifSaisi, src:'saisi'};
+    var d0=D0().slice(0,7), d1=D1().slice(0,7), parMois={};
+    try{
+      var fs=(db.parametres&&db.parametres.bulletins&&db.parametres.bulletins.fiches)||[];
+      fs.forEach(function(f){
+        var m=String(f.mois||''); if(!m) return;
+        if(d0&&m<d0) return; if(d1&&m>d1) return;
+        (parMois[m]=parMois[m]||{})[String(f.nom||f.id||'').toUpperCase()]=1;
+      });
+    }catch(e){}
+    var mois=Object.keys(parMois);
+    if(!mois.length) return {n:null, src:'aucun'};
+    var t=0; mois.forEach(function(m){ t+=Object.keys(parMois[m]).length; });
+    return {n:Math.round(t/mois.length*10)/10, src:'bulletins', mois:mois.length};
+  }
+
+  /* ---------- RÉGIME D'ANNEXE ----------------------------------------------
+     Une micro-entreprise est DISPENSÉE d'annexe (art. L123-16-1), une petite entreprise
+     peut la présenter en forme ABRÉGÉE (art. L123-16). YADA a les trois critères au dossier :
+     total du bilan, chiffre d'affaires net, effectif moyen. Il les teste et le dit.
+     Seuils du décret n° 2024-152 du 28 février 2024 — ils sont revalorisés périodiquement,
+     ils sont donc écrits à l'écran pour être vérifiables. */
+  var SEUILS={micro:{bilan:450000, ca:900000, eff:10}, petite:{bilan:7500000, ca:15000000, eff:50}};
+  function regime(){
+    var B=null,C=null;
+    try{ if(typeof etnBilan==='function') B=etnBilan(D1()); }catch(e){}
+    try{ if(typeof etnCR==='function') C=etnCR(D0(),D1()); }catch(e){}
+    var bilan=B?B.ta:null;
+    var ca=C?r(C.venteMarch+C.prodVendue):null;
+    var eff=effectif().n;
+    function test(S){
+      var d=0, det=[];
+      det.push({l:'Total du bilan', v:bilan, s:S.bilan, d:(bilan!=null&&bilan>S.bilan)});
+      det.push({l:'Chiffre d’affaires net', v:ca, s:S.ca, d:(ca!=null&&ca>S.ca)});
+      det.push({l:'Effectif moyen', v:eff, s:S.eff, d:(eff!=null&&eff>S.eff), eff:true});
+      det.forEach(function(x){ if(x.d) d++; });
+      var connus=det.filter(function(x){ return x.v!=null; }).length;
+      return {det:det, depasses:d, connus:connus, dedans:(d<2)};
+    }
+    var m=test(SEUILS.micro), p=test(SEUILS.petite);
+    var cat = m.dedans ? 'micro' : (p.dedans ? 'petite' : 'complete');
+    return {bilan:bilan, ca:ca, eff:eff, micro:m, petite:p, cat:cat, complet:(m.connus===3&&p.connus===3)};
+  }
+  var REGIME_LBL={
+    micro:['Micro-entreprise','L’entreprise ne dépasse pas deux des trois seuils de la micro-entreprise : elle est DISPENSÉE d’annexe (art. L123-16-1 du Code de commerce). L’annexe reste utile au dossier de révision — elle n’est simplement pas exigible.'],
+    petite:['Petite entreprise — annexe ABRÉGÉE','L’entreprise ne dépasse pas deux des trois seuils de la petite entreprise : l’annexe peut être présentée en forme abrégée (art. L123-16).'],
+    complete:['Annexe COMPLÈTE','L’entreprise dépasse deux des trois seuils de la petite entreprise : l’annexe complète est exigible.']
+  };
+
+  /* ---------- ONGLETS ---------- */
+  var ONGLETS=[['regime','Régime & règles'],['immo','Immobilisations & amortissements'],
+               ['prov','Provisions & dépréciations'],['ech','Créances & dettes'],
+               ['regul','Comptes de régularisation'],['divers','Capital, effectif & engagements']];
+  function tabActif(){ var k=window.__anxTab; for(var i=0;i<ONGLETS.length;i++){ if(ONGLETS[i][0]===k) return k; } return 'regime'; }
+  window.anxOnglet=function(k){ window.__anxTab=k; RENDER(); };
+
+  /* ---------- rendu : briques ---------- */
+  function tMvt(titre, rows, tot, lblOuv){
+    var h='<div class="anx-bt">'+esc(titre)+'</div><table class="anx-t"><thead><tr>'
+      +'<th>Poste</th><th class="r">'+esc(lblOuv||'À l’ouverture')+'</th><th class="r">Augmentations</th>'
+      +'<th class="r">Diminutions</th><th class="r">À la clôture</th></tr></thead><tbody>';
+    if(!rows.length) h+='<tr><td colspan="5" class="na">Aucun mouvement sur l’exercice.</td></tr>';
+    rows.forEach(function(x){
+      h+='<tr><td>'+esc(x.l)+'</td><td class="r">'+n0(x.m.ouv)+'</td><td class="r">'+n0(x.m.aug)
+        +'</td><td class="r">'+n0(x.m.dim)+'</td><td class="r tot">'+n0(x.m.clo)+'</td></tr>';
+    });
+    if(tot) h+='<tr class="gen"><td>'+esc(tot.l)+'</td><td class="r">'+n0(tot.m.ouv)+'</td><td class="r">'+n0(tot.m.aug)
+        +'</td><td class="r">'+n0(tot.m.dim)+'</td><td class="r tot">'+n0(tot.m.clo)+'</td></tr>';
+    return h+'</tbody></table>';
+  }
+  function tDetail(titre, rows){
+    if(!rows.length) return '';
+    var h='<div class="anx-bt">'+esc(titre)+'</div><table class="anx-t"><thead><tr><th class="mono">Compte</th><th>Libellé</th>'
+      +'<th class="r">À l’ouverture</th><th class="r">Augmentations</th><th class="r">Diminutions</th><th class="r">À la clôture</th></tr></thead><tbody>';
+    rows.forEach(function(a){
+      h+='<tr><td class="mono">'+esc(a.k)+'</td><td>'+esc(a.lib||'')+'</td><td class="r">'+n0(a.ouv)
+        +'</td><td class="r">'+n0(a.aug)+'</td><td class="r">'+n0(a.dim)+'</td><td class="r tot">'+n0(a.clo)+'</td></tr>';
+    });
+    return h+'</tbody></table>';
+  }
+
+  /* ---------- 1. RÉGIME & RÈGLES ---------- */
+  function vRegime(){
+    var R=regime(), E=store(), L=REGIME_LBL[R.cat];
+    function ligne(x){
+      var v=(x.v==null)?'<span class="na">non calculable</span>':(x.eff?String(x.v):num(x.v));
+      var s=(x.eff?String(x.s):num(x.s));
+      return '<tr><td>'+esc(x.l)+'</td><td class="r">'+v+'</td><td class="r">'+s+'</td>'
+        +'<td class="r"><span class="anx-tag'+(x.d?' ko':'')+'">'+(x.v==null?'—':(x.d?'dépassé':'dans le seuil'))+'</span></td></tr>';
+    }
+    var h='<div class="anx-bt">Régime d’annexe applicable</div>'
+      +'<div class="anx-verdict'+(R.cat==='micro'?' ok':'')+'">'+esc(L[0])+'</div>'
+      +'<div class="anx-note">'+esc(L[1])+'</div>'
+      +'<table class="anx-t"><thead><tr><th>Critère</th><th class="r">Valeur du dossier</th><th class="r">Seuil micro-entreprise</th><th class="r">Test</th></tr></thead><tbody>'
+      +R.micro.det.map(ligne).join('')
+      +'<tr class="gen"><td>Seuils dépassés</td><td class="r">'+R.micro.depasses+' / 3</td><td class="r">2 pour sortir du régime</td>'
+      +'<td class="r"><span class="anx-tag'+(R.micro.dedans?'':' ko')+'">'+(R.micro.dedans?'micro':'au-delà')+'</span></td></tr></tbody></table>'
+      +(R.cat!=='micro'
+        ? '<table class="anx-t"><thead><tr><th>Critère</th><th class="r">Valeur du dossier</th><th class="r">Seuil petite entreprise</th><th class="r">Test</th></tr></thead><tbody>'
+          +R.petite.det.map(ligne).join('')
+          +'<tr class="gen"><td>Seuils dépassés</td><td class="r">'+R.petite.depasses+' / 3</td><td class="r">2 pour sortir du régime</td>'
+          +'<td class="r"><span class="anx-tag'+(R.petite.dedans?'':' ko')+'">'+(R.petite.dedans?'petite':'au-delà')+'</span></td></tr></tbody></table>'
+        : '')
+      +'<div class="anx-note2">Seuils du décret n° 2024-152 du 28 février 2024 — micro : '+num(SEUILS.micro.bilan)+' de total de bilan, '
+      +num(SEUILS.micro.ca)+' de chiffre d’affaires net, '+SEUILS.micro.eff+' salariés · petite : '+num(SEUILS.petite.bilan)+', '
+      +num(SEUILS.petite.ca)+', '+SEUILS.petite.eff+' salariés. Ces montants sont revalorisés périodiquement : ils sont écrits ici pour être vérifiables.'
+      +(R.complet?'':' <b>Un critère au moins n’est pas calculable dans ce dossier</b> — le régime affiché est indicatif tant qu’il manque.')+'</div>';
+
+    h+='<div class="anx-bt">Règles et méthodes comptables</div>'
+      +'<div class="anx-note">Ces paragraphes sont les seuls que le logiciel ne peut pas déduire du dossier : ils relèvent du jugement du professionnel. Ils sont pré-remplis aux règles du PCG et restent entièrement modifiables.</div>';
+    REGLES_DEF.forEach(function(x){
+      h+='<div class="anx-bloc"><div class="anx-lbl">'+esc(x[1])+'</div>'
+        +'<textarea class="anx-ta" rows="'+Math.max(3,Math.min(9,String(E.regles[x[0]]||'').split('\n').length+1))+'" '
+        +'onchange="anxRegle(\''+x[0]+'\',this.value)">'+esc(E.regles[x[0]]||'')+'</textarea></div>';
+    });
+    h+='<div class="anx-bloc"><div class="anx-lbl">Événements postérieurs à la clôture</div>'
+      +'<div class="anx-note2">Aucune écriture ne peut révéler un événement survenu après la clôture : il ne peut être qu’écrit.</div>'
+      +'<textarea class="anx-ta" rows="3" placeholder="Néant, ou description des événements significatifs survenus entre la date de clôture et la date d’arrêté des comptes." '
+      +'onchange="anxChamp(\'evenements\',this.value)">'+esc(E.evenements||'')+'</textarea></div>'
+      +'<div class="anx-acts"><button class="anx-b" onclick="anxReglesDefaut()">Rétablir les règles par défaut (PCG)</button></div>';
+    return h;
+  }
+  window.anxRegle=function(k,v){ store().regles[k]=String(v||''); SAVE(); };
+  window.anxChamp=function(k,v){ var E=store(); E[k]=(v===''?'':v); SAVE(); };
+  window.anxReglesDefaut=function(){
+    function go(){ var E=store(); REGLES_DEF.forEach(function(x){ E.regles[x[0]]=x[2]; }); SAVE(); RENDER();
+      try{ toast('Règles et méthodes rétablies au texte PCG'); }catch(e){} }
+    try{ if(typeof yadaConfirm==='function'){ yadaConfirm('Rétablir les cinq paragraphes de règles au texte par défaut ? Le texte saisi sera remplacé.', go); return; } }catch(e){}
+    go();
+  };
+
+  /* ---------- 2. IMMOBILISATIONS & AMORTISSEMENTS ---------- */
+  function vImmo(){
+    var mI=mvt(T_INCORP,'D'), mC=mvt(T_CORP,'D'), mF=mvt(T_FIN,'D'), mT=mvt(T_IMMO,'D');
+    var aI=mvt(pref('280'),'C'), aC=mvt(pref('281','282','283','284','285'),'C'), aT=mvt(T_AMORT,'C');
+    var K=concordance();
+    var h=tMvt('Tableau des immobilisations — valeurs brutes',[
+        {l:'Immobilisations incorporelles', m:mI},
+        {l:'Immobilisations corporelles',   m:mC},
+        {l:'Immobilisations financières',   m:mF}
+      ], {l:'TOTAL des valeurs brutes', m:mT});
+    h+='<div class="anx-note2">Augmentations = acquisitions et apports de l’exercice · diminutions = cessions et mises au rebut. '
+      +'Les à-nouveaux ne sont pas des mouvements de l’exercice : ils forment l’ouverture, sinon l’actif serait compté deux fois.</div>';
+    h+=tMvt('Tableau des amortissements',[
+        {l:'Amortissements des immobilisations incorporelles', m:aI},
+        {l:'Amortissements des immobilisations corporelles',   m:aC}
+      ], {l:'TOTAL des amortissements', m:aT}, 'Cumul à l’ouverture');
+    h+='<div class="anx-note2">Augmentations = dotations de l’exercice · diminutions = amortissements sortis à l’occasion d’une cession.</div>';
+
+    if(K){
+      h+='<div class="anx-bt">Contrôle de concordance avec le bilan</div>'
+        +'<div class="anx-verdict'+(K.ok?' ok':' ko')+'">'+(K.ok?'L’annexe décompose exactement le bilan ✓':'Écart entre l’annexe et le bilan — un compte tombe hors des deux classements')+'</div>'
+        +'<table class="anx-t"><thead><tr><th>Grandeur</th><th class="r">Annexe (clôture)</th><th class="r">Bilan (v643)</th><th class="r">Écart</th></tr></thead><tbody>'
+        +'<tr><td>Immobilisations brutes</td><td class="r">'+num(K.aBrut)+'</td><td class="r">'+num(K.bBrut)+'</td><td class="r tot">'+num(K.eBrut)+'</td></tr>'
+        +'<tr><td>Amortissements et dépréciations</td><td class="r">'+num(K.aAmort)+'</td><td class="r">'+num(K.bAmort)+'</td><td class="r tot">'+num(K.eAmort)+'</td></tr>'
+        +'<tr class="gen"><td>Valeur nette</td><td class="r">'+num(r(K.aBrut-K.aAmort))+'</td><td class="r">'+num(r(K.bBrut-K.bAmort))+'</td>'
+        +'<td class="r tot">'+num(r((K.aBrut-K.aAmort)-(K.bBrut-K.bAmort)))+'</td></tr></tbody></table>'
+        +'<div class="anx-note2">L’annexe ne recalcule pas le bilan : elle le décompose par mouvement. Ce contrôle le prouve — il ne peut s’écarter que si un compte échappe au classement.</div>';
+    }
+    h+=tDetail('Détail par compte — immobilisations', detail(T_IMMO,'D'));
+    h+=tDetail('Détail par compte — amortissements', detail(T_AMORT,'C'));
+    return h;
+  }
+
+  /* ---------- 3. PROVISIONS & DÉPRÉCIATIONS ---------- */
+  function vProv(){
+    var pr=mvt(T_PROVREG,'C'), rc=mvt(T_PROVRC,'C');
+    var di=mvt(T_DEPIMMO,'C'), ds=mvt(T_DEPSTOCK,'C'), dc=mvt(T_DEPCREA,'C'), dv=mvt(T_DEPVMP,'C');
+    var tot={ouv:0,aug:0,dim:0,clo:0};
+    [pr,rc,di,ds,dc,dv].forEach(function(m){ tot.ouv=r(tot.ouv+m.ouv); tot.aug=r(tot.aug+m.aug); tot.dim=r(tot.dim+m.dim); tot.clo=r(tot.clo+m.clo); });
+    var h=tMvt('Tableau des provisions et des dépréciations',[
+        {l:'Provisions réglementées (14x)',                     m:pr},
+        {l:'Provisions pour risques et charges (15x)',          m:rc},
+        {l:'Dépréciations des immobilisations (29x)',           m:di},
+        {l:'Dépréciations des stocks et en-cours (39x)',        m:ds},
+        {l:'Dépréciations des comptes de tiers (49x)',          m:dc},
+        {l:'Dépréciations des valeurs mobilières de placement (59x)', m:dv}
+      ], {l:'TOTAL', m:tot}, 'À l’ouverture');
+    h+='<div class="anx-note2">Augmentations = dotations de l’exercice (681x, 686x, 687x) · diminutions = reprises (781x, 786x, 787x). '
+      +'Une dépréciation de créance client naît au Dossier de révision (cycle Tiers) ou à l’Inventaire ; elle se reprend sur décision, jamais automatiquement.</div>';
+    var det=detail(function(k){ return T_PROVREG(k)||T_PROVRC(k)||T_DEPIMMO(k)||T_DEPSTOCK(k)||T_DEPCREA(k)||T_DEPVMP(k); },'C');
+    h+=tDetail('Détail par compte', det);
+    if(!det.length) h+='<div class="anx-note">Le dossier ne porte aucune provision ni dépréciation sur l’exercice. La mention « Néant » suffit alors à l’annexe.</div>';
+    return h;
+  }
+
+  /* ---------- 4. CRÉANCES & DETTES PAR ÉCHÉANCE ---------- */
+  function vEch(){
+    var d1=D1();
+    /* LE CÔTÉ DÉCIDE DE LA RUBRIQUE (règle posée en v643 pour le bilan, appliquée ici).
+       Un compte de classe 4 peut être débiteur OU créditeur : une 44571 créditrice est une
+       DETTE fiscale, une 44566 débitrice est une CRÉANCE. Sommer la famille en net ferait
+       apparaître la TVA collectée à l'actif « en négatif » — et la compterait deux fois,
+       une fois en moins à l'actif, une fois en plus au passif. On calcule donc compte par
+       compte et l'on ne retient, de chaque côté, que les comptes qui vont dans ce sens. */
+    function solde(test,sens){
+      var t=0;
+      detail(test,sens).forEach(function(a){ if(a.clo>0.005) t=r(t+a.clo); });
+      return t;
+    }
+    var cImmo=solde(pref('26','27'),'D'),
+        cCli =solde(pref('411','413','416','418'),'D'),
+        cAut =solde(pref('409','425','44','46','47'),'D');
+    var E=empSplit();
+    var dEmp=E?E.crd:solde(pref('16'),'C');   /* le tableau d'amortissement prime sur le solde comptable */
+    var dFou=solde(pref('401','403','404','405','408'),'C'),
+        dFis=solde(pref('42','43','44'),'C'),
+        dAut=solde(pref('45','46','47','419'),'C');
+
+    var h='<div class="anx-bt">État des créances</div><table class="anx-t"><thead><tr><th>Poste</th>'
+      +'<th class="r">Montant brut</th><th class="r">À 1 an au plus</th><th class="r">À plus d’un an</th></tr></thead><tbody>';
+    function lc(l, v, plus){ var un=r(v-(plus||0));
+      return '<tr><td>'+esc(l)+'</td><td class="r">'+n0(v)+'</td><td class="r">'+n0(un)+'</td><td class="r tot">'+n0(plus||0)+'</td></tr>'; }
+    h+=lc('Créances rattachées à des participations et prêts (26x, 27x)', cImmo, cImmo);
+    h+=lc('Créances clients et comptes rattachés (411, 413, 416, 418)', cCli, 0);
+    h+=lc('Autres créances (409, 425, 44x, 46x, 47x)', cAut, 0);
+    var tc=r(cImmo+cCli+cAut);
+    h+='<tr class="gen"><td>TOTAL DES CRÉANCES</td><td class="r">'+n0(tc)+'</td><td class="r">'+n0(r(tc-cImmo))+'</td><td class="r tot">'+n0(cImmo)+'</td></tr></tbody></table>';
+
+    h+='<div class="anx-bt">État des dettes</div><table class="anx-t"><thead><tr><th>Poste</th>'
+      +'<th class="r">Montant brut</th><th class="r">À 1 an au plus</th><th class="r">À plus d’un an</th></tr></thead><tbody>';
+    if(E) h+='<tr><td>Emprunts auprès des établissements de crédit (16x)<span class="anx-tag">tableau d’amortissement</span></td>'
+      +'<td class="r">'+n0(dEmp)+'</td><td class="r">'+n0(E.un)+'</td><td class="r tot">'+n0(E.plus)+'</td></tr>';
+    else h+=lc('Emprunts auprès des établissements de crédit (16x)', dEmp, dEmp);
+    h+=lc('Dettes fournisseurs et comptes rattachés (40x)', dFou, 0);
+    h+=lc('Dettes fiscales et sociales (42x, 43x, 44x)', dFis, 0);
+    h+=lc('Autres dettes (45x, 46x, 47x, 419)', dAut, 0);
+    var td=r(dEmp+dFou+dFis+dAut);
+    var dun=r(td-(E?E.plus:dEmp)), dpl=(E?E.plus:dEmp);
+    h+='<tr class="gen"><td>TOTAL DES DETTES</td><td class="r">'+n0(td)+'</td><td class="r">'+n0(dun)+'</td><td class="r tot">'+n0(dpl)+'</td></tr></tbody></table>';
+
+    h+='<div class="anx-note">Un seul poste a une échéance <b>réellement connue</b> : l’emprunt. Son tableau d’amortissement dit, échéance par échéance, '
+      +'ce qui sera remboursé et quand — la ventilation est donc calculée'+(E?(' sur '+E.nb+' emprunt(s) du dossier, en comparant chaque échéance au '+esc(jour(d1))+'.'):', dès qu’un emprunt est saisi au module Immobilisations & Financements.')+'</div>'
+      +'<div class="anx-note2">Pour tous les autres postes, « à 1 an au plus » est une <b>convention</b> tirée de leur nature (créances clients, dettes fournisseurs, dettes fiscales et sociales sont à court terme) : '
+      +'aucune écriture ne porte de date d’échéance. Un prêt ou un dépôt à plus d’un an doit donc être reclassé à la main par le réviseur.</div>';
+    return h;
+  }
+
+  /* ---------- 5. COMPTES DE RÉGULARISATION (cut-off v644) ---------- */
+  function vRegul(){
+    var F=[
+      ['Factures non parvenues (408)',                 pref('408'), 'C'],
+      ['Fournisseurs d’immobilisations — factures non parvenues (405)', pref('405'), 'C'],
+      ['Factures à établir (418)',                     pref('418'), 'D'],
+      ['Personnel — charges à payer (428)',            pref('428'), 'C'],
+      ['Organismes sociaux — charges à payer (438)',   pref('438'), 'C'],
+      ['État — charges à payer (448)',                 pref('448'), 'C'],
+      ['Intérêts courus non échus (1688)',             pref('1688'), 'C'],
+      ['Charges constatées d’avance (486)',            pref('486'), 'D'],
+      ['Produits constatés d’avance (487)',            pref('487'), 'C'],
+      ['Produits à recevoir (4387, 4487, 768x rattachés)', pref('4387','4487'), 'D']
+    ];
+    var lignes=F.map(function(x){ return {l:x[0], m:mvt(x[1], x[2]), s:x[2]}; })
+                .filter(function(x){ return Math.abs(x.m.clo)>0.005||Math.abs(x.m.aug)>0.005||Math.abs(x.m.ouv)>0.005; });
+    var h='<div class="anx-bt">Charges à payer, produits à recevoir et comptes de régularisation</div>';
+    if(!lignes.length){
+      h+='<div class="anx-note">Aucun compte de rattachement mouvementé sur l’exercice. Un résultat sans cut-off n’est qu’un résultat de trésorerie déguisé : '
+        +'le module <b>Inventaire &amp; cut-off</b> (rubrique Traitements) passe ces écritures et leur extourne.</div>';
+      return h;
+    }
+    h+='<table class="anx-t"><thead><tr><th>Poste</th><th class="r">Sens</th><th class="r">À l’ouverture</th>'
+      +'<th class="r">Mouvements de l’exercice</th><th class="r">À la clôture</th></tr></thead><tbody>';
+    var tD=0,tC=0;
+    lignes.forEach(function(x){
+      if(x.s==='D') tD=r(tD+x.m.clo); else tC=r(tC+x.m.clo);
+      h+='<tr><td>'+esc(x.l)+'</td><td class="r"><span class="anx-tag">'+(x.s==='D'?'actif':'passif')+'</span></td>'
+        +'<td class="r">'+n0(x.m.ouv)+'</td><td class="r">'+n0(r(x.m.aug-x.m.dim))+'</td><td class="r tot">'+n0(x.m.clo)+'</td></tr>';
+    });
+    h+='<tr class="gen"><td>TOTAL à l’actif</td><td class="r"></td><td class="r"></td><td class="r"></td><td class="r tot">'+n0(tD)+'</td></tr>'
+      +'<tr class="gen"><td>TOTAL au passif</td><td class="r"></td><td class="r"></td><td class="r"></td><td class="r tot">'+n0(tC)+'</td></tr></tbody></table>'
+      +'<div class="anx-note2">Ces comptes sont ceux du cut-off : ils rattachent à l’exercice ce qui lui appartient. '
+      +'Les écritures de rattachement s’<b>extournent</b> au premier jour de l’exercice suivant — c’est ce qui empêche la charge d’être comptée deux fois.</div>';
+    return h;
+  }
+
+  /* ---------- 6. CAPITAL, EFFECTIF, ENGAGEMENTS ---------- */
+  function vDivers(){
+    var E=store(), cap=mvt(pref('101'),'C'), ef=effectif();
+    var s=S();
+    var h='<div class="anx-bt">Composition du capital social</div>'
+      +'<table class="anx-t"><thead><tr><th>Poste</th><th class="r">À l’ouverture</th><th class="r">Variations</th><th class="r">À la clôture</th></tr></thead><tbody>'
+      +'<tr><td>Capital social (101)</td><td class="r">'+n0(cap.ouv)+'</td><td class="r">'+n0(r(cap.aug-cap.dim))+'</td><td class="r tot">'+n0(cap.clo)+'</td></tr>'
+      +'<tr><td>Primes d’émission, de fusion, d’apport (104)</td><td class="r">'+n0(mvt(pref('104'),'C').ouv)+'</td>'
+      +'<td class="r">'+n0(r(mvt(pref('104'),'C').aug-mvt(pref('104'),'C').dim))+'</td><td class="r tot">'+n0(mvt(pref('104'),'C').clo)+'</td></tr>'
+      +'<tr><td>Réserves (106)</td><td class="r">'+n0(mvt(pref('106'),'C').ouv)+'</td>'
+      +'<td class="r">'+n0(r(mvt(pref('106'),'C').aug-mvt(pref('106'),'C').dim))+'</td><td class="r tot">'+n0(mvt(pref('106'),'C').clo)+'</td></tr>'
+      +'</tbody></table>'
+      +'<div class="anx-row"><label>Nombre de parts ou d’actions</label>'
+      +'<input class="anx-in anx-mt" type="number" step="1" min="0" value="'+esc(E.nbAssocies==null?'':E.nbAssocies)+'" '
+      +'onchange="anxChamp(\'nbAssocies\',this.value)" placeholder="—">'
+      +(E.nbAssocies>0&&cap.clo>0?'<span class="anx-note2">Valeur nominale : '+num(r(cap.clo/(+E.nbAssocies)))+' par part.</span>':'')
+      +'</div>'
+      +'<div class="anx-note2">Forme juridique : '+esc(s.formeJur||'—')+' · SIREN '+esc(s.siren||'—')+'.</div>';
+
+    h+='<div class="anx-bt">Effectif moyen de l’exercice</div>';
+    if(ef.src==='bulletins')
+      h+='<div class="anx-verdict ok">'+String(ef.n)+' salarié(s) en moyenne</div>'
+        +'<div class="anx-note2">Calculé sur les bulletins de paie du dossier : moyenne du nombre de salariés distincts par mois, sur '+ef.mois+' mois de paie de l’exercice. Saisissez une valeur ci-dessous pour l’imposer.</div>';
+    else if(ef.src==='saisi')
+      h+='<div class="anx-verdict ok">'+String(ef.n)+' salarié(s) — valeur saisie</div>';
+    else
+      h+='<div class="anx-note">Aucun bulletin de paie sur l’exercice : l’effectif moyen ne peut pas être déduit du dossier. Il doit être saisi.</div>';
+    h+='<div class="anx-row"><label>Effectif moyen (saisie manuelle)</label>'
+      +'<input class="anx-in anx-mt" type="number" step="0.1" min="0" value="'+esc(E.effectifSaisi==null?'':E.effectifSaisi)+'" '
+      +'onchange="anxChamp(\'effectifSaisi\',this.value)" placeholder="déduit des bulletins"></div>';
+
+    h+='<div class="anx-bt">Engagements donnés et reçus</div>'
+      +'<div class="anx-note2">Cautions, nantissements, engagements de crédit-bail, garanties : aucun de ces engagements ne figure au bilan — ils ne peuvent être qu’écrits.</div>'
+      +'<textarea class="anx-ta" rows="4" placeholder="Néant, ou description des engagements hors bilan (cautions données, nantissements, engagements de crédit-bail restant à courir…)." '
+      +'onchange="anxChamp(\'engagements\',this.value)">'+esc(E.engagements||'')+'</textarea>';
+    return h;
+  }
+
+  /* ---------- IMPRESSION ---------- */
+  window.anxImprimer=function(){
+    var s=S(), R=regime(), E=store();
+    var t=document.createElement('div');
+    var h='<div class="doc-page"><h1 style="margin:0 0 2px">ANNEXE DES COMPTES ANNUELS</h1>'
+      +'<div style="font-size:12px;margin-bottom:10px">'+esc(s.raison||'')+' · SIREN '+esc(s.siren||'—')
+      +' · exercice du '+esc(jour(D0()))+' au '+esc(jour(D1()))+' · édité le '
+      +esc((function(){ try{ return jour(todayStr()); }catch(e){ return ''; } })())+'</div>'
+      +'<p style="font-size:12px">'+esc(REGIME_LBL[R.cat][1])+'</p>';
+    REGLES_DEF.forEach(function(x){
+      h+='<h2 style="font-size:14px;margin:14px 0 4px">'+esc(x[1])+'</h2>'
+        +'<p style="font-size:12px;white-space:pre-wrap;margin:0">'+esc(E.regles[x[0]]||'')+'</p>';
+    });
+    var vues=[['Immobilisations et amortissements',vImmo],['Provisions et dépréciations',vProv],
+              ['État des créances et des dettes',vEch],['Comptes de régularisation',vRegul],
+              ['Capital, effectif et engagements',vDivers]];
+    vues.forEach(function(v){
+      h+='<h2 style="font-size:14px;margin:16px 0 4px">'+esc(v[0])+'</h2>';
+      try{ h+='<div class="anx-print">'+v[1]().replace(/<textarea[\s\S]*?<\/textarea>/g,'').replace(/<input[^>]*>/g,'').replace(/<button[\s\S]*?<\/button>/g,'')+'</div>'; }catch(e){}
+    });
+    h+='<h2 style="font-size:14px;margin:16px 0 4px">Événements postérieurs à la clôture</h2>'
+      +'<p style="font-size:12px;white-space:pre-wrap;margin:0">'+esc(E.evenements||'Néant.')+'</p>'
+      +'</div>';
+    t.innerHTML=h;
+    try{
+      var pa=document.getElementById('print-area');
+      if(!pa){ pa=document.createElement('div'); pa.id='print-area'; document.body.appendChild(pa); }
+      pa.innerHTML=t.innerHTML; window.print();
+    }catch(e){}
+  };
+
+  /* ---------- page ---------- */
+  window.pageAnnexe=function(){
+    var s=S(), k=tabActif(), R=regime(), K=concordance();
+    var corps=(k==='immo')?vImmo():(k==='prov')?vProv():(k==='ech')?vEch():(k==='regul')?vRegul():(k==='divers')?vDivers():vRegime();
+    return '<div id="yada-anx">'
+      +'<div class="anx-mast"><div class="anx-eyebrow">YADA · ANNEXE DES COMPTES ANNUELS</div>'
+      +'<h1 class="anx-title">Annexe</h1>'
+      +'<div class="anx-soc">'+esc(s.raison||'')+' · exercice '+esc(jour(D0()))+' → '+esc(jour(D1()))+'</div>'
+      +'<button class="anx-close" title="Fermer" onclick="anxFermer()">✕</button></div>'
+      +'<div class="anx-kpis">'
+      +'<div class="anx-k"><div class="l">Régime d’annexe</div><div class="v">'+esc(REGIME_LBL[R.cat][0].split('—')[0].trim())+'</div></div>'
+      +'<div class="anx-k"><div class="l">Total du bilan</div><div class="v">'+(R.bilan==null?'—':num(R.bilan))+'</div></div>'
+      +'<div class="anx-k"><div class="l">Chiffre d’affaires net</div><div class="v">'+(R.ca==null?'—':num(R.ca))+'</div></div>'
+      +'<div class="anx-k"><div class="l">Concordance avec le bilan</div><div class="v">'+(K?(K.ok?'conforme':'écart'):'—')+'</div></div>'
+      +'</div>'
+      +'<div class="anx-note2b">Le bilan dit <b>combien</b>, le compte de résultat dit <b>comment</b> — l’annexe dit <b>selon quelles règles</b> et <b>par quels mouvements</b>. '
+      +'Elle est la troisième composante obligatoire des comptes annuels (art. L123-12 du Code de commerce). Les tableaux ci-dessous ne recalculent pas le bilan : ils le décomposent.</div>'
+      +'<div class="anx-tabs">'+ONGLETS.map(function(o){
+          return '<button class="anx-tab'+(o[0]===k?' on':'')+'" onclick="anxOnglet(\''+o[0]+'\')">'+esc(o[1])+'</button>'; }).join('')+'</div>'
+      +'<div class="anx-body">'+corps
+      +'<div class="anx-acts"><button class="anx-b anx-pri" onclick="anxImprimer()">Imprimer l’annexe complète</button></div>'
+      +'</div></div>';
+  };
+
+  /* La sortie s'appelle « …Fermer() » : le filet v614 la reconnait et n'en greffe pas une
+     seconde (invariant v626 : exactement 1 sortie par module). */
+  window.anxFermer=function(){ try{ if(typeof yadaFermerPage==='function') yadaFermerPage(); }catch(e){} };
+
+  /* ---------- enregistrement du module ---------- */
+  window.YADA_OK=(window.YADA_OK||[]);
+  if(window.YADA_OK.indexOf('annexe')<0) window.YADA_OK.push('annexe');
+  window.YADA_LBL=(window.YADA_LBL||{});
+  window.YADA_LBL.annexe='Annexe des comptes annuels';
+
+  /* ---------- style Registre N&B, scopé #yada-anx ---------- */
+  try{
+    var st=document.getElementById('anx-mod');
+    if(!st){ st=document.createElement('style'); st.id='anx-mod'; document.head.appendChild(st); }
+    st.textContent=
+      'html body:not(#_yz) #yada-anx{background:#000;color:#f5f5f6;min-height:100dvh;padding:0 0 60px;font-family:Georgia,"Times New Roman",serif}'
+     +'html body:not(#_yz) #yada-anx *{font-family:inherit}'
+     +'html body:not(#_yz) #yada-anx .anx-mast{position:relative;padding:26px 24px 16px;border-bottom:1px solid #242427}'
+     +'html body:not(#_yz) #yada-anx .anx-eyebrow{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;letter-spacing:.14em;color:#8b8b90}'
+     +'html body:not(#_yz) #yada-anx .anx-title{font-size:27px;margin:6px 0 4px;font-weight:400}'
+     +'html body:not(#_yz) #yada-anx .anx-soc{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:#8b8b90}'
+     +'html body:not(#_yz) #yada-anx .anx-close{position:absolute;top:22px;right:22px;width:30px;height:30px;background:#000;color:#f5f5f6;border:1px solid #f5f5f6;border-radius:5px;cursor:pointer;font-family:ui-monospace,monospace;font-size:14px}'
+     +'html body:not(#_yz) #yada-anx .anx-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:#242427;margin:0 0 2px}'
+     +'html body:not(#_yz) #yada-anx .anx-k{background:#0b0b0c;padding:14px 16px}'
+     +'html body:not(#_yz) #yada-anx .anx-k .l{font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.07em;color:#8b8b90;text-transform:uppercase}'
+     +'html body:not(#_yz) #yada-anx .anx-k .v{font-size:19px;margin-top:5px}'
+     +'html body:not(#_yz) #yada-anx .anx-note2b{padding:14px 24px;color:#a8a9ad;font-size:13px;border-bottom:1px solid #242427}'
+     +'html body:not(#_yz) #yada-anx .anx-tabs{display:flex;flex-wrap:wrap;gap:1px;background:#242427;border-bottom:1px solid #242427}'
+     +'html body:not(#_yz) #yada-anx .anx-tab{flex:1;min-width:150px;background:#0b0b0c;color:#8b8b90;border:0;padding:10px 12px;cursor:pointer;font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.04em}'
+     +'html body:not(#_yz) #yada-anx .anx-tab.on{background:#f5f5f6;color:#0a0a0b}'
+     +'html body:not(#_yz) #yada-anx .anx-body{padding:16px 24px 6px;overflow-x:auto}'
+     +'html body:not(#_yz) #yada-anx .anx-t{width:100%;border-collapse:collapse;margin:8px 0}'
+     +'html body:not(#_yz) #yada-anx .anx-t th{font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#8b8b90;background:#121214;padding:6px 8px;text-align:left;font-weight:400;border-bottom:1px solid #242427}'
+     +'html body:not(#_yz) #yada-anx .anx-t td{padding:4px 8px;border-bottom:1px solid #1c1c1f;font-size:13px}'
+     +'html body:not(#_yz) #yada-anx .anx-t th.r,html body:not(#_yz) #yada-anx .anx-t td.r{text-align:right}'
+     +'html body:not(#_yz) #yada-anx .anx-t th.mono,html body:not(#_yz) #yada-anx .anx-t td.mono{font-family:ui-monospace,monospace;font-size:12px}'
+     +'html body:not(#_yz) #yada-anx .anx-t td.tot{border-left:1px solid #35353a}'
+     +'html body:not(#_yz) #yada-anx .anx-t td.na{color:#8b8b90}'
+     +'html body:not(#_yz) #yada-anx .anx-t tr.gen td{background:#121214;border-top:2px solid #f5f5f6}'
+     +'html body:not(#_yz) #yada-anx .anx-bt{font-family:ui-monospace,monospace;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:#a8a9ad;margin:18px 0 2px}'
+     +'html body:not(#_yz) #yada-anx .anx-verdict{font-size:16px;margin:8px 0;padding:8px 12px;border:1px solid #35353a;border-radius:4px;display:inline-block}'
+     +'html body:not(#_yz) #yada-anx .anx-verdict.ok{background:#f5f5f6;color:#0a0a0b;border-color:#f5f5f6}'
+     +'html body:not(#_yz) #yada-anx .anx-verdict.ko{border-color:#f5f5f6}'
+     +'html body:not(#_yz) #yada-anx .anx-note{color:#a8a9ad;font-size:13px;margin:8px 0}'
+     +'html body:not(#_yz) #yada-anx .anx-note2{color:#8b8b90;font-size:11.5px;margin:6px 0}'
+     +'html body:not(#_yz) #yada-anx .anx-tag{font-family:ui-monospace,monospace;font-size:9px;letter-spacing:.08em;padding:1px 5px;border:1px solid #35353a;color:#8b8b90;border-radius:3px;margin-left:6px}'
+     +'html body:not(#_yz) #yada-anx .anx-tag.ko{background:#f5f5f6;color:#0a0a0b;border-color:#f5f5f6}'
+     +'html body:not(#_yz) #yada-anx .anx-bloc{margin:12px 0}'
+     +'html body:not(#_yz) #yada-anx .anx-lbl{font-family:ui-monospace,monospace;font-size:10.5px;letter-spacing:.05em;color:#a8a9ad;margin-bottom:4px}'
+     +'html body:not(#_yz) #yada-anx .anx-ta{width:100%;background:#000;color:#f5f5f6;border:1px solid #242427;border-radius:3px;padding:8px;font-size:12.5px;line-height:1.5;resize:vertical;box-sizing:border-box}'
+     +'html body:not(#_yz) #yada-anx .anx-row{display:flex;align-items:center;gap:10px;margin:8px 0;font-size:13px;flex-wrap:wrap}'
+     +'html body:not(#_yz) #yada-anx .anx-row label{color:#a8a9ad;font-size:12.5px}'
+     +'html body:not(#_yz) #yada-anx .anx-in{background:#000;color:#f5f5f6;border:1px solid #242427;border-radius:3px;padding:4px 6px;font-family:ui-monospace,monospace;font-size:12px;max-width:100%}'
+     +'html body:not(#_yz) #yada-anx .anx-mt{text-align:right;max-width:150px}'
+     +'html body:not(#_yz) #yada-anx .anx-acts{display:flex;gap:8px;align-items:center;margin:16px 0 20px;flex-wrap:wrap}'
+     +'html body:not(#_yz) #yada-anx .anx-b{background:#000;color:#f5f5f6;border:1px solid #35353a;border-radius:4px;padding:5px 11px;cursor:pointer;font-family:ui-monospace,monospace;font-size:11.5px}'
+     +'html body:not(#_yz) #yada-anx .anx-b.anx-pri{background:#f5f5f6;color:#0a0a0b;border-color:#f5f5f6}'
+     +'@media(max-width:820px){html body:not(#_yz) #yada-anx .anx-kpis{grid-template-columns:repeat(2,1fr)}}';
   }catch(e){}
 })();
 </script>
