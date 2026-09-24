@@ -4208,6 +4208,7 @@ function render(){
   controles:(typeof pageControles==='function'?pageControles:function(){return'<div class="mod-wrap"><div class="card"><h2>Contrôles</h2></div></div>';}),
   importbanque:(typeof pageImportBanque==='function'?pageImportBanque:function(){return'<div class="mod-wrap"><div class="card"><h2>Import bancaire</h2></div></div>';}),
   recurrentes:(typeof pageRecurrentes==='function'?pageRecurrentes:function(){return'<div class="mod-wrap"><div class="card"><h2>Écritures récurrentes</h2></div></div>';}),
+  automatismes:(typeof pageAutomatismes==='function'?pageAutomatismes:function(){return'<div class="mod-wrap"><div class="card"><h2>Automatismes</h2></div></div>';}),
   dossier:pageDossier, parametrage:pageParametrage, plancomptable:pagePlanComptable, infosociete:pageInfoSociete, coffre:pageCoffre
 })[current]();
   // compta/compteaux et dash/societe fournissent déjà leur propre conteneur plein cadre ; les autres sont enveloppés
@@ -11083,7 +11084,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v632';
+    b.textContent='YADA · v633';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -35470,6 +35471,360 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
   }
   window.yadaLisibilite=lisibilite;
   setInterval(function(){ ensure(); lisibilite(); },1500);
+})();
+</script>
+<script id="yada-addon-automatismes">
+/* ═══ ÉTAPE 1 — SOCLE D'AUTOMATISATION : module « Automatismes » ═══
+   Orchestrateur des traitements répétitifs du dossier. Chaque automatisme s'y déclare avec
+   un repérage (combien d'actions en attente), un interrupteur (actif / suspendu), son dernier
+   passage et son compteur d'actions. Deux automatismes livrés à cette étape :
+     1. Lettrage automatique des comptes de tiers (facture ↔ règlement, et règlement groupé) ;
+     2. Génération des échéances récurrentes échues (réutilise le module Écritures récurrentes).
+   100% ADDITIF — aucune fonction existante réécrite ; le lettrage réutilise la convention de
+   lettres du moteur lzLettrer (A→Z puis AA…), la génération réutilise window.rcGenerer(per,true)
+   et sa clé anti-doublon recId + recPer. Aucune écriture déséquilibrée ne peut naître d'ici :
+   le lettrage ne touche QUE le champ `lettre`, la génération passe par posterOD. */
+(function(){
+  window.YADA_OK=(window.YADA_OK||[]);
+  if(window.YADA_OK.indexOf('automatismes')<0) window.YADA_OK.push('automatismes');
+  window.YADA_LBL=window.YADA_LBL||{}; if(!window.YADA_LBL.automatismes) window.YADA_LBL.automatismes='Automatismes';
+
+  function e2(x){ return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+  function E(x){ return (typeof eur==='function')?eur(x):((+x||0).toFixed(2)+' €'); }
+  function R2(x){ return (typeof r2==='function')?r2(x):Math.round((+x||0)*100)/100; }
+  function SAVE(){ try{ if(typeof save==='function') save(); }catch(e){} }
+  function RENDER(){ try{ if(typeof render==='function') render(); }catch(e){} }
+  function TOAST(m){ try{ if(typeof toast==='function') toast(m); }catch(e){} }
+  function frd(d){ d=String(d||''); var m=d.match(/^(\d{4})-(\d{2})-(\d{2})/); return m?(m[3]+'/'+m[2]+'/'+m[1].slice(2)):d; }
+  function aujourd(){ try{ return (typeof todayStr==='function')?todayStr():new Date().toISOString().slice(0,10); }catch(e){ return new Date().toISOString().slice(0,10); } }
+  function anneeExo(){ try{ return (typeof exoYear==='function')?exoYear():String(new Date().getFullYear()); }catch(e){ return String(new Date().getFullYear()); } }
+  function dernierJour(p){ var a=String(p||'').split('-'); return new Date(+a[0],+a[1],0).getDate(); }
+  var MOIS=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  function moisLbl(p){ var m=String(p||'').split('-'); return (MOIS[(+m[1]||1)-1]||'')+' '+(m[0]||''); }
+  function horodate(ts){ if(!ts) return '—'; var d=new Date(ts); if(isNaN(d)) return '—';
+    function p2(n){ return ('0'+n).slice(-2); }
+    return p2(d.getDate())+'/'+p2(d.getMonth()+1)+'/'+String(d.getFullYear()).slice(2)+' à '+p2(d.getHours())+':'+p2(d.getMinutes()); }
+
+  /* ---------- état persistant ---------- */
+  function etat(){
+    try{
+      db.parametres=db.parametres||{};
+      var a=db.parametres.automatismes;
+      if(!a||typeof a!=='object'){ a={actifs:{},passages:[],totaux:{}}; db.parametres.automatismes=a; }
+      if(!a.actifs||typeof a.actifs!=='object') a.actifs={};
+      if(!Array.isArray(a.passages)) a.passages=[];
+      if(!a.totaux||typeof a.totaux!=='object') a.totaux={};
+      return a;
+    }catch(e){ return {actifs:{},passages:[],totaux:{}}; }
+  }
+  function estActif(cle){ var a=etat(); return a.actifs[cle]!==false; }
+  function journaliser(cle,nom,n,det){
+    var a=etat();
+    a.totaux[cle]=(+a.totaux[cle]||0)+n;
+    a.passages.unshift({cle:cle,nom:nom,ts:Date.now(),n:n,det:(det||[]).slice(0,8)});
+    if(a.passages.length>40) a.passages.length=40;
+  }
+  function dernierPassage(cle){ var a=etat(); for(var i=0;i<a.passages.length;i++){ if(a.passages[i].cle===cle) return a.passages[i]; } return null; }
+
+  /* ═══════════ AUTOMATISME 1 — LETTRAGE AUTOMATIQUE DES COMPTES DE TIERS ═══════════
+     Règle : on ne lettre que des ensembles STRICTEMENT équilibrés (Σ débit = Σ crédit).
+       (a) paire exacte  : une facture ↔ un règlement du même montant (le plus proche en date) ;
+       (b) lot           : un règlement qui solde exactement plusieurs factures consécutives.
+     Aucune autre combinaison n'est tentée — un rapprochement ambigu reste à la main. */
+  function ligneReelle(o){
+    try{ var ec=(db.ecritures||[]).filter(function(x){return x.id===o.ecritureId;})[0];
+      return ec?(ec.lignes||[])[o.idx]:null; }catch(e){ return null; }
+  }
+  function allocateur(deja){
+    var used={}; (deja||[]).forEach(function(L){ if(L) used[L]=1; });
+    return function(){
+      var i,j,x;
+      for(i=0;i<26;i++){ x=String.fromCharCode(65+i); if(!used[x]){ used[x]=1; return x; } }
+      for(i=0;i<26;i++)for(j=0;j<26;j++){ x=String.fromCharCode(65+i)+String.fromCharCode(65+j); if(!used[x]){ used[x]=1; return x; } }
+      return '?';
+    };
+  }
+  function parDate(a,b){ return a.date<b.date?-1:(a.date>b.date?1:0); }
+
+  function autoLettrage(simulation){
+    var res={n:0,det:[]};
+    var T=[]; try{ T=(db.tiers||[]).filter(function(t){ return t.type==='fournisseur'||t.type==='client'; }); }catch(e){ return res; }
+    if(typeof auxLignes!=='function') return res;
+    T.forEach(function(t){
+      var L=[]; try{ L=auxLignes(t)||[]; }catch(e){ return; }
+      var libres=L.filter(function(l){ return !l.lettre && ((+l.debit||0)>0.004 || (+l.credit||0)>0.004); });
+      if(libres.length<2) return;
+      var next=allocateur(L.map(function(l){ return l.lettre; }));
+      var pris={};
+      var D=libres.filter(function(l){ return (+l.debit||0)>0.004; }).sort(parDate);
+      var C=libres.filter(function(l){ return (+l.credit||0)>0.004; }).sort(parDate);
+      var lots=[];
+      function poser(lot){
+        var d=0,c=0; lot.forEach(function(l){ d+=(+l.debit||0); c+=(+l.credit||0); });
+        if(Math.abs(R2(d-c))>=0.005) return false;
+        lot.forEach(function(l){ pris[l.key]=1; });
+        lots.push({lot:lot,montant:R2(d)});
+        return true;
+      }
+      /* (a) paires exactes — appariement au plus proche en date */
+      D.forEach(function(d){
+        if(pris[d.key]) return;
+        var md=(+d.debit||0), best=null;
+        for(var i=0;i<C.length;i++){
+          var c=C[i]; if(pris[c.key]) continue;
+          if(Math.abs(md-(+c.credit||0))>=0.005) continue;
+          if(!best) best=c; else if(Math.abs(new Date(c.date)-new Date(d.date))<Math.abs(new Date(best.date)-new Date(d.date))) best=c;
+        }
+        if(best) poser([d,best]);
+      });
+      /* (b) un règlement qui solde exactement plusieurs pièces (dans les deux sens) */
+      function lotSolde(uns,multi,champUn,champMulti){
+        uns.forEach(function(u){
+          if(pris[u.key]) return;
+          var cible=(+u[champUn]||0), acc=0, lot=[];
+          for(var i=0;i<multi.length;i++){
+            var m=multi[i]; if(pris[m.key]) continue;
+            var v=(+m[champMulti]||0);
+            if(acc+v-cible>0.005) continue;
+            acc+=v; lot.push(m);
+            if(Math.abs(acc-cible)<0.005){ poser(lot.concat([u])); return; }
+          }
+        });
+      }
+      lotSolde(C,D,'credit','debit');   /* un encaissement pour plusieurs factures client */
+      lotSolde(D,C,'debit','credit');   /* un paiement pour plusieurs factures fournisseur */
+
+      lots.forEach(function(g){
+        var L2=next();
+        if(!simulation){ g.lot.forEach(function(o){ var l=ligneReelle(o); if(l) l.lettre=L2; }); }
+        res.n++;
+        res.det.push((t.nom||t.raison||'Tiers')+' — lettre '+L2+' · '+g.lot.length+' ligne(s) · '+E(g.montant));
+      });
+    });
+    if(!simulation && res.n) SAVE();
+    return res;
+  }
+
+  /* ═══════════ AUTOMATISME 2 — GÉNÉRATION DES ÉCHÉANCES RÉCURRENTES ÉCHUES ═══════════
+     Reprend la logique d'échéancier du module Écritures récurrentes (exercice, périodicité,
+     bornes début/fin) et ne génère QUE les échéances dont la date est atteinte. L'écriture
+     est posée par window.rcGenerer(per, true) — anti-doublon recId + recPer, garde d'équilibre. */
+  function periodes(m){
+    if(!m) return [];
+    var y=anneeExo(), out=[], dep=String(m.debut||'')||null, fin=String(m.fin||'')||null;
+    var moisDep=dep?(+dep.split('-')[1]||1):1;
+    for(var i=1;i<=12;i++){
+      var p=y+'-'+('0'+i).slice(-2);
+      if(dep && p<dep) continue;
+      if(fin && p>fin) continue;
+      if(m.periodicite==='trimestrielle'){ if(((i-moisDep)%3+3)%3!==0) continue; }
+      else if(m.periodicite==='annuelle'){ if(i!==moisDep) continue; }
+      out.push(p);
+    }
+    return out;
+  }
+  function dateDe(m,per){ var j=Math.min(Math.max(+m.jour||1,1),dernierJour(per)); return per+'-'+('0'+j).slice(-2); }
+  function dejaGeneree(id,per){
+    try{ return !!(db.ecritures||[]).filter(function(e){ return e.recId===id && e.recPer===per; })[0]; }catch(e){ return false; }
+  }
+  function modeleEquilibre(m){
+    var d=0,c=0,n=0;
+    ((m&&m.lignes)||[]).forEach(function(l){ var vd=(+l.debit||0),vc=(+l.credit||0);
+      if(String(l.compte||'').trim() && (vd>0||vc>0)) n++; d+=vd; c+=vc; });
+    return (n>=2 && d>0 && Math.abs(d-c)<0.005);
+  }
+
+  function autoRecurrentes(simulation){
+    var res={n:0,det:[]};
+    var L=[]; try{ L=(db.parametres&&db.parametres.recurrentes)||[]; }catch(e){ return res; }
+    if(!L.length) return res;
+    var today=aujourd(), prev=window.__rcSel, ok=(typeof window.rcGenerer==='function');
+    L.forEach(function(m){
+      if(!m || m.actif===false) return;
+      if(!modeleEquilibre(m)) return;
+      periodes(m).forEach(function(per){
+        if(dejaGeneree(m.id,per)) return;
+        if(dateDe(m,per)>today) return;
+        if(simulation){ res.n++; res.det.push((m.libelle||'Modèle')+' — '+moisLbl(per)); return; }
+        if(!ok) return;
+        window.__rcSel=m.id;
+        var fait=false; try{ fait=window.rcGenerer(per,true); }catch(e){ fait=false; }
+        if(fait){ res.n++; res.det.push((m.libelle||'Modèle')+' — '+moisLbl(per)+' · '+frd(dateDe(m,per))); }
+      });
+    });
+    window.__rcSel=prev;
+    return res;
+  }
+
+  /* ---------- registre des automatismes ---------- */
+  var AUTOS=[
+    { cle:'lettrage', nom:'Lettrage des comptes de tiers',
+      desc:'Rapproche facture et règlement sur les comptes fournisseurs et clients : paire de même montant, ou règlement qui solde exactement plusieurs pièces. Ne lettre que des ensembles équilibrés.',
+      unite:'lettrage', run:autoLettrage },
+    { cle:'recurrentes', nom:'Échéances récurrentes échues',
+      desc:'Poste les écritures des modèles récurrents dont la date d’échéance est atteinte (loyer, abonnement, redevance). Une échéance déjà générée n’est jamais reprise.',
+      unite:'écriture', run:autoRecurrentes }
+  ];
+  function auto(cle){ for(var i=0;i<AUTOS.length;i++){ if(AUTOS[i].cle===cle) return AUTOS[i]; } return null; }
+
+  /* ---------- actions ---------- */
+  window.auBasculer=function(cle){
+    var a=etat(); a.actifs[cle]=(a.actifs[cle]===false); SAVE(); RENDER();
+    TOAST(a.actifs[cle]===false?'Automatisme suspendu':'Automatisme activé');
+  };
+  window.auLancer=function(cle){
+    var A=auto(cle); if(!A) return;
+    var r={n:0,det:[]}; try{ r=A.run(false)||r; }catch(e){ r={n:0,det:[]}; }
+    journaliser(A.cle,A.nom,r.n,r.det); SAVE(); RENDER();
+    TOAST(r.n?(r.n+' '+A.unite+(r.n>1?'s':'')+' — '+A.nom):('Rien à traiter — '+A.nom));
+  };
+  window.auLancerTout=function(){
+    var total=0, lignes=[];
+    AUTOS.forEach(function(A){
+      if(!estActif(A.cle)) return;
+      var r={n:0,det:[]}; try{ r=A.run(false)||r; }catch(e){ r={n:0,det:[]}; }
+      journaliser(A.cle,A.nom,r.n,r.det);
+      total+=r.n; if(r.n) lignes.push(A.nom+' : '+r.n);
+    });
+    SAVE(); RENDER();
+    TOAST(total?('Passage terminé — '+total+' action(s) · '+lignes.join(' · ')):'Passage terminé — rien à traiter');
+  };
+  window.auViderJournal=function(){
+    function go(){ var a=etat(); a.passages=[]; SAVE(); RENDER(); TOAST('Journal des passages vidé'); }
+    var msg='Vider le journal des passages ? Les écritures et les lettrages restent en place.';
+    if(typeof yadaConfirm==='function') yadaConfirm(msg,go); else go();
+  };
+  window.auFermer=function(){
+    try{ if(typeof window.yadaFermerPage==='function'){ window.yadaFermerPage(); return; } }catch(e){}
+    try{ current='compta'; RENDER(); }catch(e){}
+  };
+
+  /* ---------- rendu ---------- */
+  function kpi(lbl,val){ return '<div class="au-k"><div class="au-kv">'+e2(val)+'</div><div class="au-kl">'+e2(lbl)+'</div></div>'; }
+  function carte(A){
+    var actif=estActif(A.cle), d=dernierPassage(A.cle), a=etat();
+    var att=0; try{ att=(A.run(true)||{n:0}).n; }catch(e){ att=0; }
+    var pastille = actif
+      ? (att?'<span class="au-tag au-due">'+att+' EN ATTENTE</span>':'<span class="au-tag au-ok">À JOUR</span>')
+      : '<span class="au-tag au-off">SUSPENDU</span>';
+    return '<div class="au-card">'
+      +'<div class="au-cardh"><span class="au-ttl">'+e2(A.nom)+'</span>'+pastille+'</div>'
+      +'<div class="au-pad">'
+      +'<div class="au-desc">'+e2(A.desc)+'</div>'
+      +'<table class="au-t"><thead><tr><th>Indicateur</th><th class="r">Valeur</th></tr></thead><tbody>'
+      +'<tr><td>Dernier passage</td><td class="r">'+e2(d?horodate(d.ts):'—')+'</td></tr>'
+      +'<tr><td>Actions au dernier passage</td><td class="r">'+(d?d.n:0)+'</td></tr>'
+      +'<tr><td>Actions depuis l’origine</td><td class="r">'+(+a.totaux[A.cle]||0)+'</td></tr>'
+      +'<tr><td>En attente de traitement</td><td class="r">'+att+'</td></tr>'
+      +'</tbody></table>'
+      +'<div class="au-acts">'
+      +'<button class="au-btn au-pri" onclick="auLancer(\''+e2(A.cle)+'\')">Exécuter maintenant</button>'
+      +'<button class="au-btn" onclick="auBasculer(\''+e2(A.cle)+'\')">'+(actif?'Suspendre':'Activer')+'</button>'
+      +'</div></div></div>';
+  }
+  function journal(){
+    var a=etat(), P=a.passages||[];
+    var rows=P.map(function(p){
+      var det=(p.det||[]).map(function(x){ return e2(x); }).join(' · ');
+      return '<tr><td>'+e2(horodate(p.ts))+'</td><td>'+e2(p.nom||p.cle)+'</td><td class="r">'+(+p.n||0)+'</td><td>'+(det||'—')+'</td></tr>';
+    }).join('');
+    return '<div class="au-card">'
+      +'<div class="au-cardh"><span class="au-ttl">Journal des passages</span>'
+      +'<button class="au-btn" onclick="auViderJournal()">Vider le journal</button></div>'
+      +'<div class="au-pad">'
+      +(P.length
+        ? '<table class="au-t"><thead><tr><th>Horodatage</th><th>Automatisme</th><th class="r">Actions</th><th>Détail</th></tr></thead><tbody>'+rows+'</tbody></table>'
+        : '<div class="au-note">Aucun passage enregistré. Lancez un automatisme pour ouvrir le journal.</div>')
+      +'</div></div>';
+  }
+
+  window.pageAutomatismes=function(){
+    var a=etat();
+    var nActifs=AUTOS.filter(function(A){ return estActif(A.cle); }).length;
+    var attente=0; AUTOS.forEach(function(A){ if(!estActif(A.cle)) return; try{ attente+=(A.run(true)||{n:0}).n; }catch(e){} });
+    var totalGlobal=0; Object.keys(a.totaux||{}).forEach(function(k){ totalGlobal+=(+a.totaux[k]||0); });
+    var dernier=(a.passages&&a.passages[0])?horodate(a.passages[0].ts):'—';
+    var soc=''; try{ soc=(db.societe&&(db.societe.raison||db.societe.nom))||''; }catch(e){}
+
+    return '<div class="mod-wrap"><div id="yada-au">'
+      +'<div class="au-mast">'
+        +'<div class="au-mast-l"><h1 class="au-title">Automatismes</h1>'
+        +'<div class="au-sub">'+e2(soc)+(soc?' · ':'')+'exercice '+e2(anneeExo())+'</div></div>'
+        +'<button class="au-close" onclick="auFermer()" title="Fermer">Fermer</button>'
+      +'</div>'
+      +'<div class="au-kpis">'
+        +kpi('Automatismes actifs',nActifs+' / '+AUTOS.length)
+        +kpi('Actions en attente',String(attente))
+        +kpi('Actions depuis l’origine',String(totalGlobal))
+        +kpi('Dernier passage',dernier)
+      +'</div>'
+      +'<div class="au-bar">'
+        +'<button class="au-btn au-pri" onclick="auLancerTout()">Lancer tous les automatismes actifs</button>'
+        +'<span class="au-note au-inline">Chaque automatisme s’arrête net dès qu’une situation est ambiguë : rien n’est imputé au jugé.</span>'
+      +'</div>'
+      +'<div class="au-grid">'+AUTOS.map(carte).join('')+'</div>'
+      +journal()
+      +'</div></div>';
+  };
+
+  /* ---------- style « Registre » N&B, scopé #yada-au ---------- */
+  var BG='#000', PANEL='#0b0b0c', HEAD='#121214', LINE='#242427', LINE2='#35353a', GREY='#8b8b90', MUTED='#a8a9ad', INK='#f5f5f6';
+  var P='html body:not(#_yz) #yada-au ';
+  var css=''
+  + 'html body:not(#_yz) #yada-au{background:'+BG+' !important;color:'+INK+' !important;padding:0 0 26px;min-height:100%}'
+  + P+'*{font-family:Georgia,"Times New Roman",serif !important}'
+  + P+'.au-sub,'+P+'.au-kl,'+P+'.au-desc,'+P+'.au-note,'+P+'.au-tag,'+P+'.au-btn,'+P+'.au-close,'+P+'.au-t th,'+P+'.au-t td{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace !important}'
+  + P+'.au-mast{position:relative;display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:22px 16px 14px;border-bottom:1px solid '+LINE2+'}'
+  + P+'.au-title{margin:0;font-size:26px;letter-spacing:.01em;color:'+INK+'}'
+  + P+'.au-title::before{content:"YADA · AUTOMATISMES";display:block;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:10px;letter-spacing:.18em;color:'+GREY+';margin-bottom:7px}'
+  + P+'.au-sub{font-size:11px;color:'+GREY+';margin-top:6px;letter-spacing:.04em}'
+  + P+'.au-close{flex:0 0 auto;min-width:64px;height:30px;padding:0 12px;background:'+BG+';color:'+INK+';border:1px solid '+INK+';border-radius:0;font-size:11px;letter-spacing:.06em;cursor:pointer}'
+  + P+'.au-close:hover{background:'+INK+';color:'+BG+'}'
+  + P+'.au-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:16px 16px 0}'
+  + P+'.au-k{background:'+PANEL+';border:1px solid '+LINE+';padding:12px 14px}'
+  + P+'.au-kv{font-size:19px;color:'+INK+';font-variant-numeric:tabular-nums}'
+  + P+'.au-kl{font-size:10px;letter-spacing:.12em;color:'+GREY+';margin-top:5px}'
+  + P+'.au-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:16px 16px 0}'
+  + P+'.au-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding:16px 16px 0;align-items:stretch}'
+  + P+'.au-card{background:'+PANEL+';border:1px solid '+LINE+';display:flex;flex-direction:column;margin:16px 16px 0}'
+  + P+'.au-grid .au-card{margin:0}'
+  + P+'.au-cardh{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;background:'+HEAD+';border-bottom:1px solid '+LINE+'}'
+  + P+'.au-ttl{font-size:14px;color:'+INK+'}'
+  + P+'.au-pad{padding:12px 14px 14px;display:flex;flex-direction:column;gap:11px;flex:1}'
+  + P+'.au-desc{font-size:11px;line-height:1.65;color:'+MUTED+'}'
+  + P+'.au-note{font-size:11px;line-height:1.6;color:'+GREY+'}'
+  + P+'.au-inline{flex:1;min-width:220px}'
+  + P+'.au-t{width:100%;border-collapse:collapse}'
+  + P+'.au-t th{background:'+HEAD+';color:'+GREY+';font-size:10px;letter-spacing:.1em;font-weight:400;padding:7px 9px;border-bottom:1px solid '+LINE+';text-align:left}'
+  + P+'.au-t td{font-size:12px;color:'+INK+';padding:7px 9px;border-bottom:1px solid '+LINE+'}'
+  + P+'.au-t th.r,'+P+'.au-t td.r{text-align:right;font-variant-numeric:tabular-nums}'
+  + P+'.au-t tr:last-child td{border-bottom:0}'
+  + P+'.au-acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto;padding-top:4px}'
+  + P+'.au-btn{background:'+BG+';color:'+INK+';border:1px solid '+LINE2+';border-radius:0;padding:6px 11px;font-size:11px;letter-spacing:.05em;cursor:pointer}'
+  + P+'.au-btn:hover{border-color:'+INK+'}'
+  + P+'.au-pri{background:'+INK+';color:'+BG+';border-color:'+INK+'}'
+  + P+'.au-pri:hover{background:'+BG+';color:'+INK+'}'
+  + P+'.au-tag{font-size:9px;letter-spacing:.12em;padding:3px 8px;border:1px solid '+LINE2+';color:'+GREY+';white-space:nowrap}'
+  + P+'.au-due{background:'+INK+';color:'+BG+';border-color:'+INK+'}'
+  + P+'.au-ok{color:'+MUTED+';border-color:'+LINE2+'}'
+  + P+'.au-off{color:'+GREY+';border-color:'+LINE+'}'
+  + '@media(max-width:980px){'+P+'.au-kpis{grid-template-columns:repeat(2,1fr)}'+P+'.au-grid{grid-template-columns:1fr}}'
+  ;
+  function ensure(){
+    try{
+      if(document.getElementById('automatismes-mod')) return;
+      var st=document.createElement('style'); st.id='automatismes-mod'; st.textContent=css;
+      document.head.appendChild(st);
+    }catch(e){}
+  }
+  ensure();
+  try{
+    if(typeof window.render==='function'){
+      var _r=window.render;
+      window.render=function(){ var x=_r.apply(this,arguments); try{ ensure(); }catch(e){} return x; };
+    }
+  }catch(e){}
+  setInterval(ensure,1500);
 })();
 </script>
 </body>

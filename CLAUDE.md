@@ -36,7 +36,39 @@
 
 ---
 
-## 🟢 Dernière mise à jour — Dernières couleurs de l'ancienne version retirées + filet de LISIBILITÉ + légende regroupée — v632
+## 🟢 Dernière mise à jour — ÉTAPE 1 de l'automatisation : module AUTOMATISMES (lettrage automatique + échéances récurrentes échues) — v633
+**Quoi :** demande — *« Développement de tout le système étape par étape pour automatiser et rapidement »*. **Étape 1 : le socle.** Un nouveau module **« Automatismes »** rassemble en une page les traitements répétitifs du dossier : chaque automatisme s'y déclare avec **ce qui l'attend** (compteur d'actions en attente, calculé en direct), un **interrupteur** (actif / suspendu), son **dernier passage**, son **compteur d'actions depuis l'origine**, et un bouton **« Exécuter maintenant »**. Un bouton unique **« Lancer tous les automatismes actifs »** fait passer tout le dossier d'un clic. Un **journal des passages** (40 derniers) garde l'horodatage, le nombre d'actions et le détail.
+
+**Deux automatismes livrés à cette étape :**
+
+| Automatisme | Ce qu'il fait | Ce qu'il refuse de faire |
+| --- | --- | --- |
+| **Lettrage des comptes de tiers** | Rapproche facture ↔ règlement sur les comptes fournisseurs et clients : **(a) paire exacte** (même montant, appariée au **plus proche en date**), **(b) lot** (un règlement qui solde **exactement** plusieurs pièces). Lettres A→Z puis AA… par compte. | **Tout ensemble non strictement équilibré.** Aucune combinaison au jugé, aucun arrondi de complaisance : un rapprochement ambigu reste à la main. |
+| **Échéances récurrentes échues** | Poste les écritures des **modèles récurrents** dont la **date d'échéance est atteinte** (loyer, abonnement, redevance), sur tout l'exercice, tous modèles confondus. | Les échéances **futures** (aucune anticipation), les modèles **suspendus**, les modèles **déséquilibrés**, et toute échéance **déjà générée**. |
+
+**Pourquoi ces deux-là en premier :** ce sont les deux seuls traitements du logiciel où la décision comptable est **entièrement déterminée** par les données — un lettrage équilibré est vrai ou faux, une échéance due est due ou non. Ils n'exigent aucun arbitrage, donc ils peuvent tourner seuls sans surveillance. Les traitements qui demandent un jugement (imputation d'un libellé bancaire, pointage d'un relevé) viennent aux étapes suivantes, avec un mécanisme d'apprentissage et une validation humaine.
+
+**Comment — nouvel addon `yada-addon-automatismes` (100% ADDITIF, injecté en DERNIER) + 1 édition chirurgicale :** `window.YADA_OK.push('automatismes')` + `window.YADA_LBL.automatismes='Automatismes'` → le module apparaît **automatiquement dans le menu « Modules »** ; clé `automatismes:(typeof pageAutomatismes==='function'?pageAutomatismes:repli)` ajoutée au **dispatch de `render()`** (même patron gardé que `controles`/`recurrentes`). État persistant dans **`db.parametres.automatismes`** (`{actifs,passages,totaux}`). **Points techniques :** (1) le lettrage lit les lignes via **`auxLignes(t)`** (qui rattache aussi les lignes portées sur le **collectif** 401/411 via la facture) puis écrit **uniquement le champ `lettre`** de la ligne réelle — **aucun montant n'est touché**, donc aucune écriture ne peut se déséquilibrer ; (2) les lettres sont allouées **une fois par compte** par un allocateur local, au lieu d'appeler `lzProchaineLettre` (qui rebalaye toutes les écritures) une fois par lot — et `lzLettrer` n'est **pas** réutilisé car il appelle `save()`+`toast()` à chaque lot ; on enregistre **une seule fois** en fin de passage ; (3) la génération récurrente passe par **`window.rcGenerer(per, true)`** (drapeau silencieux du module Écritures récurrentes) après avoir pointé `window.__rcSel` sur le modèle, puis **restaure** la sélection — l'anti-doublon `recId`+`recPer` et la garde d'équilibre du module s'appliquent donc tels quels ; (4) l'échéancier est **recalculé** dans l'addon (la fonction `echeances` vit dans une IIFE, elle n'est pas globale) à l'identique : exercice, bornes début/fin, périodicité mensuelle / trimestrielle / annuelle. Rendu éditorial **« Registre » N&B** scopé `#yada-au`, **1 seule sortie « Fermer »** (invariant v626), **0 gras** (v627), **0 en-tête vide** et montants à droite (v630/v631). `sw.js` yada-v228, badge v633, `version.json` 633.
+
+**Validé :** `node --check` (**304 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014) + balises `</head>`/`</body>`/`</html>` inchangées (3/5/3) + **filet d'équilibre** (`YADA_CHROME=… node tests/equilibre-ecritures.mjs` : vente 1200=1200, achat 600=600 ✅) + **rendu Playwright sur dossier d'essai** :
+
+| Mesure | Résultat |
+| --- | --- |
+| Lettrage — paire exacte (facture 1 200 ↔ encaissement 1 200) | lettre **A**, 2 lignes |
+| Lettrage — lot (encaissement 600 soldant 360 + 240) | lettre **B**, 3 lignes |
+| Facture fournisseur **non réglée** | **non lettrée** (laissée à la main) |
+| Échéances récurrentes générées (modèle jan→mars, jour 5) | **3** (janvier · février · mars) |
+| Écritures **déséquilibrées** après passage | **0** |
+| **Second passage** (idempotence) | **0 action**, 9 écritures inchangées |
+| Suspendre un automatisme | pastille **SUSPENDU**, exclu du passage global |
+
++ **routage 25/25** (24 modules + Consultation, `body[data-page]` = module demandé à chaque étape) + **module Automatismes** : 4 KPI, **exactly 1 sortie « Fermer »**, **0 en-tête vide**, **0 bouton vide**, **0 gras**, **0 débordement** + **0 pageerror**, **0 console.error**. Badge → **v633**.
+
+**Les étapes suivantes (annoncées, non engagées) :** **2.** moteur d'**imputation qui apprend** le compte retenu par libellé et par tiers, et pré-impute l'import bancaire, le FEC et la saisie ; **3.** **rapprochement bancaire automatique** (pointage relevé ↔ écritures par montant et fenêtre de dates) ; **4.** **contrôles de cohérence en continu** (le module Contrôles tourne après chaque passage et remonte ses anomalies dans le journal) ; **5.** **traitements périodiques** (OD de TVA, dotations d'amortissement en lot, relances clients, clôture). Chaque étape s'ajoutera comme une ligne de plus dans ce même module, sans rien déplacer.
+
+---
+
+## 🟢 MAJ précédente — Dernières couleurs de l'ancienne version retirées + filet de LISIBILITÉ + légende regroupée — v632
 **Quoi :** poursuite de la demande — *« Tout doit être aligné et symétrique »*. Balayage des 23 modules sur un dossier réellement peuplé (**5 846 éléments · 70 074 propriétés**), qui relève **quatre défauts visibles** que les v630/v631 ne mesuraient pas :
 
 | Défaut | Avant | Après |
