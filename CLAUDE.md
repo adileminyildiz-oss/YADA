@@ -36,7 +36,57 @@
 
 ---
 
-## 🟢 Dernière mise à jour — TABLEAU DE FLUX DE TRÉSORERIE : où est passé l'argent — v650
+## 🟢 Dernière mise à jour — PARCOURS COMPTABLE GUIDÉ : les 22 étapes, dans l'ordre, verrouillées — v651
+**Quoi :** cahier des charges reçu — un **moteur comptable** qui suit un **ordre obligatoire** de 22 étapes, avec des contrôles permanents et une **règle absolue : aucune écriture validée sans contrôle**. Les modules existaient (banque, rapprochement, achats, ventes, TVA, paie, immobilisations, révision, liasse, clôture) mais **rien ne les ordonnait ni ne les verrouillait** : on pouvait valider une banque en écart, lettrer avant d'avoir comptabilisé, clôturer sans réviser. Nouveau module **« Parcours comptable guidé »** (rubrique **Traitements**, en tête) : les **22 étapes**, chacune **MESURÉE sur le dossier** (jamais déclarée), **verrouillée par ses prérequis**, avec **une seule action à faire maintenant** et le bouton qui ouvre le module qui fait le travail.
+
+| # | Étape | Ce qui est mesuré |
+| --- | --- | --- |
+| 1 | Paramétrage dossier | dénomination · SIREN · exercice · SIRET · APE · TVA intracom. · régime |
+| 2 | Constitution société | crédit du `101` · reste à verser au `4562` · *sans objet si l'exercice porte des à-nouveaux* |
+| 3-4 | Import banque · écritures | lignes de relevé mémorisées · écritures **BQ** · lignes sans écriture · solde du `471` |
+| **5-6** | **Rapprochement · VALIDATION** | **écart par compte et par mois** — la validation reste **fermée** tant qu'un écart subsiste |
+| 7-10 | Fournisseurs · Clients · Achats · Ventes | dépôts reçus et en attente · écritures **ACH**/**VTE** · TVA déductible et collectée |
+| 11-12 | Lettrage · Échéances | lignes `401`/`411` **non lettrées** · balance âgée **0-30 / 31-60 / 61-90 / 90+** |
+| 13-15 | TVA · Paie · OD | CA3 déposées et OD passées par mois clos · bulletins, OD de paie et de charges, soldes `421`/`431` · compte d'attente `471` |
+| 16-18 | Immobilisations · Amortissements · Provisions | fiches vs comptes `2xx` mouvementés · **dotation attendue (plans) vs `6811` passée** · `15x` et dotations `6815` |
+| 19-22 | Révision · Déclarations · Clôture · Liasse | cycles visés (v646) · charge d'impôt `695`/`444` · OD de résultat et à-nouveaux · bilan et résultat |
+
+**Le verrou, c'est l'étape 6.** Le cahier des charges est explicite : *valider les écritures bancaires **après** rapprochement **sans écart***. Le parcours le tient pour de vrai — `pcValiderBanque()` **recalcule l'écart au moment du clic** et **refuse** s'il n'est pas nul, même si l'on force l'appel. Et l'**ordre est un verrou, pas une suggestion** : une étape dont un prérequis n'est pas franchi affiche « en attente de l'étape N », **perd ses boutons** et ne peut pas être ouverte. Le **lettrage (11) attend la banque validée (6) ET les achats (9) ET les ventes (10)** — on ne rapproche pas des factures contre une banque qui n'est pas sûre.
+
+**Deux contrôles qui criaient au loup, corrigés avant la livraison :**
+1. **« Bilan équilibré » comparait `ta` à `tp`** — or `bilanNorm` (v643) **ne range que les comptes de bilan** : le **résultat de l'exercice** et les **résultats antérieurs non affectés** sont ajoutés au passif **à l'affichage**. Sur un dossier pourtant juste (actif 10 700 = passif 10 200 + résultat 500), le contrôle annonçait un déséquilibre. Il refait désormais le total du passif **exactement comme le bilan imprimé**, et affiche la décomposition.
+2. **« FEC conforme » exigeait neuf chiffres** — un **compte auxiliaire** est un préfixe collectif suivi de lettres (`401FOU0000`, `401GASO00`) : le contrôle rejetait des comptes parfaitement valides. Motif corrigé en `[1-8]` + huit caractères alphanumériques.
+
+**Constaté et corrigé — deux étapes pointaient dans le vide.** Les étapes **Import clients** et **Comptabilisation ventes** renvoyaient vers le module `facturation`, **absent de `window.YADA_OK` depuis la table rase v535** : le routeur le renvoie silencieusement sur la Consultation. Elles pointent désormais sur la **Consultation** (journal VTE, clic droit pour éditer — v253), et **`pcAller` ne redirige plus en silence** : un module non enregistré est annoncé.
+
+**Comment — nouvel addon `yada-addon-parcours` (100% ADDITIF) + 2 éditions chirurgicales :** clé `parcours:(typeof pageParcours==='function'?pageParcours:repli)` au **dispatch de `render()`** et `'parcours'` ajouté **en tête** de la rubrique **Traitements** de la barre v641. **Points techniques :** (1) **lecture seule stricte** sur la comptabilité — vérifié par égalité JSON des écritures avant/après ; le seul écrit est `db.parametres.parcours.valide` (la validation de banque, horodatée) ; (2) l'écart de rapprochement est lu par **`rapStats(releveDe(compte,mois))`** sur **chaque couple compte 512 × mois réellement mouvementé** — un mois sans relevé créé compte comme non rapproché ; (3) la dotation attendue vient de **`immoRowAnnee`** (les plans, v645), confrontée au `6811` réellement passé ; (4) le **résultat est recalculé indépendamment** (agrégation propre des classes 6 et 7, hors à-nouveaux et OD de résultat) et confronté à `etnCR()` — deux chemins de calcul qui doivent s'accorder ; (5) trois onglets : **les 22 étapes**, **contrôles finaux** (21 points du cahier des charges), **règles appliquées** (règle absolue, 11 contrôles permanents, dictionnaire comptable). Rendu **Registre N&B** scopé `#yada-pc`. La sortie s'appelle **`pcFermer()`** pour que le filet v614 la reconnaisse — **invariant v626 : exactement 1 sortie « Fermer »**. `sw.js` yada-v246, badge v651, `version.json` 651.
+
+**Validé :** `node --check` (**320 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014) + balises (3/5/3) + **filet d'équilibre** ✅ + sonde Playwright sur un dossier d'essai monté pour que **chaque étape ait un état voulu**, joué **deux fois** — rapprochement en écart, puis sans écart :
+
+| Mesure | Rapprochement **en écart** | Rapprochement **sans écart** |
+| --- | --- | --- |
+| Étapes rendues · ordre | **22** · 1→22 conforme | **22** · conforme |
+| 5 — Rapprochement | à faire · 0/1 mois · **écart 1 600,00 €** | **terminé** · 1/1 mois · écart 0 |
+| 6 — Validation banque | **en attente de l'étape 5** · « validation refusée » · **0 bouton** | à faire · « la validation est ouverte » · **2 boutons** |
+| **Validation forcée** (`pcValiderBanque()` appelé malgré l'écart) | **refusée** — rien n'est écrit | acceptée · `{date, mois:1, ecart:0}` |
+| 11 — Lettrage | **bloqué** (en attente de l'étape 6) | **débloqué** après validation |
+| Prochaine action | « Étape 5 — Rapprochement bancaire » | « Étape 11 — Lettrage tiers — 2 400,00 € à rapprocher » |
+| Répartition des étapes | — | 11 terminées · 4 à faire · **3 bloquées** · 4 sans objet |
+| Contrôles finaux | — | **18 / 21 tenus** (les 3 restants sont réels : 411 non lettrés, OD de TVA non passée, CA3 non déposée) |
+| Bilan équilibré (après correctif) | — | **tenu** — actif 10 700 = passif 10 200 + résultat 500 + report 0 |
+| Résultat cohérent (deux calculs) | — | **tenu** — compte de résultat 500,00 € · recalcul 500,00 € |
+| **Lecture seule stricte** | écritures **identiques** (JSON) · **0 écriture créée** |
+| Routage des modules cités | **11 testés · tous OK** (après correctif `facturation`) |
+| Sorties « Fermer » · boutons vides · gras · italique · souligné · débordement | **1** · **0** · **0** · **0** · **0** · **0** |
+| Écritures déséquilibrées · pageerror · console.error | **0** · **0** · **0** |
+
+**Ce que le parcours a révélé sur le dossier de démarrage** (19 écritures) : **8 étapes franchies sur 21**, **8 en attente d'une étape antérieure**, **13 contrôles finaux tenus sur 21** — et la première chose à faire est le **paramétrage du dossier**. C'est exactement le rôle demandé : dire, sans complaisance, ce qui importe maintenant.
+
+**La suite du cahier des charges, par étape sans module aujourd'hui :** **v652** constitution de société (`512`/`101`, `4562`/`101` puis versement, frais `201`+`44562`/`401`) · **v653** factures non rapprochées — conditions et **modes de paiement** (espèces, carte bancaire, virement, prélèvement, chèque), caisse `530`, balance âgée et liste de relance · **v654** provisions (`6815`/`151`) et **provision d'impôt** (`695`/`444`, puis `444`/`512`) tirée du résultat fiscal de la liasse v647.
+
+---
+
+## 🟢 MAJ précédente — TABLEAU DE FLUX DE TRÉSORERIE : où est passé l'argent — v650
 **Quoi :** le **bilan dit le PATRIMOINE**, le **compte de résultat la PERFORMANCE**, l'**annexe les RÈGLES** (v649). **Aucun des trois ne dit OÙ EST PASSÉ L'ARGENT** — et c'est la question que pose tout dirigeant qui lit un bénéfice sur un compte à sec. Un résultat **n'est pas** de la trésorerie : l'amortissement est une charge qu'on ne décaisse pas, le stock et les créances immobilisent un argent que le résultat ne voit pas, et **rembourser un emprunt vide la banque sans toucher au résultat**. Nouveau module **« Tableau de flux de trésorerie »** (rubrique **États**), **méthode indirecte**, avec comparatif **N-1** :
 
 | Flux | Contenu |

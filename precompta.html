@@ -4212,6 +4212,7 @@ function render(){
   axes:(typeof pageAxes==='function'?pageAxes:function(){return'<div class="mod-wrap"><div class="card"><h2>Analytique par affaire</h2></div></div>';}),
   annexe:(typeof pageAnnexe==='function'?pageAnnexe:function(){return'<div class="mod-wrap"><div class="card"><h2>Annexe des comptes annuels</h2></div></div>';}),
   flux:(typeof pageFlux==='function'?pageFlux:function(){return'<div class="mod-wrap"><div class="card"><h2>Tableau de flux de trésorerie</h2></div></div>';}),
+  parcours:(typeof pageParcours==='function'?pageParcours:function(){return'<div class="mod-wrap"><div class="card"><h2>Parcours comptable guidé</h2></div></div>';}),
   importbanque:(typeof pageImportBanque==='function'?pageImportBanque:function(){return'<div class="mod-wrap"><div class="card"><h2>Import bancaire</h2></div></div>';}),
   recurrentes:(typeof pageRecurrentes==='function'?pageRecurrentes:function(){return'<div class="mod-wrap"><div class="card"><h2>Écritures récurrentes</h2></div></div>';}),
   automatismes:(typeof pageAutomatismes==='function'?pageAutomatismes:function(){return'<div class="mod-wrap"><div class="card"><h2>Automatismes</h2></div></div>';}),
@@ -11097,7 +11098,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v650';
+    b.textContent='YADA · v651';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -37428,7 +37429,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     {id:'yb-saisie',  lbl:'Saisie',       prend:[],
      mods:['journal','achats','recurrentes','importbanque','chargespaie']},
     {id:'yb-trait',   lbl:'Traitements',  prend:[['sg-util','Utilitaires']],
-     mods:['automatismes','inventaire','rappro','banque','immos']},
+     mods:['parcours','automatismes','inventaire','rappro','banque','immos']},
     {id:'yb-decl',    lbl:'Déclarations', prend:[], mods:['tva','liasse']},
     {id:'yb-etats',   lbl:'États',        prend:[], mods:['editions','annexe','flux']},
     {id:'yb-revis',   lbl:'Révision',     prend:[], mods:['revision','controles']},
@@ -40789,6 +40790,688 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
      +'html body:not(#_yz) #yada-fx .fx-b.fx-pri{background:#f5f5f6;color:#0a0a0b;border-color:#f5f5f6}'
      +'@media(max-width:820px){html body:not(#_yz) #yada-fx .fx-kpis{grid-template-columns:repeat(2,1fr)}}';
   }catch(e){}
+})();
+</script>
+<script id="yada-addon-parcours">
+/* ===== YADA — PARCOURS COMPTABLE GUIDÉ (v651) — 100% ADDITIF =====
+   Les 22 étapes du moteur comptable, dans l'ordre obligatoire.
+   Chaque étape est MESURÉE sur le dossier (jamais déclarée), verrouillée par
+   ses prérequis, et rend la main au module qui fait réellement le travail.
+   Règle absolue reprise du cahier des charges : aucune validation sans contrôle. */
+(function(){
+  if(window.__yadaParcours) return; window.__yadaParcours=true;
+
+  function r(n){ return Math.round((+n||0)*100)/100; }
+  function eu(n){ try{ return eur(n); }catch(e){ return r(n).toFixed(2)+' €'; } }
+  function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function C9(x){ try{ return c9(String(x||'')); }catch(e){ return String(x||''); } }
+  function D0(){ try{ return (db.societe&&db.societe.exoDebut)||''; }catch(e){ return ''; } }
+  function D1(){ try{ return (db.societe&&db.societe.exoFin)||''; }catch(e){ return ''; } }
+  function AUJ(){ try{ return todayStr(); }catch(e){ return new Date().toISOString().slice(0,10); } }
+  function exo(){ try{ return exoYear(); }catch(e){ return String(D0()||'').slice(0,4); } }
+  function dansExo(d){ var a=D0(),b=D1(); d=String(d||''); return (!a||d>=a)&&(!b||d<=b); }
+  function ecrExo(){ return (db.ecritures||[]).filter(function(e){ return dansExo(e.date); }); }
+  function estAN(e){ var l=String(e.libelle||''); return l.indexOf('À-NOUVEAUX')>=0||l.indexOf('A-NOUVEAUX')>=0; }
+  function estRes(e){ var l=String(e.libelle||''); return l.indexOf('OD RÉSULTAT')>=0||l.indexOf('OD RESULTAT')>=0; }
+  function pref(){ var p=[].slice.call(arguments); return function(k){ for(var i=0;i<p.length;i++){ if(k.indexOf(p[i])===0) return true; } return false; }; }
+
+  /* mouvements d'une famille de comptes sur l'exercice */
+  function mvt(test, opt){
+    opt=opt||{}; var o={d:0,c:0,n:0};
+    ecrExo().forEach(function(e){
+      if(opt.sansAN&&estAN(e)) return;
+      if(opt.sansRes&&estRes(e)) return;
+      (e.lignes||[]).forEach(function(l){
+        var k=C9(l.compte); if(!k||!test(k)) return;
+        o.d=r(o.d+(+l.debit||0)); o.c=r(o.c+(+l.credit||0)); o.n++;
+      });
+    });
+    o.solde=r(o.d-o.c); return o;
+  }
+  function nbJrn(code){ return ecrExo().filter(function(e){ return String(e.journal||'')===code; }).length; }
+  function param(k, def){ db.parametres=db.parametres||{}; if(db.parametres[k]==null) db.parametres[k]=def; return db.parametres[k]; }
+  function etat(){ var p=param('parcours',{}); p.valide=p.valide||{}; return p; }
+
+  /* ---- lignes de tiers non lettrées (401 / 411) ---- */
+  function nonLettrees(px){
+    var out=[];
+    ecrExo().forEach(function(e){
+      if(estAN(e)) return;
+      (e.lignes||[]).forEach(function(l){
+        var k=C9(l.compte); if(!k||k.indexOf(px)!==0) return;
+        if(l.lettre) return;
+        var m=r((+l.debit||0)-(+l.credit||0)); if(!m) return;
+        out.push({date:e.date, cpt:k, lib:e.libelle||'', m:m});
+      });
+    });
+    return out;
+  }
+
+  /* ---- rapprochement : écart par compte et par mois ---- */
+  function rappro(){
+    var res={mois:0, faits:0, ecart:0, manquants:[], enEcart:[]};
+    var cpts=[], ms=[];
+    try{ cpts=comptesBanque()||[]; }catch(e){}
+    try{ ms=moisExoListe()||[]; }catch(e){}
+    if(!cpts.length||!ms.length) return res;
+    cpts.forEach(function(cp){
+      ms.forEach(function(m){
+        var bouge=ecrExo().some(function(e){
+          return String(e.date||'').slice(0,7)===m && (e.lignes||[]).some(function(l){ return C9(l.compte)===C9(cp.code); });
+        });
+        if(!bouge) return;
+        res.mois++;
+        var rel=null; try{ rel=releveDe(cp.code,m); }catch(e){}
+        if(!rel){ res.manquants.push(cp.lib+' · '+m); return; }
+        var st=null; try{ st=rapStats(rel); }catch(e){}
+        if(!st){ res.manquants.push(cp.lib+' · '+m); return; }
+        var ec=r(st.ecartAJustifier);
+        if(Math.abs(ec)<0.005){ res.faits++; }
+        else { res.ecart=r(res.ecart+Math.abs(ec)); res.enEcart.push({lib:cp.lib+' · '+m, ec:ec}); }
+      });
+    });
+    return res;
+  }
+
+  /* ---- TVA : mois clos de l'exercice, OD passée, CA3 déposée ---- */
+  function tva(){
+    var o={mois:0, od:0, decl:0, regime:''};
+    try{ o.regime=(db.societe&&db.societe.regimeTVA)||''; }catch(e){}
+    var ms=[]; try{ ms=moisExoListe()||[]; }catch(e){}
+    var cur=AUJ().slice(0,7);
+    ms.forEach(function(m){
+      if(m>=cur) return;            /* un mois en cours peut encore recevoir des factures */
+      var t=null; try{ t=tvaDuMois(m); }catch(e){}
+      if(t&&!t.col&&!t.ded) return;  /* mois sans TVA : rien à déclarer */
+      o.mois++;
+      try{ if(odTvaDejaPostee(m)) o.od++; }catch(e){}
+      try{ if(db.societe&&db.societe.tvaDeclaree&&db.societe.tvaDeclaree[m]) o.decl++; }catch(e){}
+    });
+    return o;
+  }
+
+  /* ---- amortissements : dotation attendue vs dotation passée ---- */
+  function amort(){
+    var o={fiches:0, attendu:0, passe:0};
+    var an=+exo()||0;
+    (db.immos||[]).forEach(function(im){
+      o.fiches++;
+      try{ var row=immoRowAnnee(im,an); if(row&&row.dotation) o.attendu=r(o.attendu+row.dotation); }catch(e){}
+    });
+    o.passe=mvt(pref('6811'),{sansAN:true}).d;
+    o.ecart=r(o.attendu-o.passe);
+    return o;
+  }
+
+  /* =================== LES 22 ÉTAPES =================== */
+  /* st : 'fait' | 'encours' | 'afaire' | 'na' — mesuré, jamais déclaré */
+  function etapes(){
+    var E=[], s=db.societe||{};
+
+    /* 1 — Paramétrage dossier */
+    (function(){
+      var req=[['raison','Dénomination'],['siren','SIREN'],['exoDebut',"Début d'exercice"],['exoFin',"Fin d'exercice"]];
+      var opt=[['siret','SIRET'],['codeAPE','Code APE'],['tvaIntra','N° TVA intracom.'],['regimeTVA','Régime de TVA']];
+      var mq=req.filter(function(f){ return !String(s[f[0]]||'').trim(); }).map(function(f){ return f[1]; });
+      var mo=opt.filter(function(f){ return !String(s[f[0]]||'').trim(); }).map(function(f){ return f[1]; });
+      E.push({n:1, t:'Paramétrage dossier', mod:'infosociete', req:[],
+        st: mq.length?'afaire':(mo.length?'encours':'fait'),
+        q: mq.length ? ('manque : '+mq.join(', ')) : (mo.length ? ('à compléter : '+mo.join(', ')) : 'identité, exercice et régime renseignés'),
+        d:[['Exercice', (D0()&&D1())?(frDate(D0())+' → '+frDate(D1())):'non défini'],
+           ['Régime de TVA', s.regimeTVA||'non défini'],
+           ['SIREN · SIRET', (s.siren||'—')+' · '+(s.siret||'—')]]});
+    })();
+
+    /* 2 — Constitution société */
+    (function(){
+      var cap=mvt(pref('101'),{sansAN:true}), nv=mvt(pref('4562','456'),{sansAN:true});
+      var an=ecrExo().some(estAN);
+      var st = cap.c>0.005 ? 'fait' : (an ? 'na' : 'afaire');
+      E.push({n:2, t:'Constitution société', mod:'constitution', req:[1], st:st,
+        q: st==='fait' ? ('capital souscrit : '+eu(cap.c)+(nv.solde>0.005?(' · reste à verser '+eu(nv.solde)):' · intégralement versé'))
+          : st==='na'  ? "l'exercice porte des à-nouveaux : la société existait déjà"
+          : "aucune écriture de capital — dossier de création à constituer",
+        d:[['Capital (101) crédité', eu(cap.c)],
+           ['Capital appelé non versé (4562)', eu(nv.solde)],
+           ['Écriture attendue', 'débit 512 / crédit 101 · non libéré : débit 4562 / crédit 101']]});
+    })();
+
+    /* 3 — Import banque */
+    (function(){
+      var lig=(param('relevesLignes',[])||[]);
+      var nb=lig.filter(function(l){ return dansExo(l.date); }).length;
+      var bq=nbJrn('BQ');
+      E.push({n:3, t:'Import banque', mod:'importbanque', req:[1],
+        st: nb>0 ? 'fait' : (bq>0 ? 'encours' : 'afaire'),
+        q: nb>0 ? (nb+' ligne(s) de relevé mémorisée(s) sur l\'exercice')
+          : (bq>0 ? (bq+' écriture(s) de banque existent sans relevé mémorisé (import FEC ou saisie directe)')
+                  : 'aucun relevé déposé'),
+        d:[['Lignes de relevé', String(nb)],
+           ['Écritures de banque (BQ)', String(bq)],
+           ['Imports enregistrés', String((param('importsBanque',[])||[]).length)]]});
+    })();
+
+    /* 4 — Génération écritures banque */
+    (function(){
+      var lig=(param('relevesLignes',[])||[]).filter(function(l){ return dansExo(l.date); });
+      var sans=lig.filter(function(l){ return !l.ecritureId; }).length;
+      var bq=nbJrn('BQ'), att=mvt(pref('471'),{sansAN:true});
+      E.push({n:4, t:'Génération écritures banque', mod:'importbanque', req:[3],
+        st: bq===0 ? 'afaire' : (sans>0 ? 'encours' : 'fait'),
+        q: bq===0 ? 'aucune écriture de banque'
+          : (sans>0 ? (sans+' ligne(s) de relevé sans écriture') : (bq+' écriture(s) de banque générées')),
+        d:[['Écritures de banque', String(bq)],
+           ['Lignes de relevé sans écriture', String(sans)],
+           ['Compte d\'attente 471', eu(att.solde)+(Math.abs(att.solde)>0.005?' — à imputer':' — soldé')]]});
+    })();
+
+    /* 5 — Rapprochement bancaire */
+    (function(){
+      var R=rappro();
+      E.push({n:5, t:'Rapprochement bancaire', mod:'rappro', req:[4],
+        st: R.mois===0 ? 'afaire' : (R.faits===R.mois ? 'fait' : (R.faits>0?'encours':'afaire')),
+        q: R.mois===0 ? 'aucun mois de banque mouvementé'
+          : (R.faits===R.mois ? (R.faits+'/'+R.mois+' mois rapprochés — écart 0')
+             : (R.faits+'/'+R.mois+' mois rapprochés · écart restant '+eu(R.ecart))),
+        d:[['Mois à rapprocher', String(R.mois)],
+           ['Sans relevé créé', R.manquants.length?R.manquants.join(' · '):'aucun'],
+           ['En écart', R.enEcart.length?R.enEcart.map(function(x){ return x.lib+' ('+eu(x.ec)+')'; }).join(' · '):'aucun']],
+        _r:R});
+    })();
+
+    /* 6 — Validation banque : LE VERROU */
+    (function(){
+      var R=rappro(), v=etat().valide.banque;
+      var ok=(R.mois>0&&R.faits===R.mois);
+      E.push({n:6, t:'Validation banque', mod:'rappro', req:[5],
+        st: v ? 'fait' : 'afaire',
+        q: v ? ('validée le '+frDate(v.date)+' — '+v.mois+' mois, écart 0')
+             : (ok ? 'rapprochement sans écart : la validation est ouverte'
+                   : "le rapprochement n'est pas sans écart — validation refusée"),
+        d:[['Règle', 'aucune écriture de banque validée tant que le rapprochement présente un écart'],
+           ['Écart constaté', eu(R.ecart)],
+           ['État', v?('validée le '+frDate(v.date)):'non validée']],
+        act: v ? {f:'pcDevaliderBanque', l:'Retirer la validation'} : (ok?{f:'pcValiderBanque', l:'Valider les écritures de banque'}:null)});
+    })();
+
+    /* 7 — Import fournisseurs */
+    (function(){
+      var dep=(param('depots',[])||[]).filter(function(d){ return d.cat==='achat'; });
+      var att=dep.filter(function(d){ return d.statut!=='comptabilisee'&&d.statut!=='refusee'; }).length;
+      var fa=(db.factures||[]).filter(function(f){ return f.type==='achat'&&dansExo(f.date); }).length;
+      E.push({n:7, t:'Import fournisseurs', mod:'achats', req:[1],
+        st: (dep.length||fa) ? (att>0?'encours':'fait') : 'afaire',
+        q: (dep.length||fa) ? (dep.length+' dépôt(s) · '+fa+' facture(s) d\'achat'+(att>0?(' · '+att+' en attente de traitement'):''))
+                            : 'aucune facture fournisseur déposée',
+        d:[['Dépôts reçus', String(dep.length)],['En attente', String(att)],['Factures d\'achat', String(fa)]]});
+    })();
+
+    /* 8 — Import clients */
+    (function(){
+      var dep=(param('depots',[])||[]).filter(function(d){ return d.cat==='vente'; });
+      var att=dep.filter(function(d){ return d.statut!=='comptabilisee'&&d.statut!=='refusee'; }).length;
+      var fv=(db.factures||[]).filter(function(f){ return f.type==='vente'&&dansExo(f.date); }).length;
+      var docs=(db.docs||[]).filter(function(d){ return d.type==='facture'; }).length;
+      E.push({n:8, t:'Import clients', mod:'compta', req:[1],
+        st: (dep.length||fv||docs) ? (att>0?'encours':'fait') : 'afaire',
+        q: (dep.length||fv||docs) ? (docs+' facture(s) émise(s) · '+dep.length+' dépôt(s)'+(att>0?(' · '+att+' en attente'):''))
+                                  : 'aucune facture client',
+        d:[['Factures émises', String(docs)],['Dépôts reçus', String(dep.length)],['Factures de vente', String(fv)]]});
+    })();
+
+    /* 9 — Comptabilisation achats */
+    (function(){
+      var ach=nbJrn('ACH');
+      var dep=(param('depots',[])||[]).filter(function(d){ return d.cat==='achat'&&d.statut!=='comptabilisee'&&d.statut!=='refusee'; }).length;
+      var ded=mvt(function(k){ return k.indexOf('4456')===0&&k.indexOf('44567')!==0; },{sansAN:true});
+      E.push({n:9, t:'Comptabilisation achats', mod:'achats', req:[7],
+        st: ach===0 ? 'afaire' : (dep>0?'encours':'fait'),
+        q: ach===0 ? 'aucune écriture d\'achat' : (ach+' écriture(s) au journal ACH'+(dep>0?(' · '+dep+' dépôt(s) non comptabilisé(s)'):'')),
+        d:[['Écritures ACH', String(ach)],
+           ['TVA déductible (4456x)', eu(ded.d)],
+           ['Écriture type', 'débit 607/606/615 · débit 44566 · crédit 401']]});
+    })();
+
+    /* 10 — Comptabilisation ventes */
+    (function(){
+      var vte=nbJrn('VTE');
+      var dep=(param('depots',[])||[]).filter(function(d){ return d.cat==='vente'&&d.statut!=='comptabilisee'&&d.statut!=='refusee'; }).length;
+      var col=mvt(pref('4457'),{sansAN:true});
+      E.push({n:10, t:'Comptabilisation ventes', mod:'compta', req:[8],
+        st: vte===0 ? 'afaire' : (dep>0?'encours':'fait'),
+        q: vte===0 ? 'aucune écriture de vente' : (vte+' écriture(s) au journal VTE'+(dep>0?(' · '+dep+' dépôt(s) non comptabilisé(s)'):'')),
+        d:[['Écritures VTE', String(vte)],
+           ['TVA collectée (4457x)', eu(col.c)],
+           ['Écriture type', 'débit 411 · crédit 706/707 · crédit 44571'],
+           ['Où saisir', 'Consultation — journal VTE (clic droit sur une écriture pour éditer)']]});
+    })();
+
+    /* 11 — Lettrage tiers */
+    (function(){
+      var f=nonLettrees('401'), c=nonLettrees('411');
+      var mf=r(f.reduce(function(a,x){ return a+Math.abs(x.m); },0));
+      var mc=r(c.reduce(function(a,x){ return a+Math.abs(x.m); },0));
+      var tot=f.length+c.length;
+      E.push({n:11, t:'Lettrage tiers', mod:'rappro', req:[6,9,10],
+        st: tot===0 ? 'fait' : 'afaire',
+        q: tot===0 ? 'tous les comptes de tiers sont lettrés'
+                   : (tot+' ligne(s) non lettrée(s) — '+eu(r(mf+mc))+' à rapprocher'),
+        d:[['Fournisseurs 401 non lettrés', f.length+' ligne(s) · '+eu(mf)],
+           ['Clients 411 non lettrés', c.length+' ligne(s) · '+eu(mc)],
+           ['Comparaison', 'montant · date · référence — sinon acompte, paiement partiel, avoir, échéancier ou erreur']],
+        _f:f, _c:c});
+    })();
+
+    /* 12 — Contrôle échéances */
+    (function(){
+      var L=nonLettrees('401').concat(nonLettrees('411'));
+      var auj=AUJ(), b={a:0,b:0,c:0,d:0}, m={a:0,b:0,c:0,d:0};
+      L.forEach(function(x){
+        var j=Math.floor((new Date(auj)-new Date(x.date))/86400000);
+        var k = j<=30?'a' : j<=60?'b' : j<=90?'c' : 'd';
+        b[k]++; m[k]=r(m[k]+Math.abs(x.m));
+      });
+      E.push({n:12, t:'Contrôle échéances', mod:'reglements', req:[11],
+        st: L.length===0 ? 'fait' : (b.d>0?'afaire':'encours'),
+        q: L.length===0 ? 'aucune créance ni dette en attente'
+                        : (b.d>0 ? (b.d+' pièce(s) à plus de 90 jours — '+eu(m.d)+' à relancer')
+                                 : (L.length+' pièce(s) en cours, aucune au-delà de 90 jours')),
+        d:[['0 à 30 jours', b.a+' · '+eu(m.a)],
+           ['31 à 60 jours', b.b+' · '+eu(m.b)],
+           ['61 à 90 jours', b.c+' · '+eu(m.c)],
+           ['Plus de 90 jours', b.d+' · '+eu(m.d)]]});
+    })();
+
+    /* 13 — TVA */
+    (function(){
+      var T=tva();
+      E.push({n:13, t:'TVA', mod:'tva', req:[9,10],
+        st: T.mois===0 ? 'na' : (T.decl===T.mois ? 'fait' : (T.od>0?'encours':'afaire')),
+        q: T.mois===0 ? 'aucune période taxable close sur l\'exercice'
+          : (T.decl+'/'+T.mois+' déclaration(s) déposée(s) · '+T.od+'/'+T.mois+' OD de TVA passée(s)'),
+        d:[['Régime', T.regime||'non défini'],
+           ['Périodes closes', String(T.mois)],
+           ['Liquidation', 'débit 44571 · crédit 44566 et 44562 · solde au 44551']]});
+    })();
+
+    /* 14 — Paie */
+    (function(){
+      var b=(param('bulletins',{}).fiches)||[];
+      var bm=b.filter(function(f){ return dansExo((f.periode||'')+'-01')||dansExo(f.date||''); }).length||b.length;
+      var odp=nbJrn('ODP'), odc=nbJrn('ODC');
+      var s421=mvt(pref('421'),{sansAN:true}), s431=mvt(pref('431'),{sansAN:true});
+      var brut=mvt(pref('641'),{sansAN:true});
+      E.push({n:14, t:'Paie', mod:'chargespaie', req:[1],
+        st: (bm===0&&odp===0) ? 'na' : ((odp>0&&odc>0)?'fait':'encours'),
+        q: (bm===0&&odp===0) ? 'aucun bulletin ni OD de paie — dossier sans salarié'
+          : (bm+' bulletin(s) · '+odp+' OD de paie · '+odc+' OD de charges'),
+        d:[['Rémunérations (641)', eu(brut.d)],
+           ['Personnel à payer (421)', eu(-s421.solde)],
+           ['Organismes sociaux (431)', eu(-s431.solde)]]});
+    })();
+
+    /* 15 — Opérations diverses */
+    (function(){
+      var od=ecrExo().filter(function(e){ return String(e.journal||'')==='OD'&&!estAN(e)&&!estRes(e); }).length;
+      var att=mvt(pref('471'),{sansAN:true});
+      E.push({n:15, t:'Opérations diverses', mod:'inventaire', req:[1],
+        st: Math.abs(att.solde)>0.005 ? 'afaire' : (od>0?'fait':'encours'),
+        q: Math.abs(att.solde)>0.005 ? ('compte d\'attente 471 non soldé : '+eu(att.solde))
+                                     : (od+' opération(s) diverse(s) · compte 471 soldé'),
+        d:[['Écritures OD', String(od)],
+           ['Compte d\'attente 471', eu(att.solde)],
+           ['Cut-off', 'CCA 486 · PCA 487 · FNP 408 · FAE 418']]});
+    })();
+
+    /* 16 — Immobilisations */
+    (function(){
+      var n=(db.immos||[]).length;
+      var br=mvt(pref('20','21','22','23'),{sansAN:false});
+      E.push({n:16, t:'Immobilisations', mod:'immos', req:[1],
+        st: n===0 ? (br.d>0.005?'afaire':'na') : 'fait',
+        q: n===0 ? (br.d>0.005 ? ('des comptes d\'immobilisation sont mouvementés ('+eu(br.d)+') sans aucune fiche') : 'aucune immobilisation au dossier')
+                 : (n+' fiche(s) d\'immobilisation'),
+        d:[['Fiches', String(n)],
+           ['Immobilisations brutes', eu(br.d)],
+           ['Écriture type', 'débit 20x/21x · débit 44562 · crédit 404']]});
+    })();
+
+    /* 17 — Amortissements */
+    (function(){
+      var A=amort();
+      E.push({n:17, t:'Amortissements', mod:'immos', req:[16],
+        st: A.fiches===0 ? 'na' : (Math.abs(A.ecart)<0.005 ? 'fait' : 'afaire'),
+        q: A.fiches===0 ? 'aucune immobilisation à amortir'
+          : (Math.abs(A.ecart)<0.005 ? ('dotation de l\'exercice passée : '+eu(A.passe))
+             : ('dotation attendue '+eu(A.attendu)+' · passée '+eu(A.passe)+' — reste '+eu(A.ecart))),
+        d:[['Dotation attendue (plans)', eu(A.attendu)],
+           ['Dotation comptabilisée (6811)', eu(A.passe)],
+           ['Écriture type', 'débit 6811 · crédit 28xx']]});
+    })();
+
+    /* 18 — Provisions */
+    (function(){
+      var p15=mvt(pref('15'),{sansAN:true}), dot=mvt(pref('6815','6817'),{sansAN:true});
+      var dep=mvt(pref('29','39','49','59'),{sansAN:true});
+      var y=(p15.n+dot.n+dep.n)>0;
+      E.push({n:18, t:'Provisions', mod:'inventaire', req:[1],
+        st: y ? 'fait' : 'afaire',
+        q: y ? ('provisions pour risques et charges '+eu(-p15.solde)+' · dépréciations '+eu(-dep.solde))
+             : 'aucune provision ni dépréciation constatée — à examiner (litiges, risques, charges)',
+        d:[['Provisions 15x', eu(-p15.solde)],
+           ['Dotations 6815', eu(dot.d)],
+           ['Dépréciations 29x/39x/49x', eu(-dep.solde)]]});
+    })();
+
+    /* 19 — Révision comptable */
+    (function(){
+      var rev=(param('revision',{})[exo()])||{};
+      var cy=Object.keys(rev).length, vis=0;
+      Object.keys(rev).forEach(function(k){ if(rev[k]&&rev[k].visa) vis++; });
+      E.push({n:19, t:'Révision comptable', mod:'revision', req:[11,13,14,17],
+        st: vis===0 ? 'afaire' : (vis>=6 ? 'fait' : 'encours'),
+        q: vis===0 ? 'aucun cycle visé' : (vis+'/6 cycle(s) visé(s)'),
+        d:[['Cycles visés', vis+' / 6'],
+           ['Cycles renseignés', String(cy)],
+           ['Principe', 'chaque solde du bilan rapproché d\'une pièce extérieure']]});
+    })();
+
+    /* 20 — Déclarations fiscales */
+    (function(){
+      var li=(param('liasse',{})[exo()])||null;
+      var is=mvt(pref('444'),{sansAN:true}), ch=mvt(pref('695','698'),{sansAN:true});
+      E.push({n:20, t:'Déclarations fiscales', mod:'liasse', req:[19],
+        st: ch.d>0.005 ? 'fait' : (li?'encours':'afaire'),
+        q: ch.d>0.005 ? ('impôt sur les sociétés comptabilisé : '+eu(ch.d))
+          : (li ? 'résultat fiscal préparé — provision d\'impôt non comptabilisée' : 'liasse non préparée'),
+        d:[['Charge d\'impôt (695/698)', eu(ch.d)],
+           ['Impôt dû (444)', eu(-is.solde)],
+           ['Écriture type', 'débit 695 · crédit 444 · paiement : débit 444 · crédit 512']]});
+    })();
+
+    /* 21 — Clôture */
+    (function(){
+      var res=(db.ecritures||[]).some(function(e){ return estRes(e)&&dansExo(e.date); });
+      var anS=(db.ecritures||[]).some(function(e){ return estAN(e)&&String(e.date||'')>D1(); });
+      var fini=D1()&&AUJ()>D1();
+      E.push({n:21, t:'Clôture', mod:'editions', req:[19,20],
+        st: (res&&anS) ? 'fait' : (res?'encours':(fini?'afaire':'na')),
+        q: (res&&anS) ? 'résultat soldé et à-nouveaux reportés'
+          : (res ? 'OD de résultat passée — à-nouveaux à reporter'
+             : (fini ? 'exercice terminé, clôture à passer' : 'exercice en cours jusqu\'au '+(D1()?frDate(D1()):'—'))),
+        d:[['OD de résultat', res?'passée':'non passée'],
+           ['À-nouveaux N+1', anS?'reportés':'non reportés'],
+           ['Fin d\'exercice', D1()?frDate(D1()):'—']]});
+    })();
+
+    /* 22 — Liasse fiscale */
+    (function(){
+      var b=null, cr=null;
+      try{ b=etnBilan(D1()); }catch(e){}
+      try{ cr=etnCR(D0(),D1()); }catch(e){}
+      var eq = b ? (Math.abs(r(b.ta-b.tp))<0.01) : false;
+      var li=(param('liasse',{})[exo()])||null;
+      E.push({n:22, t:'Liasse fiscale', mod:'liasse', req:[21],
+        st: li ? 'fait' : (eq?'afaire':'afaire'),
+        q: li ? 'liasse renseignée' : 'liasse à produire',
+        d:[['Total actif net', b?eu(b.ta):'—'],
+           ['Total passif', b?eu(b.tp):'—'],
+           ['Bilan', eq?'équilibré':'NON équilibré'],
+           ['Résultat net', cr?eu(cr.net):'—']]});
+    })();
+
+    /* --- verrouillage par prérequis (l'ordre est obligatoire) --- */
+    var par={}; E.forEach(function(e){ par[e.n]=e; });
+    E.forEach(function(e){
+      if(e.st==='fait'||e.st==='na') return;
+      var bl=(e.req||[]).filter(function(n){ var p=par[n]; return p && p.st!=='fait' && p.st!=='na'; });
+      if(bl.length){ e.bloque=bl; }
+    });
+    return E;
+  }
+
+  /* =================== CONTRÔLES FINAUX =================== */
+  function controles(){
+    var K=[];
+    function ok(l,c,v){ K.push({l:l, ok:!!c, v:v}); }
+    var R=rappro();
+    ok('512 = relevés', R.mois>0 && R.faits===R.mois, R.mois>0?('écart '+eu(R.ecart)):'aucun mois à rapprocher');
+    var caisse=mvt(pref('53'));
+    ok('530 = caisse', caisse.solde>=-0.005, 'solde '+eu(caisse.solde)+(caisse.solde<-0.005?' — une caisse ne peut être créditrice':''));
+    var f=nonLettrees('401'), c=nonLettrees('411');
+    ok('401 justifiés', f.length===0, f.length+' ligne(s) non lettrée(s)');
+    ok('411 justifiés', c.length===0, c.length+' ligne(s) non lettrée(s)');
+    var ded=mvt(function(k){ return k.indexOf('4456')===0&&k.indexOf('44567')!==0; },{sansAN:true});
+    var col=mvt(pref('4457'),{sansAN:true});
+    var dec=mvt(pref('44551'),{sansAN:true});
+    ok('44566 cohérent', ded.d>=ded.c-0.005, 'déductible '+eu(ded.d));
+    ok('44571 cohérent', col.c>=col.d-0.005, 'collectée '+eu(col.c));
+    var T=tva();
+    ok('44551 cohérent', T.mois===0||T.od===T.mois, T.od+'/'+T.mois+' OD de TVA passée(s) · solde '+eu(-dec.solde));
+    var s421=mvt(pref('421'),{sansAN:true});
+    ok('421 soldé', Math.abs(s421.solde)<0.005||s421.n===0, s421.n===0?'aucun mouvement':('solde '+eu(-s421.solde)));
+    var s431=mvt(pref('431'),{sansAN:true});
+    ok('431 cohérent', s431.solde<=0.005, 'solde '+eu(-s431.solde));
+    var att=mvt(pref('471'),{sansAN:true});
+    ok('471 soldé', Math.abs(att.solde)<0.005, 'solde '+eu(att.solde));
+    [['408','FNP'],['418','FAE'],['486','CCA'],['487','PCA']].forEach(function(x){
+      var m=mvt(pref(x[0]),{sansAN:true});
+      ok(x[0]+' justifié ('+x[1]+')', true, m.n===0?'aucun mouvement':('solde '+eu(m.solde)+' · '+m.n+' ligne(s)'));
+    });
+    var A=amort(), br=mvt(pref('20','21','22','23'));
+    var fichesBrut=0; (db.immos||[]).forEach(function(im){ fichesBrut=r(fichesBrut+(+im.montantHT||0)); });
+    ok('Immobilisations cohérentes', A.fiches===0||Math.abs(r(br.d-fichesBrut))<0.01 || br.d>=fichesBrut-0.01,
+       A.fiches+' fiche(s) · brut comptable '+eu(br.d)+' · fiches '+eu(fichesBrut));
+    ok('Amortissements cohérents', A.fiches===0||Math.abs(A.ecart)<0.005, 'écart de dotation '+eu(A.ecart));
+    ok('TVA cohérente', T.mois===0||T.decl===T.mois, T.decl+'/'+T.mois+' déclaration(s) déposée(s)');
+    var D=0,Cc=0; (db.ecritures||[]).forEach(function(e){ (e.lignes||[]).forEach(function(l){ D=r(D+(+l.debit||0)); Cc=r(Cc+(+l.credit||0)); }); });
+    ok('Balance équilibrée', Math.abs(r(D-Cc))<0.01, 'débit '+eu(D)+' · crédit '+eu(Cc));
+    /* LE BILAN N'EST PAS « ACTIF = PASSIF » AU SENS BRUT.
+       bilanNorm ne range que les comptes de bilan : le RÉSULTAT de l'exercice et les
+       RÉSULTATS ANTÉRIEURS non affectés sont ajoutés au passif à l'affichage (v643).
+       Comparer ta à tp seul crie au loup sur un dossier pourtant juste — on refait donc
+       le total du passif exactement comme le bilan imprimé, puis on confronte. */
+    var b=null, cr=null;
+    try{ b=etnBilan(D1()); }catch(e){}
+    try{ cr=etnCR(D0(),D1()); }catch(e){}
+    if(b){
+      var dl=(b.passif.filter(function(x){ return x.c==='DL'; })[0]||{v:0}).v;
+      var resAff=(Math.abs(dl)>0.005)?0:(cr?cr.net:0);
+      var report=r(r(b.ta-b.tp)-resAff);
+      var totP=r(b.tp+resAff+report);
+      ok('Bilan équilibré', Math.abs(r(b.ta-totP))<0.01,
+         'actif '+eu(b.ta)+' · passif '+eu(b.tp)+' + résultat '+eu(resAff)+' + report '+eu(report));
+    } else ok('Bilan équilibré', false, 'non calculable');
+    /* deux calculs INDÉPENDANTS du résultat : celui du compte de résultat (soldesEtn)
+       et celui du parcours (agrégation propre). S'ils divergent, un compte échappe. */
+    var p7=mvt(pref('7'),{sansAN:true,sansRes:true}), p6=mvt(pref('6'),{sansAN:true,sansRes:true});
+    var resPc=r(r(p7.c-p7.d)-r(p6.d-p6.c));
+    ok('Résultat cohérent', cr?Math.abs(r(cr.net-resPc))<0.01:false,
+       cr?('compte de résultat '+eu(cr.net)+' · recalcul '+eu(resPc)):'non calculable');
+    var mal=0; (db.ecritures||[]).forEach(function(e){
+      if(!e.date||!e.journal) { mal++; return; }
+      /* un compte AUXILIAIRE est un préfixe collectif suivi de lettres (401GASO00) :
+         exiger neuf chiffres rejetterait des comptes parfaitement valides. */
+      var bad=(e.lignes||[]).some(function(l){ var k=C9(l.compte); return !k||k==='000000000'||!/^[1-8][0-9A-Za-z]{8}$/.test(k); });
+      if(bad) mal++;
+    });
+    ok('FEC conforme', mal===0, mal===0?'champs obligatoires présents':(mal+' écriture(s) incomplète(s)'));
+    return K;
+  }
+
+  /* =================== ACTIONS =================== */
+  window.pcValiderBanque=function(){
+    var R=rappro();
+    if(!(R.mois>0&&R.faits===R.mois)){ toast('Validation refusée — le rapprochement présente un écart de '+eu(R.ecart)); return; }
+    etat().valide.banque={date:AUJ(), mois:R.mois, ecart:0};
+    save(); toast('Écritures de banque validées — '+R.mois+' mois rapprochés sans écart'); render();
+  };
+  window.pcDevaliderBanque=function(){
+    delete etat().valide.banque; save(); toast('Validation retirée'); render();
+  };
+  window.pcAller=function(mod){
+    /* un module absent du registre est renvoyé ailleurs par le routeur : on le dit
+       plutôt que d'ouvrir une page qui n'est pas celle qu'on annonce. */
+    try{ if(mod!=='compta' && (window.YADA_OK||[]).indexOf(mod)<0){
+      toast('Le module « '+mod+' » n\'est pas enregistré dans la navigation — étape à traiter depuis la Consultation.');
+      current='compta'; render(); return;
+    } }catch(e){}
+    current=mod; render();
+  };
+  window.pcOnglet=function(o){ window.pcTab=o; render(); };
+  window.pcFermer=function(){ try{ if(typeof yadaFermerPage==='function') yadaFermerPage(); }catch(e){} };
+
+  /* =================== RENDU =================== */
+  var PASTILLE={fait:'terminé', encours:'en cours', afaire:'à faire', na:'sans objet'};
+
+  function ligne(e){
+    var cls=e.bloque?'bloque':e.st;
+    var lbl=e.bloque?('en attente de l\'étape '+e.bloque.join(', ')):PASTILLE[e.st];
+    var det=(e.d||[]).map(function(x){ return '<div class="pc-kv"><span class="pc-k">'+esc(x[0])+'</span><span class="pc-v">'+esc(x[1])+'</span></div>'; }).join('');
+    var btn='';
+    if(e.act && !e.bloque) btn+='<button class="pc-btn pc-pri" onclick="'+e.act.f+'()">'+esc(e.act.l)+'</button>';
+    if(e.mod && !e.bloque) btn+='<button class="pc-btn" onclick="pcAller(\''+e.mod+'\')">Ouvrir le module</button>';
+    return '<div class="pc-etape '+cls+'">'
+      +'<div class="pc-head"><span class="pc-num">'+e.n+'</span>'
+      +'<span class="pc-titre">'+esc(e.t)+'</span>'
+      +'<span class="pc-pill pc-'+cls+'">'+esc(lbl)+'</span></div>'
+      +'<div class="pc-quoi">'+esc(e.q)+'</div>'
+      +(e.bloque?'<div class="pc-bloc">L\'ordre est obligatoire : cette étape s\'ouvrira une fois l\'étape '+e.bloque.join(' et ')+' terminée.</div>':'')
+      +'<div class="pc-det">'+det+'</div>'
+      +(btn?('<div class="pc-act">'+btn+'</div>'):'')
+      +'</div>';
+  }
+
+  function pageParcours(){
+    var E=etapes();
+    var faits=E.filter(function(e){ return e.st==='fait'; }).length;
+    var na=E.filter(function(e){ return e.st==='na'; }).length;
+    var suiv=null;
+    for(var i=0;i<E.length;i++){ var e=E[i]; if(e.st!=='fait'&&e.st!=='na'&&!e.bloque){ suiv=e; break; } }
+    var bloq=E.filter(function(e){ return e.bloque; }).length;
+    var tab=window.pcTab||'etapes';
+    var K=controles(); var kok=K.filter(function(x){ return x.ok; }).length;
+
+    var h='<div id="yada-pc">';
+    h+='<div class="pc-mast"><div class="pc-eyebrow">YADA · MOTEUR COMPTABLE</div>'
+      +'<h1 class="pc-h1">Parcours comptable guidé</h1>'
+      +'<div class="pc-sub">'+esc((db.societe&&db.societe.raison)||'Dossier')+' · exercice '+esc(exo())
+      +' · les 22 étapes, dans l\'ordre obligatoire</div>'
+      +'<button class="pc-close" onclick="pcFermer()" title="Fermer">Fermer</button></div>';
+
+    h+='<div class="pc-kpis">'
+      +'<div class="pc-kpi"><div class="pc-kl">Étapes franchies</div><div class="pc-kv2">'+faits+' / '+(E.length-na)+'</div></div>'
+      +'<div class="pc-kpi"><div class="pc-kl">En attente d\'une étape antérieure</div><div class="pc-kv2">'+bloq+'</div></div>'
+      +'<div class="pc-kpi"><div class="pc-kl">Sans objet sur ce dossier</div><div class="pc-kv2">'+na+'</div></div>'
+      +'<div class="pc-kpi"><div class="pc-kl">Contrôles finaux tenus</div><div class="pc-kv2">'+kok+' / '+K.length+'</div></div>'
+      +'</div>';
+
+    h+='<div class="pc-next"><div class="pc-nl">Ce qui importe maintenant</div>'
+      +(suiv ? ('<div class="pc-nt">Étape '+suiv.n+' — '+esc(suiv.t)+'</div><div class="pc-nq">'+esc(suiv.q)+'</div>'
+               +'<div class="pc-act">'+(suiv.act?('<button class="pc-btn pc-pri" onclick="'+suiv.act.f+'()">'+esc(suiv.act.l)+'</button>'):'')
+               +(suiv.mod?('<button class="pc-btn" onclick="pcAller(\''+suiv.mod+'\')">Ouvrir le module</button>'):'')+'</div>')
+            : '<div class="pc-nt">Le dossier est à jour</div><div class="pc-nq">Les 22 étapes sont franchies ou sans objet sur ce dossier.</div>')
+      +'</div>';
+
+    h+='<div class="pc-tabs">'
+      +'<button class="pc-tab'+(tab==='etapes'?' on':'')+'" onclick="pcOnglet(\'etapes\')">Les 22 étapes</button>'
+      +'<button class="pc-tab'+(tab==='ctrl'?' on':'')+'" onclick="pcOnglet(\'ctrl\')">Contrôles finaux</button>'
+      +'<button class="pc-tab'+(tab==='regle'?' on':'')+'" onclick="pcOnglet(\'regle\')">Règles appliquées</button>'
+      +'</div>';
+
+    if(tab==='etapes'){
+      h+='<div class="pc-liste">'+E.map(ligne).join('')+'</div>';
+    } else if(tab==='ctrl'){
+      h+='<div class="pc-card"><div class="pc-ch">Contrôles finaux — vérifiés sur le dossier</div>'
+        +'<table class="pc-t"><thead><tr><th>Contrôle</th><th>Constat</th><th class="r">État</th></tr></thead><tbody>'
+        +K.map(function(x){ return '<tr><td>'+esc(x.l)+'</td><td>'+esc(x.v)+'</td><td class="r"><span class="pc-pill pc-'+(x.ok?'fait':'afaire')+'">'+(x.ok?'tenu':'à revoir')+'</span></td></tr>'; }).join('')
+        +'</tbody><tfoot><tr><td>Total</td><td>'+kok+' contrôle(s) tenu(s) sur '+K.length+'</td><td class="r">'+(kok===K.length?'conforme':'à revoir')+'</td></tr></tfoot></table></div>';
+    } else {
+      h+='<div class="pc-card"><div class="pc-ch">Règle absolue</div>'
+        +'<div class="pc-txt">Aucune écriture n\'est validée sans justificatif, compte PCG valide, contrôle de TVA, contrôle du tiers, contrôle de banque, contrôle d\'exercice et équilibre débit/crédit. '
+        +'Le parcours refuse la validation d\'une étape tant que son contrôle n\'est pas tenu : la validation des écritures de banque reste fermée tant que le rapprochement présente un écart.</div></div>';
+      h+='<div class="pc-card"><div class="pc-ch">Contrôles permanents avant toute validation</div>'
+        +'<div class="pc-cols">'+['Date','Numéro de pièce','Fournisseur','Client','Montant HT','TVA','TTC','Sens débit / crédit','Exercice','Compte comptable','Pièce justificative']
+          .map(function(x){ return '<div class="pc-chip">'+esc(x)+'</div>'; }).join('')+'</div></div>';
+      h+='<div class="pc-card"><div class="pc-ch">Dictionnaire comptable retenu</div>'
+        +'<table class="pc-t"><tbody>'+[
+          ['Banque · Caisse','512 · 530'],['Client · Fournisseur','411 · 401'],['Fournisseur d\'immobilisations','404'],
+          ['Capital · Associés','101 · 455 · 4562'],['Emprunt','164'],
+          ['TVA déductible · sur immobilisations','44566 · 44562'],['TVA collectée · à décaisser','44571 · 44551'],
+          ['Salaires · URSSAF · Organismes · PAS','421 · 431 · 437 · 4421'],['Impôt sur les sociétés','444 · 695'],
+          ['Compte d\'attente','471'],['CCA · PCA · FNP · FAE','486 · 487 · 408 · 418'],
+          ['Provisions · dotation','151 · 6815'],['Amortissements · dotation','28x · 6811'],
+          ['Ventes services · marchandises','706 · 707'],['Achats marchandises · matières · non stockés','607 · 601 · 606'],
+          ['Entretien · Honoraires · Frais bancaires','615 · 6226 · 627'],['Loyer · Assurance · Télécom · Transport','613 · 616 · 626 · 624']
+        ].map(function(x){ return '<tr><td>'+esc(x[0])+'</td><td class="r">'+esc(x[1])+'</td></tr>'; }).join('')+'</tbody></table></div>';
+    }
+
+    h+='</div>';
+    return h;
+  }
+  window.pageParcours=pageParcours;
+
+  try{ if(window.YADA_OK&&window.YADA_OK.indexOf('parcours')<0) window.YADA_OK.push('parcours'); }catch(e){}
+  try{ if(window.YADA_LBL) window.YADA_LBL.parcours='Parcours comptable guidé'; }catch(e){}
+
+  var st=document.createElement('style'); st.id='pc-mod'; st.textContent=
+   'html body:not(#_yz) #yada-pc{background:#000;color:#e6e6e8;font-family:Georgia,"Times New Roman",serif;padding:0 0 40px}'
+  +'html body:not(#_yz) #yada-pc *{font-family:Georgia,"Times New Roman",serif}'
+  +'html body:not(#_yz) #yada-pc .pc-eyebrow,#yada-pc .pc-kl,#yada-pc .pc-pill,#yada-pc .pc-k,#yada-pc .pc-btn,#yada-pc .pc-tab,#yada-pc .pc-num,#yada-pc .pc-chip,#yada-pc .pc-t th,#yada-pc .pc-close,#yada-pc .pc-nl{font-family:ui-monospace,SFMono-Regular,Menlo,monospace!important}'
+  +'#yada-pc .pc-mast{position:relative;padding:26px 16px 14px;border-bottom:1px solid #242427}'
+  +'#yada-pc .pc-eyebrow{font-size:10px;color:#8b8b90;letter-spacing:.14em}'
+  +'#yada-pc .pc-h1{font-size:27px;margin:6px 0 4px;font-weight:400;color:#f5f5f6}'
+  +'#yada-pc .pc-sub{font-size:13px;color:#a8a9ad}'
+  +'#yada-pc .pc-close{position:absolute;top:22px;right:16px;width:auto;padding:5px 11px;background:#000;border:1px solid #f5f5f6;color:#f5f5f6;font-size:11px;border-radius:5px;cursor:pointer}'
+  +'#yada-pc .pc-close:hover{background:#f5f5f6;color:#0a0a0b}'
+  +'#yada-pc .pc-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:14px 16px 0}'
+  +'#yada-pc .pc-kpi{background:#0b0b0c;border:1px solid #242427;border-radius:6px;padding:10px 12px}'
+  +'#yada-pc .pc-kl{font-size:9.5px;color:#8b8b90;letter-spacing:.08em}'
+  +'#yada-pc .pc-kv2{font-size:21px;color:#f5f5f6;margin-top:3px}'
+  +'#yada-pc .pc-next{margin:14px 16px 0;background:#0b0b0c;border:1px solid #35353a;border-left:3px solid #f5f5f6;border-radius:6px;padding:13px 15px}'
+  +'#yada-pc .pc-nl{font-size:9.5px;color:#8b8b90;letter-spacing:.12em}'
+  +'#yada-pc .pc-nt{font-size:18px;color:#f5f5f6;margin:5px 0 3px}'
+  +'#yada-pc .pc-nq{font-size:13px;color:#cfd0d3}'
+  +'#yada-pc .pc-tabs{display:flex;gap:6px;padding:16px 16px 0;flex-wrap:wrap}'
+  +'#yada-pc .pc-tab{background:#000;border:1px solid #35353a;color:#a8a9ad;font-size:11px;padding:5px 11px;border-radius:5px;cursor:pointer}'
+  +'#yada-pc .pc-tab.on{background:#f5f5f6;color:#0a0a0b;border-color:#f5f5f6}'
+  +'#yada-pc .pc-liste{padding:12px 16px 0;display:grid;gap:8px}'
+  +'#yada-pc .pc-etape{background:#0b0b0c;border:1px solid #242427;border-radius:6px;padding:11px 13px}'
+  +'#yada-pc .pc-etape.fait{border-left:3px solid #f5f5f6}'
+  +'#yada-pc .pc-etape.afaire{border-left:3px solid #8b8b90}'
+  +'#yada-pc .pc-etape.encours{border-left:3px solid #cfd0d3}'
+  +'#yada-pc .pc-etape.bloque{border-left:3px solid #35353a;opacity:.62}'
+  +'#yada-pc .pc-etape.na{border-left:3px solid #242427;opacity:.55}'
+  +'#yada-pc .pc-head{display:flex;align-items:center;gap:9px;flex-wrap:wrap}'
+  +'#yada-pc .pc-num{font-size:10px;color:#8b8b90;border:1px solid #35353a;border-radius:4px;padding:1px 6px;min-width:22px;text-align:center}'
+  +'#yada-pc .pc-titre{font-size:15px;color:#f5f5f6;flex:1}'
+  +'#yada-pc .pc-pill{font-size:9.5px;padding:2px 8px;border-radius:9px;letter-spacing:.06em}'
+  +'#yada-pc .pc-fait{background:#f5f5f6;color:#0a0a0b}'
+  +'#yada-pc .pc-encours{background:#000;color:#cfd0d3;border:1px solid #cfd0d3}'
+  +'#yada-pc .pc-afaire{background:#000;color:#8b8b90;border:1px solid #8b8b90}'
+  +'#yada-pc .pc-na,#yada-pc .pc-bloque{background:#000;color:#616166;border:1px solid #35353a}'
+  +'#yada-pc .pc-quoi{font-size:12.5px;color:#cfd0d3;margin:6px 0 0}'
+  +'#yada-pc .pc-bloc{font-size:11px;color:#8b8b90;margin-top:5px}'
+  +'#yada-pc .pc-det{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:4px 14px;margin-top:8px}'
+  +'#yada-pc .pc-kv{display:flex;justify-content:space-between;gap:10px;border-top:1px solid #171719;padding:3px 0}'
+  +'#yada-pc .pc-k{font-size:10px;color:#8b8b90}'
+  +'#yada-pc .pc-v{font-size:12px;color:#e6e6e8;text-align:right}'
+  +'#yada-pc .pc-act{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap}'
+  +'#yada-pc .pc-btn{background:#000;border:1px solid #35353a;color:#e6e6e8;font-size:11px;padding:5px 11px;border-radius:5px;cursor:pointer}'
+  +'#yada-pc .pc-btn:hover{border-color:#f5f5f6}'
+  +'#yada-pc .pc-pri{background:#f5f5f6;color:#0a0a0b;border-color:#f5f5f6}'
+  +'#yada-pc .pc-card{margin:12px 16px 0;background:#0b0b0c;border:1px solid #242427;border-radius:6px;padding:12px 14px}'
+  +'#yada-pc .pc-ch{font-size:15px;color:#f5f5f6;margin-bottom:8px}'
+  +'#yada-pc .pc-txt{font-size:12.5px;color:#cfd0d3;line-height:1.55}'
+  +'#yada-pc .pc-cols{display:flex;flex-wrap:wrap;gap:5px}'
+  +'#yada-pc .pc-chip{font-size:10px;color:#a8a9ad;border:1px solid #35353a;border-radius:9px;padding:2px 9px}'
+  +'#yada-pc .pc-t{width:100%;border-collapse:collapse;margin-top:4px}'
+  +'#yada-pc .pc-t th{background:#121214;color:#a8a9ad;font-size:9.5px;letter-spacing:.08em;text-align:left;padding:5px 8px;border-bottom:1px solid #35353a;font-weight:400}'
+  +'#yada-pc .pc-t td{font-size:12px;color:#e6e6e8;padding:5px 8px;border-bottom:1px solid #171719}'
+  +'#yada-pc .pc-t tfoot td{color:#f5f5f6;border-top:1px solid #35353a}'
+  +'#yada-pc .pc-t .r{text-align:right}'
+  +'@media(max-width:900px){#yada-pc .pc-kpis{grid-template-columns:repeat(2,1fr)}}';
+  document.head.appendChild(st);
 })();
 </script>
 </body>
