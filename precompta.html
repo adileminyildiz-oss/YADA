@@ -11084,7 +11084,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v640';
+    b.textContent='YADA · v641';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -28935,6 +28935,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
   try{ if(typeof SG_MENUS!=='undefined' && SG_MENUS.indexOf('yada-mods')<0) SG_MENUS.push('yada-mods'); }catch(e){}
   function ensureMenu(){
     try{
+      if(window.YADA_BARRE) return;   /* v641 — la barre thématique a remplacé le menu plat « Modules » */
       if(typeof current==='undefined'||current!=='compta') return;
       var menu=document.querySelector('.sg-app .sg-menu'); if(!menu) return;
       var old=menu.querySelector('#sg-mi-modules'); if(old&&old.parentNode) old.parentNode.removeChild(old);
@@ -37166,6 +37167,134 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
         window.save=function(){ var r=_s.apply(this,arguments); EMPREINTE=''; return r; }; } }catch(e){}
   try{ if(typeof window.chargerDossier==='function'){ var _c=window.chargerDossier;
         window.chargerDossier=function(){ var r=_c.apply(this,arguments); IDX=null; EMPREINTE=''; return r; }; } }catch(e){}
+})();
+</script>
+<script id="yada-addon-barre-commande">
+/* v641 — LA BANDE DU HAUT DEVIENT LE POSTE DE COMMANDE.
+   La barre de menus de la Consultation (Fichier · Exercice · Journal · Compte · Balances ·
+   Paramètres · Utilitaires · Navigation · Modules · Aide) est restructurée en RUBRIQUES MÉTIER
+   qui accueillent TOUS les modules :
+     Fichier · Consultation · Saisie · Traitements · Déclarations · États · Révision · Analyse ·
+     Paramètres · Aide
+   Les menus natifs ne sont PAS réécrits : leurs boutons sont DÉPLACÉS (déplacement DOM — les
+   handlers en ligne voyagent avec eux, même parade qu'en v623 pour la barre de filtre).
+   Le menu plat « Modules » disparaît : chaque module rejoint sa rubrique.
+   Invariants : 0 bouton vide (un module non enregistré n'apparaît pas), aucun débordement.
+   100% ADDITIF (1 seule édition chirurgicale hors addon : la garde de l'ancien menu « Modules »). */
+(function(){
+  window.YADA_BARRE=true;   /* coupe la reconstruction de l'ancien menu plat « Modules » */
+
+  /* Rubriques : ce que chaque menu PREND aux menus natifs, puis les MODULES qu'il liste. */
+  var PLAN=[
+    {id:'yb-fichier', lbl:'Fichier',
+     prend:[['sg-fichier',''],['sg-exercice','Exercice']], mods:[]},
+    {id:'yb-consult', lbl:'Consultation',
+     prend:[['sg-journal','Journal'],['sg-compte','Compte'],['sg-balances','Balances'],['sg-nav','Navigation']], mods:[]},
+    {id:'yb-saisie',  lbl:'Saisie',       prend:[],
+     mods:['journal','achats','recurrentes','importbanque','chargespaie']},
+    {id:'yb-trait',   lbl:'Traitements',  prend:[['sg-util','Utilitaires']],
+     mods:['automatismes','rappro','banque','immos']},
+    {id:'yb-decl',    lbl:'Déclarations', prend:[], mods:['tva']},
+    {id:'yb-etats',   lbl:'États',        prend:[], mods:['editions']},
+    {id:'yb-revis',   lbl:'Révision',     prend:[], mods:['controles']},
+    {id:'yb-analyse', lbl:'Analyse',      prend:[],
+     mods:['dash','analytique','reglements','pilotage','salarie']},
+    {id:'yb-param',   lbl:'Paramètres',   prend:[['sg-param','Réglages de la consultation']],
+     mods:['plancomptable','tiers','parametrage','infosociete','societe','coffre','fec']}
+  ];
+
+  /* Chaque rubrique se ferme avec les autres. */
+  try{ if(typeof SG_MENUS!=='undefined') PLAN.forEach(function(P){
+    if(SG_MENUS.indexOf(P.id)<0) SG_MENUS.push(P.id); }); }catch(e){}
+
+  function lbl(id){ try{ return (window.YADA_LBL&&window.YADA_LBL[id])||id; }catch(e){ return id; } }
+  function connu(id){ try{ return (window.YADA_OK||[]).indexOf(id)>=0; }catch(e){ return false; } }
+  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function grp(titre){
+    var d=document.createElement('div'); d.className='yb-grp'; d.textContent=titre; return d;
+  }
+  function sep(){ var d=document.createElement('div'); d.className='sep'; return d; }
+
+  function btnModule(id){
+    var b=document.createElement('button');
+    b.setAttribute('onclick',"event.stopPropagation();closeMenus();current='"+id+"';render()");
+    b.textContent=lbl(id); return b;
+  }
+
+  function construire(menu){
+    /* 1. l'entrée « Aide » reste en dernier : on la met de côté */
+    var aide=null;
+    Array.prototype.slice.call(menu.children).forEach(function(sp){
+      if(/^\s*Aide/.test(sp.textContent||'')) aide=sp;
+    });
+
+    PLAN.forEach(function(P){
+      var sp=document.createElement('span');
+      sp.className='mi'; sp.id=P.id+'-mi';
+      sp.setAttribute('onclick',"event.stopPropagation();toggleMenu('"+P.id+"')");
+      sp.innerHTML=esc(P.lbl)+'<div class="sg-dd" id="'+P.id+'"></div>';
+      var dd=sp.querySelector('.sg-dd');
+      var vide=true;
+
+      /* 2. reprise des menus natifs — DÉPLACEMENT des boutons (handlers conservés) */
+      P.prend.forEach(function(pair){
+        var src=document.getElementById(pair[0]); if(!src) return;
+        var kids=Array.prototype.slice.call(src.children);
+        if(!kids.length) return;
+        if(!vide) dd.appendChild(sep());
+        if(pair[1]) dd.appendChild(grp(pair[1]));
+        kids.forEach(function(k){ dd.appendChild(k); });
+        vide=false;
+        var host=src.parentNode;                       /* le <span class="mi"> natif */
+        if(host&&host.parentNode) host.parentNode.removeChild(host);
+      });
+
+      /* 3. les modules de la rubrique — seulement ceux qui existent (0 bouton vide) */
+      var mods=P.mods.filter(connu);
+      if(mods.length){
+        if(!vide) dd.appendChild(sep());
+        if(P.prend.length) dd.appendChild(grp('Modules'));
+        mods.forEach(function(id){ dd.appendChild(btnModule(id)); });
+        vide=false;
+      }
+
+      if(vide) return;                                  /* aucune rubrique vide dans la barre */
+      menu.appendChild(sp);
+    });
+
+    /* 4. l'ancien menu plat « Modules » n'a plus lieu d'être */
+    var old=menu.querySelector('#yada-mods-mi'); if(old&&old.parentNode) old.parentNode.removeChild(old);
+    var old2=menu.querySelector('#sg-mi-modules'); if(old2&&old2.parentNode) old2.parentNode.removeChild(old2);
+
+    /* 5. « Aide » repasse en dernier */
+    if(aide) menu.appendChild(aide);
+    menu.setAttribute('data-yb','1');
+  }
+
+  function ensure(){
+    try{
+      if(typeof current==='undefined'||current!=='compta') return;
+      var menu=document.querySelector('.sg-app .sg-menu'); if(!menu) return;
+      if(menu.getAttribute('data-yb')==='1') return;    /* idempotent */
+      construire(menu);
+    }catch(e){}
+  }
+  try{ if(typeof window.render==='function'){ var _r=window.render;
+    window.render=function(){ var x=_r.apply(this,arguments); try{ ensure(); }catch(e){} return x; }; } }catch(e){}
+  try{ setInterval(ensure, 900); }catch(e){}
+  try{ ensure(); }catch(e){}
+
+  /* Style — en-têtes de rubrique dans les déroulants (jetons Registre, aucune couleur nouvelle) */
+  try{
+    var st=document.getElementById('yb-barre-mod');
+    if(!st){ st=document.createElement('style'); st.id='yb-barre-mod'; document.head.appendChild(st); }
+    st.textContent=
+      'html body:not(#_yz) .sg-app .sg-dd .yb-grp{padding:6px 12px 3px;font-size:10px;letter-spacing:.09em;'
+     +'text-transform:uppercase;color:#8b8b90;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;'
+     +'font-weight:400;cursor:default;white-space:nowrap}'
+     +'html body:not(#_yz) .sg-app .sg-dd{max-height:82vh;overflow:auto}';
+  }catch(e){}
 })();
 </script>
 </body>

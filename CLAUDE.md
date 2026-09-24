@@ -36,7 +36,43 @@
 
 ---
 
-## 🟢 Dernière mise à jour — ÉTAPE 8 : LE JOURNAL REDEVIENT OUVRABLE (11 s → 0,1 s) — v640
+## 🟢 Dernière mise à jour — LA BANDE DU HAUT DEVIENT LE POSTE DE COMMANDE (10 rubriques métier) — v641
+**Quoi :** demande — *« je veux que la bande du haut soit l'acteur majeur des paramètres »*, chaque module placé dans une rubrique. La barre de menus de la Consultation (Fichier · Exercice · Journal · Compte · Balances · Paramètres · Utilitaires · Navigation · **Modules** · Aide) est restructurée en **10 rubriques métier** qui suivent la chaîne comptable :
+
+| Rubrique | Ce qu'elle reprend | Modules qu'elle liste |
+| --- | --- | --- |
+| **Fichier** | Fichier + **Exercice** | — |
+| **Consultation** | Journal · Compte · Balances · Navigation | — |
+| **Saisie** | — | Journal comptable · Fournisseurs · Écritures récurrentes · Import bancaire · Charges & Paie |
+| **Traitements** | Utilitaires | Automatismes · Rapprochement bancaire · Banque · Immobilisations |
+| **Déclarations** | — | Module TVA |
+| **États** | — | Éditions comptables |
+| **Révision** | — | Contrôles de cohérence |
+| **Analyse** | — | Tableau de bord · Analytique & rentabilité · Suivi des règlements · Pilotage · Salarié |
+| **Paramètres** | Réglages de la consultation | Plan comptable · Tiers · Paramétrage · Informations société · Sociétés · Coffre-fort · Import/Export FEC |
+| **Aide** | Aide (inchangée, toujours en dernier) | — |
+
+**Le menu plat « Modules » disparaît** : ses 24 entrées rejoignent leur rubrique. Les rubriques nouvelles (Déclarations, États, Révision) n'ont aujourd'hui qu'un module chacune — **elles se remplissent aux étapes suivantes** (Liasse fiscale, Bilan/CR normalisés, Dossier de révision), ce qui est précisément leur raison d'être : la barre est **la structure d'accueil** du programme comptable à venir.
+
+**Comment — nouvel addon `yada-addon-barre-commande` (100% ADDITIF) + 1 édition chirurgicale :** les menus natifs ne sont **pas réécrits** — leurs boutons sont **DÉPLACÉS** dans la nouvelle rubrique (`appendChild` du nœud existant → les `onclick` en ligne voyagent avec eux, **même parade qu'en v623** pour la barre de filtre de l'éditeur), puis le `<span class="mi">` natif est retiré. Les rubriques sont donc **pilotées par les mêmes handlers qu'avant** (`exSuivant`, `fileExportFEC`, `sgSetJrn`…) — aucune logique dupliquée. Les ids des rubriques sont poussés dans **`SG_MENUS`** → elles se ferment avec les autres (`closeMenus`, clic extérieur). L'édition chirurgicale est une **ligne gardée** dans l'ancien `ensureMenu` (`if(window.YADA_BARRE) return;`) qui empêche la reconstruction du menu plat par son intervalle de 900 ms. **Points techniques :** (1) **idempotent** — la barre est marquée `data-yb="1"` ; `pageCompta` la reconstruisant à chaque rendu, le marqueur disparaît et la rubrique se rebâtit, sans jamais se dédoubler ; (2) **0 bouton vide** (invariant v629/v630) — un module absent de `window.YADA_OK` **n'est pas affiché**, et une rubrique qui se retrouverait vide **n'entre pas dans la barre** ; (3) en-têtes de rubrique `.yb-grp` aux **jetons Registre** (mono 10 px, gris `#8b8b90`), déroulants bornés à `82vh`. `sw.js` yada-v236, badge v641, `version.json` 641.
+
+**Validé :** `node --check` (**311 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014) + balises (3/5/3) + **filet d'équilibre** ✅ + sonde Playwright :
+
+| Mesure | Résultat |
+| --- | --- |
+| Barre rendue | **10 rubriques** — Fichier · Consultation · Saisie · Traitements · Déclarations · États · Révision · Analyse · Paramètres · Aide |
+| Ancien menu plat « Modules » | **retiré** |
+| Boutons des déroulants · **boutons vides** | **79** · **0** |
+| Menus natifs repris (Fichier = Fichier + Exercice) | **21 boutons**, « Exercice suivant… » présent |
+| Navigation réelle depuis la barre | **6/6** (tva · editions · controles · automatismes · journal · dash) |
+| Débordement de barre à 1440 / 1280 / 1024 / 900 px | **aucun** (`scrollWidth = clientWidth`, document sans défilement horizontal) |
+| pageerror · console.error | **0** · **0** |
+
+**Le programme qui suit** (chaque étape rejoint sa rubrique) : **v642** TVA sur les encaissements (Déclarations) · **v643** Bilan & Compte de résultat normalisés + SIG + N-1 (États) · **v644** Inventaire & cut-off (Traitements) · **v645** Dossier de révision par cycles (Révision) · **v646** Liasse fiscale 2050-2059 (Déclarations) · **v647** Analytique par axes / chantiers (Analyse) · **v648** amortissement dégressif — bascule linéaire (Traitements).
+
+---
+
+## 🟢 MAJ précédente — ÉTAPE 8 : LE JOURNAL REDEVIENT OUVRABLE (11 s → 0,1 s) — v640
 **Quoi :** profil de **tous les modules** sur un dossier réel. Le **Journal comptable** met **11,2 s** à s'afficher sur 15 000 écritures (1,5 s dès 2 000) — de très loin le module le plus lourd, et l'un des plus ouverts. Il s'affiche désormais en **106 ms**.
 
 | Dossier | Avant | Après |
