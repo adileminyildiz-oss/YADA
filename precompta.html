@@ -11084,7 +11084,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v639';
+    b.textContent='YADA · v640';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -29706,11 +29706,22 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       })
       .sort(function(a,b){ return String(a.date)<String(b.date)?-1:1; });
     var td=0, tc=0, html='';
-    if(!list.length) return {rows:'<tr><td colspan="6" class="jr-empty">Aucune écriture'+(q?' pour cette recherche':'')+'.</td></tr>', td:0, tc:0, n:0};
-    list.forEach(function(e){
+    if(!list.length) return {rows:'<tr><td colspan="6" class="jr-empty">Aucune écriture'+(q?' pour cette recherche':'')+'.</td></tr>', td:0, tc:0, n:0, page:1, pages:1, off:0, vues:0};
+    /* Les TOTAUX portent sur le journal ENTIER — la pagination ne borne que ce qui est affiché. */
+    list.forEach(function(e){ (e.lignes||[]).forEach(function(l){ td+=(+l.debit||0); tc+=(+l.credit||0); }); });
+    /* Pagination : n'apparaît qu'au-delà de JR_PAR_PAGE écritures. En deçà — la quasi-totalité
+       des journaux d'un dossier courant — la page est rendue exactement comme avant. */
+    var pages=Math.max(1,Math.ceil(list.length/JR_PAR_PAGE));
+    var sig=jr+'|'+q+'|'+list.length;
+    if(window.__jrSig!==sig){ window.__jrSig=sig; window.__jrPage=1; }
+    var page=(typeof window.__jrPage==='number'&&window.__jrPage>=1)?window.__jrPage:1;
+    if(page>pages) page=pages;
+    window.__jrPage=page;
+    var off=(page-1)*JR_PAR_PAGE;
+    var vue=(list.length>JR_PAR_PAGE)?list.slice(off,off+JR_PAR_PAGE):list;
+    vue.forEach(function(e){
       var piece=e.numero||e.piece||'';
       (e.lignes||[]).forEach(function(l,i){
-        td+=(+l.debit||0); tc+=(+l.credit||0);
         html+='<tr'+(i===0?' class="jr-sep"':'')+' data-ecr="'+e2(e.id)+'" oncontextmenu="return jrnCtx(event,\''+e2(e.id)+'\')" title="Clic droit : éditer l\'écriture">'
           +'<td class="num">'+(i===0?frd(e.date):'')+'</td>'
           +'<td class="num jr-pc">'+(i===0?e2(piece):'')+'</td>'
@@ -29720,7 +29731,21 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
           +'<td class="r num">'+(l.credit?E(l.credit):'—')+'</td></tr>';
       });
     });
-    return {rows:html, td:td, tc:tc, n:list.length};
+    return {rows:html, td:td, tc:tc, n:list.length, page:page, pages:pages, off:off, vues:vue.length};
+  }
+  var JR_PAR_PAGE=100;
+  window.jrPage=function(n){
+    var p=parseInt(n,10); if(!(p>=1)) p=1; window.__jrPage=p;
+    if(typeof render==='function') render();
+    try{ var el=document.querySelector('#yada-jr .jr-panel'); if(el) el.scrollTop=0; }catch(e){}
+  };
+  function jrPager(b){
+    if(!b || b.pages<=1) return '';
+    return '<div class="jr-pag"><span class="jr-pagi">Écritures '+(b.off+1)+' à '+(b.off+b.vues)
+      +' sur '+b.n+' · page '+b.page+' sur '+b.pages+'</span><span class="jr-pagb">'
+      +'<button class="jr-pg"'+(b.page<=1?' disabled':'')+' onclick="jrPage('+(b.page-1)+')">\u2039 Pr\u00e9c\u00e9dent</button>'
+      +'<button class="jr-pg"'+(b.page>=b.pages?' disabled':'')+' onclick="jrPage('+(b.page+1)+')">Suivant \u203a</button>'
+      +'</span></div>';
   }
   window.pageJournal=function(){
     var c=counts(); var jr=curJrn();
@@ -29739,10 +29764,12 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
           +'<div class="jr-list">'+rail+'</div></div>'
         +'<div class="jr-panel">'
           +'<div class="jr-ph"><span class="jr-pt"><span class="jr-b">'+badge(jr)+'</span> Journal — '+e2(nom(jr))+'</span><span class="jr-sub">'+b.n+' écriture(s)</span></div>'
+          +jrPager(b)
           +'<div class="jr-tblwrap"><table class="jr-tbl"><thead><tr><th>Date</th><th>Pièce</th><th>Compte</th><th>Intitulé</th><th class="r">Débit</th><th class="r">Crédit</th></tr></thead>'
             +'<tbody id="jr-tbody">'+b.rows+'</tbody>'
             +'<tfoot><tr><td colspan="4">Totaux journal '+badge(jr)+(eq?'':' — déséquilibre !')+'</td><td class="r num">'+E(b.td)+'</td><td class="r num">'+E(b.tc)+'</td></tr></tfoot>'
           +'</table></div>'
+          +jrPager(b)
         +'</div>'
       +'</div></div></div>';
   };
@@ -29787,6 +29814,13 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     +'#yada-jr .jr-tbl tfoot td{border-top:1px solid #333;font-weight:700;color:#fff!important;padding:11px 11px}'
     +'#yada-jr .r{text-align:right}#yada-jr .num{font-variant-numeric:tabular-nums}'
     +'#yada-jr .jr-empty{color:#8a8a8a;text-align:center;padding:22px}'
+    +'#yada-jr .jr-pag{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:9px 0;font-size:12px}'
+    +'#yada-jr .jr-pagi{color:#8a8a8a!important}'
+    +'#yada-jr .jr-pagb{margin-left:auto;display:flex;gap:8px}'
+    +'#yada-jr .jr-pg{background:#000;color:#fff!important;border:1px solid #444;border-radius:8px;'
+      +'padding:5px 11px;font:inherit;font-size:12px;font-weight:400;cursor:pointer;white-space:nowrap}'
+    +'#yada-jr .jr-pg:hover:not([disabled]){border-color:#fff}'
+    +'#yada-jr .jr-pg[disabled]{opacity:.42;cursor:default}'
     +'#yada-jr a{color:#fff!important}'
     +'@media(max-width:760px){#yada-jr .jr-body{grid-template-columns:1fr}#yada-jr .jr-rail{border-right:0;border-bottom:1px solid #1b1b1b}}';
     document.head.appendChild(st);

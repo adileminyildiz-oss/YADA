@@ -36,7 +36,31 @@
 
 ---
 
-## 🟢 Dernière mise à jour — ÉTAPE 7 : LA VITESSE (le lettrage cesse de relire le dossier une fois par tiers) — v639
+## 🟢 Dernière mise à jour — ÉTAPE 8 : LE JOURNAL REDEVIENT OUVRABLE (11 s → 0,1 s) — v640
+**Quoi :** profil de **tous les modules** sur un dossier réel. Le **Journal comptable** met **11,2 s** à s'afficher sur 15 000 écritures (1,5 s dès 2 000) — de très loin le module le plus lourd, et l'un des plus ouverts. Il s'affiche désormais en **106 ms**.
+
+| Dossier | Avant | Après |
+| --- | --- | --- |
+| 60 écritures | 62 ms | **62 ms** — identique, aucun contrôle en plus |
+| 2 000 écritures | ≈ 1 500 ms | **99 ms** |
+| **15 000 écritures** | **≈ 14 000 ms** | **106 ms** — **×130** |
+
+**Correctif : la pagination du journal.** Le module construisait **45 002 lignes de tableau** d'un seul tenant (11,9 Mo de HTML). Seules **100 écritures** sont désormais rendues à la fois, avec un pied de navigation « Écritures 1 à 100 sur 15 000 · page 1 sur 150 · ‹ Précédent / Suivant › » **au-dessus et au-dessous** du tableau. **Seuil : 100 écritures** — en deçà, c'est-à-dire la quasi-totalité des journaux d'un dossier courant, la page est rendue **exactement comme avant**, sans le moindre contrôle supplémentaire (vérifié : 60 écritures → 180 lignes, **0 pager**).
+
+**Ce qui n'est PAS borné :** les **totaux du pied** portent sur le **journal entier** (déplacés hors de la boucle d'affichage), le **sous-titre** annonce le nombre total d'écritures, et les **compteurs du rail** restent complets. Mesuré : totaux **identiques page 1 et page 2**, et égaux au total attendu du journal (1 800 000,00 €). La page revient à **1** dès qu'on change de journal ou de recherche.
+
+**Comment :** édition chirurgicale de `bodyRows` et de `pageJournal` (module Registre), plus `window.jrPage(n)` et un style `.jr-pag` aux jetons noir & blanc du module — **aucun nouveau fichier, aucune couleur nouvelle, 0 bouton vide**.
+
+**Validé :** `node --check` (**310 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014) + balises (3/5/3) + **filet d'équilibre** ✅ + sonde Playwright (rendus 60 / 2 000 / 15 000 écritures, totaux page 1 = page 2 = journal, retour page 1 au changement de journal et de recherche, **0 bouton vide**, **routage 25/25**, **0 pageerror**, **0 console.error**). `sw.js` yada-v235, badge v640, `version.json` 640.
+
+**Leçon de méthode — deux pièges de sonde coup sur coup, et deux corrections abandonnées.**
+1. **J'ai d'abord optimisé du code mort.** Le fichier contient **trois** définitions de `pageJournal` ; j'ai lu la première (ligne 9081, avec ses onglets) et paginé celle-là. Le module réellement affiché est le **quatrième override** (`#yada-jr`, reconstruction Registre v598) — ma pagination n'était jamais exécutée. **Dans un fichier à 310 scripts qui se surchargent, on identifie la définition VIVANTE avant de lire le code** (ici : le DOM rendu portait `#yada-jr`, pas `.ecr`).
+2. **J'ai ensuite accusé la mauvaise fonction.** Une mesure à un coup donnait « Journal 13,4 s, et 7,7 s en neutralisant `jrnFactureLien` » — j'en ai conclu que ce helper coûtait 5,7 s en recherches linéaires. En comptant les appels : **0 appel**. L'écart venait du **ramasse-miettes** ; répétée, la mesure donne 14 / 22 / 28 s. **Une mesure à un coup sur un rendu lourd ne prouve rien : il faut répéter, et compter les appels avant d'attribuer un coût.** L'index écrit pour ce helper — pourtant prouvé équivalent sur ses quatre branches — a été **retiré** : corriger ce qui n'est pas appelé n'est pas une amélioration.
+3. Le vrai coût, mesuré ensuite : construction du HTML **1,4 s**, injection DOM **0,5 s**, et **le reste dans les filets génériques post-rendu** (alignement des en-têtes v631, contraste v632) qui balayent chaque cellule. Rien à optimiser en eux : c'est le **volume du DOM** qu'il fallait réduire — et la pagination les allège d'autant.
+
+---
+
+## 🟢 MAJ précédente — ÉTAPE 7 : LA VITESSE (le lettrage cesse de relire le dossier une fois par tiers) — v639
 **Quoi :** *« automatiser **et rapidement** »* — la seconde moitié de la demande, mesurée. Profil d'un passage, automatisme par automatisme, sur trois tailles de dossier : **le lettrage pèse 90 % du coût**, et il croît **en carré** — 500 écritures : 42 ms · 2 000 : 45 ms · 6 000 : **370 ms**. Sur un dossier réel de **15 000 écritures**, une simple simulation prenait **2,58 secondes**. Elle en prend désormais **12**.
 
 **La cause n'était pas le lettrage, mais `auxLignes(t)`** — la fonction qui reconstitue les lignes d'un tiers, que le lettrage appelle **une fois par tiers** : elle **recopie et retrie la TOTALITÉ des écritures à chaque appel** (`db.ecritures.slice().sort(...)`), relit toutes les lignes, et pour chaque ligne portée sur le **collectif** 401/411 refait un `db.factures.find(...)` **et** un `db.banque.find(...)`. Coût = **tiers × écritures** (× factures). 300 tiers × 15 000 écritures = 4,5 millions d'unités.
