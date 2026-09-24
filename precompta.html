@@ -11084,7 +11084,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v634';
+    b.textContent='YADA · v635';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -33487,6 +33487,8 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
         return {date:o.date, lib:o.lib, montant:o.montant, fitid:o.fitid||'', etat:r.etat, note:r.note,
                 compte:s.compte, tiersId:s.tiersId, ok:(r.etat==='nouvelle')}; });
       ST.msg=ops.length?('Fichier '+ST.format+' lu : '+ops.length+' opération(s).'):'Aucune opération reconnue dans ce fichier.';
+      /* le relevé est mémorisé pour le pointage automatique (étape 3) */
+      try{ if(ops.length && typeof window.rbMemoriserReleve==='function'){ var _mem=window.rbMemoriserReleve(ST.ops,'',ST.format); if(_mem) ST.msg+=' Relevé mémorisé : '+_mem+' ligne(s).'; } }catch(e){}
       if(typeof render==='function') render();
       if(typeof toast==='function') toast(ST.msg);
     };
@@ -36067,6 +36069,230 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       window.pageAutomatismes=function(){
         var h=_pa.apply(this,arguments);
         try{ var i=h.lastIndexOf('</div></div>'); if(i>0) return h.slice(0,i)+carteRegles()+h.slice(i); }catch(e){}
+        return h;
+      };
+    }
+  }catch(e){}
+})();
+</script>
+<script id="yada-addon-rapprochement">
+/* ═══ ÉTAPE 3 — RAPPROCHEMENT BANCAIRE AUTOMATIQUE : pointage relevé ↔ écritures ═══
+   Le relevé lu par l'Import bancaire (OFX / CSV) est désormais MÉMORISÉ ligne à ligne
+   (db.parametres.relevesLignes). L'automatisme apparie ensuite chaque ligne de relevé avec
+   l'écriture comptable qui bouge le même compte 512 du même montant (±0,01 €) dans une
+   fenêtre de ±5 jours. Un appariement n'est retenu que s'il est SANS AMBIGUÏTÉ : un seul
+   candidat, ou un candidat strictement plus proche en date que tous les autres. Deux candidats
+   à égalité de date restent à la main.
+   Chaque appariement coche la case du module Rapprochement bancaire (rel.rap du relevé
+   correspondant, s'il existe et n'est pas verrouillé) — le pointage manuel ligne à ligne
+   devient automatique, sans jamais dépointer ni modifier un montant.
+   100% ADDITIF : aucune écriture créée ni modifiée, aucun solde touché. */
+(function(){
+  function e2(x){ return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+  function E(x){ return (typeof eur==='function')?eur(x):((+x||0).toFixed(2)+' €'); }
+  function C9(c){ return (typeof c9==='function')?c9(c):String(c==null?'':c); }
+  function R2(x){ return (typeof r2==='function')?r2(x):Math.round((+x||0)*100)/100; }
+  function SAVE(){ try{ if(typeof save==='function') save(); }catch(e){} }
+  function RENDER(){ try{ if(typeof render==='function') render(); }catch(e){} }
+  function TOAST(m){ try{ if(typeof toast==='function') toast(m); }catch(e){} }
+  function UID(){ try{ if(typeof uid==='function') return uid(); }catch(e){} return String(Date.now())+Math.random().toString(36).slice(2); }
+  function frd(d){ d=String(d||''); var m=d.match(/^(\d{4})-(\d{2})-(\d{2})/); return m?(m[3]+'/'+m[2]+'/'+m[1].slice(2)):d; }
+  var MOIS=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  function moisLbl(p){ var m=String(p||'').split('-'); return (MOIS[(+m[1]||1)-1]||'')+' '+(m[0]||''); }
+  function norm(s){ return String(s||'').toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^A-Z0-9 ]/g,' ').replace(/\s+/g,' ').trim(); }
+  function JOURS(a,b){ var d1=new Date(a+'T00:00:00'), d2=new Date(b+'T00:00:00'); if(isNaN(d1)||isNaN(d2)) return 1e9; return Math.round(Math.abs(d1-d2)/86400000); }
+  function libCompte(code){ var c=C9(code);
+    try{ if(typeof COMPTES!=='undefined'&&COMPTES){ if(COMPTES[c])return COMPTES[c]; var s6=c.slice(0,6),s3=c.slice(0,3); if(COMPTES[s6])return COMPTES[s6]; if(COMPTES[s3])return COMPTES[s3]; } }catch(e){}
+    try{ var p=(db.plan||[]).filter(function(x){return C9(x.code)===c;})[0]; if(p)return p.lib; }catch(e){}
+    return ''; }
+
+  /* fenêtre de tolérance : ±5 jours entre la date du relevé et la date de l'écriture */
+  var FEN=5;
+
+  /* ---------- registre du relevé (persistant) ---------- */
+  function LIGNES(){
+    try{
+      db.parametres=db.parametres||{};
+      if(!Array.isArray(db.parametres.relevesLignes)) db.parametres.relevesLignes=[];
+      return db.parametres.relevesLignes;
+    }catch(e){ return []; }
+  }
+  function cpt512(){
+    try{
+      var j=(db.journaux||[]).filter(function(x){ return x.type==='Trésorerie' && x.compte; })[0];
+      if(j) return C9(j.compte);
+    }catch(e){}
+    return '512000000';
+  }
+  function cleLigne(l){ return C9(l.compte)+'|'+String(l.date||'')+'|'+R2(l.montant).toFixed(2)+'|'+norm(l.lib); }
+
+  /* mouvement du compte 512 porté par une écriture (débit − crédit) */
+  function mvt512(ec,cpt){
+    var s=0, c=C9(cpt||'');
+    (ec.lignes||[]).forEach(function(l){
+      var lc=C9(l.compte);
+      if(lc.indexOf('512')!==0) return;
+      if(c && c.indexOf('512')===0 && lc!==c) return;
+      s+=(+l.debit||0)-(+l.credit||0);
+    });
+    return R2(s);
+  }
+
+  /* ---------- mémorisation d'un relevé lu ---------- */
+  window.rbMemoriserReleve=function(ops,compte,src){
+    if(!ops||!ops.length) return 0;
+    var L=LIGNES(), cpt=C9(compte||cpt512()), n=0, vu={};
+    L.forEach(function(l){ vu[cleLigne(l)]=1; if(l.fitid) vu['F:'+l.fitid]=1; });
+    ops.forEach(function(o){
+      if(!o||!o.date) return;
+      var l={ id:UID(), compte:cpt, date:String(o.date), lib:String(o.lib||''), montant:R2(o.montant),
+              fitid:o.fitid||'', src:String(src||''), ecritureId:null };
+      var k=l.fitid?('F:'+l.fitid):cleLigne(l);
+      if(vu[k]) return;
+      vu[k]=1; L.push(l); n++;
+    });
+    if(n){ L.sort(function(a,b){ return a.date<b.date?-1:(a.date>b.date?1:0); }); SAVE(); }
+    return n;
+  };
+  window.rbOublierReleve=function(compte,mois){
+    function go(){
+      var L=LIGNES(), avant=L.length;
+      var reste=L.filter(function(l){ return !(C9(l.compte)===C9(compte) && String(l.date).slice(0,7)===mois); });
+      db.parametres.relevesLignes=reste; SAVE(); RENDER();
+      TOAST((avant-reste.length)+' ligne(s) de relevé oubliée(s) — les écritures et les pointages restent en place.');
+    }
+    var msg='Oublier les lignes de relevé de '+moisLbl(mois)+' ? Les écritures comptables et les pointages déjà faits restent en place.';
+    if(typeof yadaConfirm==='function') yadaConfirm(msg,go); else go();
+  };
+
+  /* ---------- pointage automatique ---------- */
+  function autoPointage(sim){
+    var res={n:0,det:[]};
+    var L=LIGNES(); if(!L.length) return res;
+    var ECR=[]; try{ ECR=(db.ecritures||[]); }catch(e){ return res; }
+    if(!ECR.length) return res;
+
+    /* écritures déjà revendiquées par une ligne de relevé */
+    var pris={};
+    L.forEach(function(l){ if(l.ecritureId) pris[l.ecritureId]=1; });
+
+    var parMois={}, faits=0, amb=0;
+    L.forEach(function(l){
+      var lien=l.ecritureId||null;
+      if(lien){
+        var vivant=ECR.filter(function(e){ return e.id===lien; }).length>0;
+        if(vivant) return;                 /* déjà pointée, rien à faire */
+        delete pris[lien];                 /* l'écriture a disparu : la ligne redevient à pointer */
+        if(!sim) l.ecritureId=null;
+      }
+      var cands=ECR.filter(function(e){
+        if(!e.date || pris[e.id]) return false;
+        if(JOURS(e.date,l.date)>FEN) return false;
+        var m=mvt512(e,l.compte); if(!m) return false;
+        return Math.abs(m-(+l.montant||0))<0.005;
+      });
+      if(!cands.length) return;
+      var best=null;
+      if(cands.length===1){ best=cands[0]; }
+      else{
+        var mn=1e9; cands.forEach(function(e){ var d=JOURS(e.date,l.date); if(d<mn) mn=d; });
+        var eg=cands.filter(function(e){ return JOURS(e.date,l.date)===mn; });
+        if(eg.length===1) best=eg[0];
+        else { amb++; return; }            /* égalité de date : ambigu, laissé à la main */
+      }
+      faits++; pris[best.id]=1;
+      var k=C9(l.compte)+'|'+String(l.date).slice(0,7);
+      (parMois[k]=parMois[k]||[]).push(best.id);
+      if(!sim) l.ecritureId=best.id;
+    });
+
+    var repDet=[], sansReleve=0;
+    if(!sim){
+      Object.keys(parMois).forEach(function(k){
+        var a=k.split('|'), cpt=a[0], mois=a[1];
+        var rel=null;
+        try{ rel=(db.releves||[]).filter(function(r){ return C9(r.compte)===C9(cpt) && r.mois===mois; })[0]||null; }catch(e){}
+        if(!rel){ sansReleve++; return; }
+        if(rel.verrouille) return;
+        rel.rap=rel.rap||[]; var add=0;
+        parMois[k].forEach(function(id){ if(rel.rap.indexOf(id)<0){ rel.rap.push(id); add++; } });
+        if(add) repDet.push(moisLbl(mois)+' : '+add+' cochée'+(add>1?'s':'')+' au rapprochement');
+      });
+      SAVE();
+    }
+
+    res.n=faits;
+    if(faits) res.det.push(faits+' ligne'+(faits>1?'s':'')+' de relevé pointée'+(faits>1?'s':''));
+    repDet.forEach(function(x){ res.det.push(x); });
+    if(sansReleve) res.det.push(sansReleve+' mois sans relevé de rapprochement créé');
+    if(amb) res.det.push(amb+' ambiguïté'+(amb>1?'s':'')+' laissée'+(amb>1?'s':'')+' à la main');
+    return res;
+  }
+  window.rbPointer=function(sim){ return autoPointage(!!sim); };
+
+  /* ---------- inscription dans le module Automatismes (étape 1) ---------- */
+  window.YADA_AUTOS=window.YADA_AUTOS||[];
+  if(!window.YADA_AUTOS.filter(function(a){return a.cle==='rapprochement';}).length){
+    window.YADA_AUTOS.push({
+      cle:'rapprochement',
+      nom:'Pointage du relevé bancaire',
+      desc:'Apparie chaque ligne du relevé mémorisé (Import bancaire OFX / CSV) avec l’écriture qui bouge le même compte 512 du même montant, à ±5 jours, puis coche le rapprochement du mois. Un appariement ambigu — deux écritures également proches — reste à la main.',
+      unite:'pointage',
+      run:function(sim){ return autoPointage(sim); }
+    });
+  }
+
+  /* ---------- carte « Relevés mémorisés », greffée sous le module Automatismes ---------- */
+  function groupes(){
+    var L=LIGNES(), g={};
+    L.forEach(function(l){
+      var mois=String(l.date).slice(0,7), k=C9(l.compte)+'|'+mois;
+      var o=g[k]||(g[k]={compte:C9(l.compte),mois:mois,n:0,pt:0,mt:0});
+      o.n++; if(l.ecritureId) o.pt++; o.mt+=(+l.montant||0);
+    });
+    var out=Object.keys(g).map(function(k){ return g[k]; });
+    out.sort(function(a,b){ return a.mois<b.mois?1:(a.mois>b.mois?-1:0); });
+    return out;
+  }
+  function releveExiste(cpt,mois){
+    try{ return (db.releves||[]).filter(function(r){ return C9(r.compte)===C9(cpt) && r.mois===mois; })[0]||null; }catch(e){ return null; }
+  }
+  function carteReleves(){
+    var G=groupes(), L=LIGNES();
+    var tot=L.length, pt=L.filter(function(l){ return !!l.ecritureId; }).length;
+    var rows=G.map(function(o){
+      var rel=releveExiste(o.compte,o.mois);
+      var etat = rel ? (rel.verrouille?'Relevé verrouillé':'Relevé créé') : 'Relevé non créé';
+      return '<tr><td>'+e2(moisLbl(o.mois))+'</td><td>'+e2(o.compte)+'</td>'
+        +'<td class="r">'+o.n+'</td><td class="r">'+o.pt+'</td><td class="r">'+(o.n-o.pt)+'</td>'
+        +'<td>'+e2(etat)+'</td>'
+        +'<td class="r"><button class="au-btn" onclick="rbOublierReleve(\''+e2(o.compte)+'\',\''+e2(o.mois)+'\')">Oublier</button></td></tr>';
+    }).join('');
+    var reste=L.filter(function(l){ return !l.ecritureId; }).slice(0,24).map(function(l){
+      return '<tr><td>'+e2(frd(l.date))+'</td><td>'+e2(l.lib||'—')+'</td><td class="r">'+e2(E(l.montant))+'</td>'
+        +'<td>'+e2(l.src||'—')+'</td></tr>';
+    }).join('');
+    var nreste=L.length-pt;
+    return '<div class="au-card">'
+      +'<div class="au-cardh"><span class="au-ttl">Relevés mémorisés &amp; pointage</span>'
+      +'<span class="au-tag'+(tot?(nreste?' au-due':' au-ok'):' au-off')+'">'+pt+' / '+tot+' POINTÉE'+(tot>1?'S':'')+'</span></div>'
+      +'<div class="au-pad">'
+      +(tot
+        ? '<table class="au-t"><thead><tr><th>Période</th><th>Compte</th><th class="r">Lignes</th><th class="r">Pointées</th><th class="r">Restantes</th><th>Rapprochement</th><th class="r">Action</th></tr></thead><tbody>'+rows+'</tbody></table>'
+          +(nreste
+            ? '<div class="au-note">Lignes de relevé restant à pointer — aucune écriture du même montant dans la fenêtre de ±'+FEN+' jours, ou appariement ambigu :</div>'
+              +'<table class="au-t"><thead><tr><th>Date</th><th>Libellé du relevé</th><th class="r">Montant</th><th>Source</th></tr></thead><tbody>'+reste+'</tbody></table>'
+              +(nreste>24?'<div class="au-note">… et '+(nreste-24)+' de plus.</div>':'')
+            : '<div class="au-note">Toutes les lignes mémorisées sont pointées.</div>')
+        : '<div class="au-note">Aucun relevé mémorisé. Déposez un fichier OFX ou CSV dans l’Import bancaire : ses lignes seront retenues ici, puis appariées aux écritures par l’automatisme « Pointage du relevé bancaire ».</div>')
+      +'</div></div>';
+  }
+  try{
+    if(typeof window.pageAutomatismes==='function'){
+      var _pa=window.pageAutomatismes;
+      window.pageAutomatismes=function(){
+        var h=_pa.apply(this,arguments);
+        try{ var i=h.lastIndexOf('</div></div>'); if(i>0) return h.slice(0,i)+carteReleves()+h.slice(i); }catch(e){}
         return h;
       };
     }

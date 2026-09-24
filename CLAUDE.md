@@ -36,7 +36,47 @@
 
 ---
 
-## 🟢 Dernière mise à jour — ÉTAPE 2 de l'automatisation : moteur d'IMPUTATION QUI APPREND (libellé → compte) — v634
+## 🟢 Dernière mise à jour — ÉTAPE 3 de l'automatisation : RAPPROCHEMENT BANCAIRE automatique (pointage relevé ↔ écritures) — v635
+**Quoi :** suite de *« Développement de tout le système étape par étape pour automatiser et rapidement »*. **Étape 3 : le relevé se pointe tout seul contre les écritures.** Deux choses manquaient pour cela : (1) le **relevé n'existait nulle part** — l'Import bancaire (v611) lisait le fichier OFX/CSV dans une variable volatile puis l'oubliait ; (2) le module **Rapprochement bancaire** ne savait pointer qu'à la main, case par case, ou tout d'un coup (« Tout rapprocher », qui coche **aussi les écritures absentes du relevé** — donc faux).
+
+**1. Le relevé est désormais MÉMORISÉ.** Au dépôt d'un fichier dans l'Import bancaire, ses lignes sont retenues dans **`db.parametres.relevesLignes`** (`{compte, date, lib, montant, fitid, src, ecritureId}`). Le message de lecture le dit : « Fichier OFX lu : 2 opération(s). **Relevé mémorisé : 2 ligne(s).** » La mémorisation est **idempotente** — re-déposer le même fichier ajoute **0 ligne** (dédoublonnage par **FITID**, sinon par compte + date + montant + libellé normalisé).
+
+**2. Le pointage.** L'automatisme apparie chaque ligne de relevé non pointée avec l'écriture qui **bouge le même compte 512** (n'importe quel journal — les frais bancaires passés en OD comptent) du **même montant à ±0,01 €**, dans une **fenêtre de ±5 jours**. Une écriture déjà revendiquée par une autre ligne n'est jamais reprise. Le signe est cohérent de bout en bout : un **encaissement** du relevé (montant positif) correspond à un **512 au débit**.
+
+| Cas | Décision |
+| --- | --- |
+| **Un seul candidat** | apparié |
+| **Plusieurs candidats, un strictement plus proche en date** | apparié sur le plus proche |
+| **Plusieurs candidats à égalité de date** | **ambigu → laissé à la main** |
+| **Aucun candidat** (montant absent, ou hors des ±5 jours) | **laissé à la main** |
+
+**3. Ce que ça donne dans le module Rapprochement.** Chaque appariement **coche la case** du relevé de rapprochement correspondant (`rel.rap` du couple compte + mois), **s'il existe et n'est pas verrouillé**. Le pointage manuel ligne à ligne devient donc automatique, **sans jamais dépointer** (l'automatisme n'ajoute jamais que des coches) et sans jamais toucher un montant ni un solde. Un mois dont le relevé n'a pas encore été créé est signalé dans le journal (« N mois sans relevé de rapprochement créé ») : créer le relevé reste un acte humain, puisqu'il déclare le **solde bancaire**.
+
+**Comment — nouvel addon `yada-addon-rapprochement` (100% ADDITIF) + 1 édition chirurgicale :** dans `ibFile` (Import bancaire), après la lecture du fichier, une ligne gardée `window.rbMemoriserReleve(ST.ops,'',ST.format)` — **sans effet si l'addon est absent**. L'addon expose `rbMemoriserReleve` / `rbPointer` / `rbOublierReleve`, s'inscrit dans **`window.YADA_AUTOS`** (registre global ouvert en v634 — une ligne de plus, le module Automatismes n'est pas touché) et greffe sous celui-ci une carte **« Relevés mémorisés & pointage »** : par période, le nombre de lignes, de pointées, de restantes, l'état du relevé de rapprochement, et la **liste des lignes restant à pointer** (celles pour lesquelles le logiciel refuse de trancher). Un bouton **« Oublier »** retire les lignes d'un mois **sans toucher aux écritures ni aux pointages déjà faits**. **Points techniques :** (1) le pointage est **idempotent** — une ligne déjà appariée est sautée, et si l'écriture appariée a **disparu** la ligne redevient à pointer ; (2) **aucune écriture n'est créée ni modifiée** — seul le champ `ecritureId` de la ligne de relevé et le tableau `rel.rap` sont écrits ; (3) le compte 512 retenu est celui du **journal de trésorerie** du dossier (repli `512000000`), et le mouvement est filtré sur **ce** 512 quand plusieurs banques existent. Rendu **Registre N&B** (classes `au-*` du module Automatismes, aucun nouveau CSS). `sw.js` yada-v230, badge v635, `version.json` 635.
+
+**Validé :** `node --check` (**306 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014) + balises `</head>`/`</body>`/`</html>` inchangées (3/5/3) + **filet d'équilibre** (`YADA_CHROME=… node tests/equilibre-ecritures.mjs` : vente 1200=1200, achat 600=600 ✅) + **rendu Playwright** sur dossier d'essai (6 écritures de banque, relevé de 6 lignes) :
+
+| Mesure | Résultat |
+| --- | --- |
+| Lignes mémorisées · **re-dépôt du même fichier** | **6** · **0** (idempotent) |
+| `PRLV SEPA ORANGE SA` −120,50 (écriture le même jour) | **pointée** |
+| `FRAIS TENUE DE COMPTE` −18,90 (écriture à **2 jours**) | **pointée** |
+| `VIR DUPONT SARL` +1 200 (encaissement, 512 au débit) | **pointée** |
+| `PRLV LOYER` −850 (**deux** écritures de 850 le même jour) | **non pointée** — ambiguë |
+| `ACHAT INCONNU XYZ` −42,30 (aucune écriture) | **non pointée** |
+| `PRLV HORS FENETRE` −77 (écriture à **32 jours**) | **non pointée** |
+| Cases cochées dans le relevé de rapprochement | **3** (e1 · e2 · e3) |
+| **Second passage** (idempotence) | **0 action** |
+| Écritures créées ou modifiées · déséquilibrées | **0** · **0** |
+| **Import bancaire réel** (OFX déposé) | « Relevé mémorisé : 2 ligne(s) » |
+
++ **routage 25/25** + module Automatismes : **4 automatismes** + journal + table des règles + carte des relevés, **1 sortie « Fermer »**, **0 en-tête vide**, **0 bouton vide**, **0 gras**, **0 débordement** + **0 pageerror**, **0 console.error**. Badge → **v635**.
+
+**Reste des étapes :** **4.** contrôles de cohérence en continu ; **5.** traitements périodiques (OD de TVA, dotations en lot, relances, clôture).
+
+---
+
+## 🟢 MAJ précédente — ÉTAPE 2 de l'automatisation : moteur d'IMPUTATION QUI APPREND (libellé → compte) — v634
 **Quoi :** suite de *« Développement de tout le système étape par étape pour automatiser et rapidement »*. **Étape 2 : le logiciel retient quel compte a été retenu pour quel libellé, et le repropose.** Deux mémoires, toutes deux construites **à partir des écritures du dossier** — donc d'un **FEC importé** comme d'une saisie :
 
 | Mémoire | Lue sur | Ce qu'elle retient |
