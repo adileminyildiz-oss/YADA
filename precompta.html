@@ -4209,6 +4209,7 @@ function render(){
   inventaire:(typeof pageInventaire==='function'?pageInventaire:function(){return'<div class="mod-wrap"><div class="card"><h2>Inventaire &amp; cut-off</h2></div></div>';}),
   revision:(typeof pageRevision==='function'?pageRevision:function(){return'<div class="mod-wrap"><div class="card"><h2>Dossier de révision</h2></div></div>';}),
   liasse:(typeof pageLiasse==='function'?pageLiasse:function(){return'<div class="mod-wrap"><div class="card"><h2>Liasse fiscale</h2></div></div>';}),
+  axes:(typeof pageAxes==='function'?pageAxes:function(){return'<div class="mod-wrap"><div class="card"><h2>Analytique par affaire</h2></div></div>';}),
   importbanque:(typeof pageImportBanque==='function'?pageImportBanque:function(){return'<div class="mod-wrap"><div class="card"><h2>Import bancaire</h2></div></div>';}),
   recurrentes:(typeof pageRecurrentes==='function'?pageRecurrentes:function(){return'<div class="mod-wrap"><div class="card"><h2>Écritures récurrentes</h2></div></div>';}),
   automatismes:(typeof pageAutomatismes==='function'?pageAutomatismes:function(){return'<div class="mod-wrap"><div class="card"><h2>Automatismes</h2></div></div>';}),
@@ -11094,7 +11095,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v647';
+    b.textContent='YADA · v648';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -37430,7 +37431,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     {id:'yb-etats',   lbl:'États',        prend:[], mods:['editions']},
     {id:'yb-revis',   lbl:'Révision',     prend:[], mods:['revision','controles']},
     {id:'yb-analyse', lbl:'Analyse',      prend:[],
-     mods:['dash','analytique','reglements','pilotage','salarie']},
+     mods:['dash','axes','analytique','reglements','pilotage','salarie']},
     {id:'yb-param',   lbl:'Paramètres',   prend:[['sg-param','Réglages de la consultation']],
      mods:['plancomptable','tiers','parametrage','infosociete','societe','coffre','fec']}
   ];
@@ -39325,6 +39326,497 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
      +'html body:not(#_yz) #yada-li .li-acts{padding:4px 24px 20px;display:flex;gap:8px;flex-wrap:wrap}'
      +'html body:not(#_yz) #yada-li .li-b{background:#000;color:#f5f5f6;border:1px solid #35353a;border-radius:4px;padding:5px 11px;cursor:pointer;font-family:ui-monospace,monospace;font-size:11.5px;margin:6px 0}'
      +'@media(max-width:820px){html body:not(#_yz) #yada-li .li-kpis{grid-template-columns:repeat(2,1fr)}}';
+  }catch(e){}
+})();
+</script>
+<script id="yada-addon-axes">
+/* v648 — ANALYTIQUE PAR AXES (chantiers / projets).
+   Le dossier charge un plan comptable BTP : on y trouve 704 TRAVAUX, 611 SOUS-TRAITANCE,
+   605 MATÉRIEL DE TRAVAUX, 621 PERSONNEL INTÉRIMAIRE. Mais un plan comptable dit la NATURE
+   d'une charge, jamais À QUEL CHANTIER elle appartient — et ce n'est pas davantage lisible
+   sur le tiers : le même fournisseur de béton livre trois chantiers. La rentabilité par
+   affaire ne peut donc venir que d'une information portée par la LIGNE d'écriture.
+   Ce module l'ajoute : `l.axe` sur la ligne, sans rien changer à la comptabilité.
+     1. Les AXES        chantiers / projets, avec leur budget
+     2. La VENTILATION  affectation ligne à ligne, en lot, ou par RÈGLES apprises
+     3. Le COMPTE DE RÉSULTAT PAR AFFAIRE  marge directe, frais généraux imputés, résultat
+   La marge DIRECTE et le résultat APRÈS frais généraux sont donnés séparément : imputer des
+   frais généraux est une convention, pas une écriture — elle doit rester visible.
+   100% ADDITIF. */
+(function(){
+  function S(){ try{ return db.societe||{}; }catch(e){ return {}; } }
+  function SAVE(){ try{ if(typeof save==='function') save(); }catch(e){} }
+  function RENDER(){ try{ if(typeof render==='function') render(); }catch(e){} }
+  function r(v){ return Math.round((+v||0)*100)/100; }
+  function num(v){ if(v==null) return ''; try{ return eur(v); }catch(e){ return r(v)+' €'; } }
+  function pct(v){ return String(Math.round((+v||0)*10)/10).replace('.',',')+' %'; }
+  function C9(x){ try{ return c9(x); }catch(e){ return String(x||''); } }
+  function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function jour(d){ try{ return frDate(d); }catch(e){ return d||''; } }
+  function UID(){ try{ return uid(); }catch(e){ return 'ax'+Math.random().toString(36).slice(2,9); } }
+  function D0(){ return String(S().exoDebut||''); }
+  function D1(){ return String(S().exoFin||''); }
+  function nomCpt(k){ k=C9(k); var l=''; try{ l=COMPTES[k]||''; }catch(e){} return k+(l?(' — '+l):''); }
+
+  /* ---------- état persistant ---------- */
+  function store(){
+    db.parametres=db.parametres||{};
+    var A=db.parametres.analytique;
+    if(!A||typeof A!=='object'){ A={axes:[], regles:[], imputerFG:false}; db.parametres.analytique=A; }
+    if(!Array.isArray(A.axes)) A.axes=[];
+    if(!Array.isArray(A.regles)) A.regles=[];
+    if(A.imputerFG==null) A.imputerFG=false;
+    return A;
+  }
+  function axes(){ return store().axes; }
+  function axeDe(id){ var L=axes(); for(var i=0;i<L.length;i++){ if(L[i].id===id) return L[i]; } return null; }
+  function nomAxe(id){ var a=axeDe(id); return a?(a.code?(a.code+' · '+a.nom):a.nom):''; }
+
+  /* ---------- natures de charges et de produits (plan BTP) ---------- */
+  function pref(){ var L=[].slice.call(arguments);
+    return function(k){ for(var i=0;i<L.length;i++){ if(k.indexOf(L[i])===0) return true; } return false; }; }
+  var NATURES=[
+    {c:'travaux',  l:'Travaux, études et prestations', sens:'p', t:pref('704','705','706','708','701','702','703','707')},
+    {c:'autresP',  l:'Autres produits',                sens:'p', t:pref('7')},
+    {c:'sstrait',  l:'Sous-traitance',                 sens:'c', t:pref('611','604')},
+    {c:'fournit',  l:'Fournitures et matériaux',       sens:'c', t:pref('601','602','605','606','607','608','609','603')},
+    {c:'materiel', l:'Location et entretien de matériel', sens:'c', t:pref('613','615','616','612')},
+    {c:'interim',  l:'Personnel extérieur (intérim)',  sens:'c', t:pref('621')},
+    {c:'personnel',l:'Personnel',                      sens:'c', t:pref('64')},
+    {c:'autresC',  l:'Autres charges directes',        sens:'c', t:pref('6')}
+  ];
+  function natureDe(k){
+    k=C9(k);
+    for(var i=0;i<NATURES.length;i++){ if(NATURES[i].t(k)) return NATURES[i]; }
+    return null;
+  }
+  function estAnalytique(k){ k=C9(k); return k.charAt(0)==='6'||k.charAt(0)==='7'; }
+
+  /* ---------- parcours des lignes analysables ---------- */
+  /* Une ligne compte pour l'analytique si elle porte un compte de classe 6 ou 7 et que
+     l'écriture n'est ni l'OD de résultat ni un à-nouveau (qui ne sont pas de l'activité). */
+  function lignes(filtre){
+    var out=[];
+    try{
+      (db.ecritures||[]).forEach(function(e){
+        var lib=String(e.libelle||'');
+        if(lib.indexOf('OD RÉSULTAT')>=0 || lib.indexOf('À-NOUVEAUX')>=0) return;
+        var d=String(e.date||'');
+        if(D0() && d<D0()) return;
+        if(D1() && d>D1()) return;
+        (e.lignes||[]).forEach(function(l,i){
+          var k=C9(l.compte); if(!estAnalytique(k)) return;
+          var mt=r((+l.debit||0)-(+l.credit||0));      /* charge > 0, produit < 0 */
+          if(Math.abs(mt)<0.005) return;
+          var o={eid:e.id, li:i, date:d, jr:e.journal||'', piece:e.piece||'',
+                 lib:(l.lib||e.libelle||''), cpt:k, mt:mt, axe:l.axe||'', ref:l};
+          if(filtre && !filtre(o)) return;
+          out.push(o);
+        });
+      });
+    }catch(e){}
+    out.sort(function(a,b){ return a.date<b.date?-1:(a.date>b.date?1:0); });
+    return out;
+  }
+
+  /* ---------- règles d'affectation ---------- */
+  /* Une règle rattache un axe à ce qui se répète : un mot du libellé, un tiers, un compte.
+     Elle ne s'applique qu'aux lignes NON encore affectées — une affectation manuelle
+     n'est jamais écrasée. */
+  function normLib(s){
+    var t=String(s==null?'':s).toUpperCase();
+    try{ t=t.normalize('NFD').replace(/[̀-ͯ]/g,''); }catch(e){}   /* accents retirés */
+    return t;
+  }
+  function regleMatch(rg,o){
+    if(rg.type==='compte'){
+      var c=String(rg.valeur||'').replace(/[^0-9]/g,''); if(c.length<2) return false;   /* une racine d'un seul chiffre prendrait toute une classe */
+      return C9(o.cpt).indexOf(c)===0;
+    }
+    var t=normLib(rg.valeur).trim();
+    if(t.length<3) return false;                 /* un fragment trop court affecterait n'importe quoi */
+    return normLib(o.lib).indexOf(t)>=0;
+  }
+  window.axAppliquerRegles=function(){
+    var A=store(), n=0;
+    var L=lignes(function(o){ return !o.axe; }), trop=0;
+    A.regles.forEach(function(rg){
+      if(rg.type!=='compte' && normLib(rg.valeur).trim().length<3) trop++;
+      if(rg.type==='compte' && String(rg.valeur||'').replace(/[^0-9]/g,'').length<2) trop++;
+    });
+    L.forEach(function(o){
+      for(var i=0;i<A.regles.length;i++){
+        var rg=A.regles[i];
+        if(!rg.axe||!axeDe(rg.axe)) continue;
+        if(regleMatch(rg,o)){ o.ref.axe=rg.axe; n++; return; }
+      }
+    });
+    SAVE();
+    if(typeof toast==='function') toast((n?(n+' ligne(s) affectée(s) par les règles.'):'Aucune ligne non affectée ne correspond aux règles.')
+      +(trop?(' '+trop+' règle(s) ignorée(s) : critère trop court.'):''));
+    RENDER();
+  };
+
+  /* ---------- compte de résultat par affaire ---------- */
+  function resultats(){
+    var L=lignes(), par={}, fg={p:0,c:0,nat:{}}, tp=0, tc=0;
+    function bloc(){ var b={p:0,c:0,nat:{},n:0}; NATURES.forEach(function(N){ b.nat[N.c]=0; }); return b; }
+    axes().forEach(function(a){ par[a.id]=bloc(); });
+    NATURES.forEach(function(N){ fg.nat[N.c]=0; });
+    L.forEach(function(o){
+      var N=natureDe(o.cpt), cle=N?N.c:'autresC';
+      var cible=(o.axe&&par[o.axe])?par[o.axe]:fg;
+      if(o.cpt.charAt(0)==='7'){ cible.p=r(cible.p-o.mt); tp=r(tp-o.mt); }     /* produit : crédit */
+      else { cible.c=r(cible.c+o.mt); tc=r(tc+o.mt); }
+      cible.nat[cle]=r((cible.nat[cle]||0)+(o.cpt.charAt(0)==='7'?-o.mt:o.mt));
+      if(cible.n!=null) cible.n++;
+    });
+    var caTotal=0; Object.keys(par).forEach(function(id){ caTotal=r(caTotal+Math.max(0,par[id].p)); });
+    var fgNet=r(fg.c-fg.p);                       /* frais généraux nets de leurs produits */
+    var imputer=!!store().imputerFG;
+    var out=axes().map(function(a){
+      var b=par[a.id]||bloc();
+      var marge=r(b.p-b.c);
+      var quote=(imputer&&caTotal>0.005&&b.p>0)?r(fgNet*(b.p/caTotal)):0;
+      var res=r(marge-quote);
+      return {axe:a, p:b.p, c:b.c, nat:b.nat, n:b.n, marge:marge,
+              tx:(b.p>0.005?r(marge/b.p*100):null), quote:quote, res:res,
+              budget:r(+a.budget||0), ecart:(+a.budget?r(b.c-(+a.budget||0)):null),
+              conso:(+a.budget>0.005?r(b.c/(+a.budget)*100):null)};
+    });
+    return {axes:out, fg:fg, fgNet:fgNet, caTotal:caTotal, tp:tp, tc:tc,
+            resultat:r(tp-tc), nonAffectees:lignes(function(o){ return !o.axe; }).length, imputer:imputer};
+  }
+
+  /* ---------- actions ---------- */
+  window.axOnglet=function(k){ window.__axTab=k; RENDER(); };
+  window.axAdd=function(){
+    var A=store();
+    A.axes.push({id:UID(), code:'', nom:'Nouveau chantier', type:'chantier', budget:0, ouvert:true});
+    SAVE(); RENDER();
+  };
+  window.axSet=function(id,champ,v){
+    var a=axeDe(id); if(!a) return;
+    a[champ]=(champ==='budget')?(parseFloat(String(v).replace(/\s/g,'').replace(',','.'))||0)
+            :(champ==='ouvert')?!!v:v;
+    SAVE(); if(champ==='budget'||champ==='ouvert') RENDER();
+  };
+  window.axDel=function(id){
+    var a=axeDe(id); if(!a) return;
+    var n=lignes(function(o){ return o.axe===id; }).length;
+    var go=function(){
+      var A=store();
+      A.axes=A.axes.filter(function(x){ return x.id!==id; });
+      A.regles=A.regles.filter(function(x){ return x.axe!==id; });
+      lignes(function(o){ return o.axe===id; }).forEach(function(o){ o.ref.axe=''; });
+      SAVE(); if(typeof toast==='function') toast('Axe supprimé — '+n+' ligne(s) remise(s) en non affecté.'); RENDER();
+    };
+    if(n && typeof yadaConfirm==='function')
+      yadaConfirm('Supprimer cet axe ? '+n+' ligne(s) repasseront en « non affecté » (aucune écriture n’est modifiée).', go, {danger:true});
+    else go();
+  };
+  window.axAffecter=function(eid,li,axe){
+    try{
+      var e=(db.ecritures||[]).filter(function(x){ return x.id===eid; })[0]; if(!e) return;
+      var l=(e.lignes||[])[li]; if(!l) return;
+      if(axe) l.axe=axe; else delete l.axe;
+      SAVE(); RENDER();
+    }catch(x){}
+  };
+  window.axAffecterLot=function(){
+    var sel=document.getElementById('ax-lot-axe'); if(!sel) return;
+    var axe=sel.value;
+    var boxes=[].slice.call(document.querySelectorAll('#yada-ax .ax-ck:checked'));
+    if(!boxes.length){ if(typeof toast==='function') toast('Cochez d’abord les lignes à affecter.'); return; }
+    boxes.forEach(function(b){
+      var eid=b.getAttribute('data-e'), li=+b.getAttribute('data-l');
+      var e=(db.ecritures||[]).filter(function(x){ return x.id===eid; })[0]; if(!e) return;
+      var l=(e.lignes||[])[li]; if(!l) return;
+      if(axe) l.axe=axe; else delete l.axe;
+    });
+    SAVE();
+    if(typeof toast==='function') toast(boxes.length+' ligne(s) affectée(s)'+(axe?(' à '+nomAxe(axe)):' remises en non affecté')+'.');
+    RENDER();
+  };
+  window.axRegleAdd=function(){
+    var A=store();
+    A.regles.push({id:UID(), type:'libelle', valeur:'', axe:(axes()[0]||{}).id||''});
+    SAVE(); RENDER();
+  };
+  window.axRegleSet=function(id,champ,v){
+    var A=store();
+    for(var i=0;i<A.regles.length;i++){ if(A.regles[i].id===id){ A.regles[i][champ]=v; break; } }
+    SAVE(); if(champ!=='valeur') RENDER();
+  };
+  window.axRegleDel=function(id){
+    var A=store(); A.regles=A.regles.filter(function(x){ return x.id!==id; }); SAVE(); RENDER();
+  };
+  window.axSetFG=function(v){ store().imputerFG=!!v; SAVE(); RENDER(); };
+  window.axPage=function(n){ window.__axPage=Math.max(0,n); RENDER(); };
+  window.axFiltre=function(v){ window.__axFiltre=v; window.__axPage=0; RENDER(); };
+
+  /* ---------- export & impression ---------- */
+  window.axExportCSV=function(){
+    try{
+      var R=resultats(), sep=';';
+      var head=['Axe','Type','Produits','Charges','Marge directe','Taux de marge %','Frais généraux imputés','Résultat','Budget de charges','Consommé %'];
+      var rows=[head.join(sep)];
+      R.axes.forEach(function(x){
+        rows.push([x.axe.code||'', x.axe.nom||'', x.p, x.c, x.marge, (x.tx==null?'':x.tx), x.quote, x.res,
+                   x.budget, (x.conso==null?'':x.conso)].join(sep));
+      });
+      rows.push(['Frais généraux non affectés','', R.fg.p, R.fg.c, r(R.fg.p-R.fg.c),'','','','',''].join(sep));
+      rows.push(['TOTAL','', R.tp, R.tc, R.resultat,'','','','',''].join(sep));
+      var csv='﻿'+rows.join('\r\n').replace(/\./g,',');
+      var a=document.createElement('a');
+      a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+      a.download='analytique-'+(S().raison||'dossier').replace(/[^a-z0-9]+/gi,'-')+'.csv';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      if(typeof toast==='function') toast('Export CSV téléchargé.');
+    }catch(e){}
+  };
+  function docAnalytique(){
+    var R=resultats(), s=S();
+    var lignesT=R.axes.map(function(x){
+      return '<tr><td>'+esc(x.axe.code||'')+'</td><td>'+esc(x.axe.nom||'')+'</td>'
+        +'<td style="text-align:right">'+num(x.p)+'</td><td style="text-align:right">'+num(x.c)+'</td>'
+        +'<td style="text-align:right">'+num(x.marge)+'</td>'
+        +'<td style="text-align:right">'+(x.tx==null?'':pct(x.tx))+'</td>'
+        +'<td style="text-align:right">'+(R.imputer?num(x.quote):'')+'</td>'
+        +'<td style="text-align:right"><b>'+num(x.res)+'</b></td>'
+        +'<td style="text-align:right">'+(x.budget?num(x.budget):'')+'</td>'
+        +'<td style="text-align:right">'+(x.conso==null?'':pct(x.conso))+'</td></tr>';
+    }).join('');
+    return '<div class="doc-page"><h1 style="margin:0 0 2px">Rentabilité par affaire · exercice '+esc(D1().slice(0,4))+'</h1>'
+      +'<div style="font-size:12px;margin-bottom:8px">'+esc(s.raison||'')+' · exercice du '+jour(D0())+' au '+jour(D1())
+      +' · '+R.axes.length+' axe(s) · '+R.nonAffectees+' ligne(s) non affectée(s)</div>'
+      +'<table style="width:100%;border-collapse:collapse;font-size:11px" border="1" cellpadding="3">'
+      +'<thead><tr><th>Code</th><th>Affaire</th><th>Produits</th><th>Charges</th><th>Marge directe</th><th>Taux</th>'
+      +'<th>F. généraux</th><th>Résultat</th><th>Budget</th><th>Consommé</th></tr></thead><tbody>'
+      +(lignesT||'<tr><td colspan="10">Aucun axe.</td></tr>')
+      +'<tr><td></td><td><b>Frais généraux non affectés</b></td><td style="text-align:right">'+num(R.fg.p)+'</td>'
+      +'<td style="text-align:right">'+num(R.fg.c)+'</td><td style="text-align:right">'+num(r(R.fg.p-R.fg.c))+'</td>'
+      +'<td colspan="5"></td></tr>'
+      +'<tr><td></td><td><b>TOTAL</b></td><td style="text-align:right"><b>'+num(R.tp)+'</b></td>'
+      +'<td style="text-align:right"><b>'+num(R.tc)+'</b></td><td style="text-align:right"><b>'+num(R.resultat)+'</b></td>'
+      +'<td colspan="5"></td></tr>'
+      +'</tbody></table>'
+      +'<div style="font-size:11px;margin-top:8px">Le résultat total est celui du compte de résultat : l’analytique le répartit, elle ne le change pas.</div>'
+      +'</div>';
+  }
+  window.axImprimer=function(){
+    try{ var z=document.getElementById('print-area'); if(!z) return; z.innerHTML=docAnalytique(); window.print(); }catch(e){}
+  };
+
+  /* ---------- page ---------- */
+  var ONGLETS=[['resultat','Rentabilité par affaire'],['ventil','Ventilation des écritures'],
+               ['axes','Chantiers & projets'],['regles','Règles d’affectation']];
+  function tabActif(){ var k=window.__axTab; for(var i=0;i<ONGLETS.length;i++){ if(ONGLETS[i][0]===k) return k; } return 'resultat'; }
+  function optAxes(sel,vide){
+    return '<option value=""'+(sel?'':' selected')+'>'+(vide||'— non affecté —')+'</option>'
+      +axes().map(function(a){ return '<option value="'+esc(a.id)+'"'+(sel===a.id?' selected':'')+'>'+esc(nomAxe(a.id))+'</option>'; }).join('');
+  }
+
+  function vResultat(){
+    var R=resultats();
+    if(!R.axes.length) return '<div class="ax-note">Aucun chantier n’est ouvert. Créez-en un dans l’onglet « Chantiers &amp; projets » : sans axe, la comptabilité sait ce qui a été dépensé, jamais pour quelle affaire.</div>';
+    var rows=R.axes.map(function(x){
+      return '<tr><td class="mono">'+esc(x.axe.code||'')+'</td><td>'+esc(x.axe.nom||'')
+        +(x.axe.ouvert===false?'<span class="ax-tag">CLOS</span>':'')+'</td>'
+        +'<td class="r">'+num(x.p)+'</td><td class="r">'+num(x.c)+'</td>'
+        +'<td class="r">'+num(x.marge)+'</td><td class="r">'+(x.tx==null?'—':pct(x.tx))+'</td>'
+        +(R.imputer?('<td class="r">'+num(x.quote)+'</td>'):'')
+        +'<td class="r tot">'+num(x.res)+'</td>'
+        +'<td class="r">'+(x.budget?num(x.budget):'—')+'</td>'
+        +'<td class="r">'+(x.conso==null?'—':pct(x.conso))+'</td>'
+        +'<td class="ax-note2">'+(x.n||0)+' ligne(s)</td></tr>';
+    }).join('');
+    var nat=NATURES.filter(function(N){ return N.sens==='c'; });
+    var det='<table class="ax-t"><thead><tr><th>Affaire</th>'
+      +nat.map(function(N){ return '<th class="r">'+esc(N.l)+'</th>'; }).join('')+'<th class="r">Total charges</th></tr></thead><tbody>'
+      +R.axes.map(function(x){ return '<tr><td>'+esc(x.axe.nom||'')+'</td>'
+        +nat.map(function(N){ return '<td class="r">'+num(x.nat[N.c]||0)+'</td>'; }).join('')
+        +'<td class="r tot">'+num(x.c)+'</td></tr>'; }).join('')
+      +'<tr class="fg"><td>Frais généraux non affectés</td>'
+      +nat.map(function(N){ return '<td class="r">'+num(R.fg.nat[N.c]||0)+'</td>'; }).join('')
+      +'<td class="r tot">'+num(R.fg.c)+'</td></tr></tbody></table>';
+    return '<div class="ax-row"><label><input type="checkbox" '+(R.imputer?'checked':'')
+      +' onchange="axSetFG(this.checked)"> Imputer les frais généraux aux affaires, au prorata de leurs produits</label></div>'
+      +'<div class="ax-note">Imputer des frais généraux est une <b>convention</b>, pas une écriture : la marge directe reste affichée à côté du résultat imputé, pour que l’un ne se cache pas derrière l’autre.</div>'
+      +'<table class="ax-t"><thead><tr><th class="mono">Code</th><th>Affaire</th><th class="r">Produits</th><th class="r">Charges</th>'
+      +'<th class="r">Marge directe</th><th class="r">Taux</th>'+(R.imputer?'<th class="r">F. généraux</th>':'')
+      +'<th class="r">Résultat</th><th class="r">Budget de charges</th><th class="r">Consommé</th><th></th></tr></thead><tbody>'
+      +rows
+      +'<tr class="fg"><td></td><td>Frais généraux non affectés</td><td class="r">'+num(R.fg.p)+'</td><td class="r">'+num(R.fg.c)+'</td>'
+      +'<td class="r">'+num(r(R.fg.p-R.fg.c))+'</td><td class="r">—</td>'+(R.imputer?'<td class="r">—</td>':'')
+      +'<td class="r">—</td><td class="r">—</td><td class="r">—</td><td class="ax-note2">'+R.nonAffectees+' ligne(s)</td></tr>'
+      +'<tr class="gen"><td></td><td>TOTAL — résultat de l’exercice</td><td class="r">'+num(R.tp)+'</td><td class="r">'+num(R.tc)+'</td>'
+      +'<td class="r">'+num(R.resultat)+'</td><td class="r"></td>'+(R.imputer?'<td class="r"></td>':'')
+      +'<td class="r">'+num(R.resultat)+'</td><td class="r"></td><td class="r"></td><td></td></tr>'
+      +'</tbody></table>'
+      +'<div class="ax-bt">Charges par nature et par affaire</div>'+det
+      +'<div class="ax-acts"><button class="ax-b" onclick="axExportCSV()">Exporter en CSV</button>'
+      +'<button class="ax-b" onclick="axImprimer()">Imprimer la rentabilité</button></div>';
+  }
+
+  var PAR_PAGE=120;
+  function vVentilation(){
+    var f=window.__axFiltre||'nonaff';
+    var L=lignes(function(o){
+      if(f==='nonaff') return !o.axe;
+      if(f==='aff') return !!o.axe;
+      if(f==='charges') return o.cpt.charAt(0)==='6';
+      if(f==='produits') return o.cpt.charAt(0)==='7';
+      return true;
+    });
+    var page=Math.min(window.__axPage||0, Math.max(0,Math.ceil(L.length/PAR_PAGE)-1));
+    var vue=L.slice(page*PAR_PAGE,(page+1)*PAR_PAGE);
+    var pager=(L.length>PAR_PAGE)
+      ? ('<div class="ax-pag">Lignes '+(page*PAR_PAGE+1)+' à '+Math.min(L.length,(page+1)*PAR_PAGE)+' sur '+L.length
+         +' · page '+(page+1)+' sur '+Math.ceil(L.length/PAR_PAGE)
+         +' <button class="ax-b" onclick="axPage('+(page-1)+')"'+(page<=0?' disabled':'')+'>‹ Précédent</button>'
+         +' <button class="ax-b" onclick="axPage('+(page+1)+')"'+((page+1)*PAR_PAGE>=L.length?' disabled':'')+'>Suivant ›</button></div>')
+      : '';
+    var opts=[['nonaff','Non affectées'],['aff','Affectées'],['charges','Charges (classe 6)'],['produits','Produits (classe 7)'],['tout','Toutes']];
+    return '<div class="ax-row"><label>Afficher</label>'
+      +'<select class="ax-in" onchange="axFiltre(this.value)">'+opts.map(function(o){
+          return '<option value="'+o[0]+'"'+(f===o[0]?' selected':'')+'>'+o[1]+'</option>'; }).join('')+'</select>'
+      +'<span style="flex:1"></span>'
+      +'<label>Affecter les lignes cochées à</label>'
+      +'<select class="ax-in" id="ax-lot-axe">'+optAxes('')+'</select>'
+      +'<button class="ax-b ax-pri" onclick="axAffecterLot()">Affecter en lot</button></div>'
+      +pager
+      +'<table class="ax-t"><thead><tr><th class="ck"></th><th>Date</th><th>Jnl</th><th class="mono">Compte</th><th>Libellé</th>'
+      +'<th class="r">Montant</th><th>Affaire</th></tr></thead><tbody>'
+      +(vue.length?vue.map(function(o){
+        return '<tr'+(o.axe?'':' class="na"')+'><td class="ck"><input type="checkbox" class="ax-ck" data-e="'+esc(o.eid)+'" data-l="'+o.li+'"></td>'
+          +'<td>'+jour(o.date)+'</td><td class="mono">'+esc(o.jr)+'</td><td class="mono">'+esc(o.cpt)+'</td>'
+          +'<td>'+esc(o.lib)+'</td><td class="r">'+num(Math.abs(o.mt))+(o.cpt.charAt(0)==='7'?' (P)':'')+'</td>'
+          +'<td><select class="ax-in" onchange="axAffecter(\''+esc(o.eid)+'\','+o.li+',this.value)">'+optAxes(o.axe)+'</select></td></tr>';
+        }).join('')
+        :'<tr><td colspan="7" class="ax-note2">Aucune ligne pour ce filtre.</td></tr>')
+      +'</tbody></table>'+pager;
+  }
+
+  function vAxes(){
+    var L=axes(), R=resultats();
+    var par={}; R.axes.forEach(function(x){ par[x.axe.id]=x; });
+    return '<table class="ax-t"><thead><tr><th class="mono">Code</th><th>Nom de l’affaire</th><th>Type</th>'
+      +'<th class="r">Budget de charges</th><th class="r">Charges engagées</th><th class="r">Reste</th><th>Ouvert</th><th></th></tr></thead><tbody>'
+      +(L.length?L.map(function(a){
+        var x=par[a.id]||{c:0};
+        var reste=(+a.budget)?r((+a.budget)-x.c):null;
+        return '<tr><td><input class="ax-in ax-code" type="text" value="'+esc(a.code||'')+'" placeholder="CH-001" oninput="axSet(\''+a.id+'\',\'code\',this.value)"></td>'
+          +'<td><input class="ax-in" type="text" value="'+esc(a.nom||'')+'" oninput="axSet(\''+a.id+'\',\'nom\',this.value)"></td>'
+          +'<td><select class="ax-in" onchange="axSet(\''+a.id+'\',\'type\',this.value)">'
+            +['chantier','projet','affaire','véhicule','agence'].map(function(t){
+              return '<option value="'+t+'"'+(a.type===t?' selected':'')+'>'+t.charAt(0).toUpperCase()+t.slice(1)+'</option>'; }).join('')
+          +'</select></td>'
+          +'<td class="r"><input class="ax-in ax-mt" type="number" step="0.01" value="'+(a.budget||0)+'" onchange="axSet(\''+a.id+'\',\'budget\',this.value)"></td>'
+          +'<td class="r">'+num(x.c)+'</td><td class="r">'+(reste==null?'—':num(reste))+'</td>'
+          +'<td><input type="checkbox" '+(a.ouvert===false?'':'checked')+' onchange="axSet(\''+a.id+'\',\'ouvert\',this.checked)"></td>'
+          +'<td class="r"><button class="ax-x" title="Supprimer cet axe" onclick="axDel(\''+a.id+'\')">✕</button></td></tr>';
+        }).join('')
+        :'<tr><td colspan="8" class="ax-note2">Aucun chantier — créez le premier.</td></tr>')
+      +'</tbody></table>'
+      +'<div class="ax-acts"><button class="ax-b ax-pri" onclick="axAdd()">+ Nouveau chantier</button></div>';
+  }
+
+  function vRegles(){
+    var A=store();
+    return '<div class="ax-note">Une règle rattache un axe à ce qui se répète — un mot du libellé ou une racine de compte. Elle ne s’applique qu’aux lignes <b>non encore affectées</b> : une affectation faite à la main n’est jamais écrasée. Un critère de moins de 3 caractères (ou une racine de compte d’un seul chiffre) est <b>ignoré</b> : il affecterait n’importe quoi.</div>'
+      +'<table class="ax-t"><thead><tr><th>Quand</th><th>contient</th><th>affecter à</th><th></th></tr></thead><tbody>'
+      +(A.regles.length?A.regles.map(function(rg){
+        return '<tr><td><select class="ax-in" onchange="axRegleSet(\''+rg.id+'\',\'type\',this.value)">'
+            +'<option value="libelle"'+(rg.type==='libelle'?' selected':'')+'>le libellé</option>'
+            +'<option value="compte"'+(rg.type==='compte'?' selected':'')+'>le compte</option></select></td>'
+          +'<td><input class="ax-in" type="text" value="'+esc(rg.valeur||'')+'" placeholder="'+(rg.type==='compte'?'605':'DUPONT')+'" oninput="axRegleSet(\''+rg.id+'\',\'valeur\',this.value)"></td>'
+          +'<td><select class="ax-in" onchange="axRegleSet(\''+rg.id+'\',\'axe\',this.value)">'+optAxes(rg.axe)+'</select></td>'
+          +'<td class="r"><button class="ax-x" title="Retirer la règle" onclick="axRegleDel(\''+rg.id+'\')">✕</button></td></tr>';
+        }).join('')
+        :'<tr><td colspan="4" class="ax-note2">Aucune règle.</td></tr>')
+      +'</tbody></table>'
+      +'<div class="ax-acts"><button class="ax-b" onclick="axRegleAdd()">+ Ajouter une règle</button>'
+      +'<button class="ax-b ax-pri" onclick="axAppliquerRegles()">Appliquer les règles aux lignes non affectées</button></div>';
+  }
+
+  window.pageAxes=function(){
+    var s=S(), R=resultats(), k=tabActif();
+    var corps=(k==='resultat')?vResultat():(k==='ventil')?vVentilation():(k==='axes')?vAxes():vRegles();
+    return '<div id="yada-ax">'
+      +'<div class="ax-mast"><div class="ax-eyebrow">YADA · ANALYTIQUE PAR AFFAIRE</div>'
+      +'<h1 class="ax-title">Analytique par chantiers &amp; projets</h1>'
+      +'<div class="ax-soc">'+esc(s.raison||'')+' · exercice '+esc(D0())+' → '+esc(D1())+'</div>'
+      +'<button class="ax-close" title="Fermer" onclick="axFermer()">✕</button></div>'
+      +'<div class="ax-kpis">'
+      +'<div class="ax-k"><div class="l">Affaires suivies</div><div class="v">'+R.axes.length+'</div></div>'
+      +'<div class="ax-k"><div class="l">Marge directe cumulée</div><div class="v">'+num(R.axes.reduce(function(a,x){ return r(a+x.marge); },0))+'</div></div>'
+      +'<div class="ax-k"><div class="l">Frais généraux non affectés</div><div class="v">'+num(R.fgNet)+'</div></div>'
+      +'<div class="ax-k"><div class="l">Lignes non affectées</div><div class="v">'+R.nonAffectees+'</div></div>'
+      +'</div>'
+      +'<div class="ax-note2b">Un plan comptable dit la <b>nature</b> d’une charge, jamais l’affaire à laquelle elle appartient — le même fournisseur livre trois chantiers. L’axe est donc porté par la <b>ligne d’écriture</b> : aucun montant, aucun compte, aucun équilibre n’est touché.</div>'
+      +'<div class="ax-tabs">'+ONGLETS.map(function(o){
+          return '<button class="ax-tab'+(o[0]===k?' on':'')+'" onclick="axOnglet(\''+o[0]+'\')">'+esc(o[1])+'</button>'; }).join('')+'</div>'
+      +'<div class="ax-body">'+corps+'</div>'
+      +'</div>';
+  };
+
+  /* La sortie s'appelle « …Fermer() » : le filet v614 la reconnait et n'en greffe pas une
+     seconde (invariant v626 : exactement 1 sortie par module). */
+  window.axFermer=function(){ try{ if(typeof yadaFermerPage==='function') yadaFermerPage(); }catch(e){} };
+
+  /* ---------- enregistrement du module ---------- */
+  window.YADA_OK=(window.YADA_OK||[]);
+  if(window.YADA_OK.indexOf('axes')<0) window.YADA_OK.push('axes');
+  window.YADA_LBL=(window.YADA_LBL||{});
+  window.YADA_LBL.axes='Analytique par affaire';
+
+  /* ---------- style Registre N&B, scopé #yada-ax ---------- */
+  try{
+    var st=document.getElementById('ax-mod');
+    if(!st){ st=document.createElement('style'); st.id='ax-mod'; document.head.appendChild(st); }
+    st.textContent=
+      'html body:not(#_yz) #yada-ax{background:#000;color:#f5f5f6;min-height:100dvh;padding:0 0 60px;font-family:Georgia,"Times New Roman",serif}'
+     +'html body:not(#_yz) #yada-ax *{font-family:inherit}'
+     +'html body:not(#_yz) #yada-ax .ax-mast{position:relative;padding:26px 24px 16px;border-bottom:1px solid #242427}'
+     +'html body:not(#_yz) #yada-ax .ax-eyebrow{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;letter-spacing:.14em;color:#8b8b90}'
+     +'html body:not(#_yz) #yada-ax .ax-title{font-size:27px;margin:6px 0 4px;font-weight:400}'
+     +'html body:not(#_yz) #yada-ax .ax-soc{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:#8b8b90}'
+     +'html body:not(#_yz) #yada-ax .ax-close{position:absolute;top:22px;right:22px;width:30px;height:30px;background:#000;color:#f5f5f6;border:1px solid #f5f5f6;border-radius:5px;cursor:pointer;font-family:ui-monospace,monospace;font-size:14px}'
+     +'html body:not(#_yz) #yada-ax .ax-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:#242427;margin:0 0 2px}'
+     +'html body:not(#_yz) #yada-ax .ax-k{background:#0b0b0c;padding:14px 16px}'
+     +'html body:not(#_yz) #yada-ax .ax-k .l{font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.07em;color:#8b8b90;text-transform:uppercase}'
+     +'html body:not(#_yz) #yada-ax .ax-k .v{font-size:20px;margin-top:5px}'
+     +'html body:not(#_yz) #yada-ax .ax-note2b{padding:14px 24px;color:#a8a9ad;font-size:13px;border-bottom:1px solid #242427}'
+     +'html body:not(#_yz) #yada-ax .ax-tabs{display:flex;flex-wrap:wrap;gap:1px;background:#242427;border-bottom:1px solid #242427}'
+     +'html body:not(#_yz) #yada-ax .ax-tab{flex:1;min-width:170px;background:#0b0b0c;color:#8b8b90;border:0;padding:10px 12px;cursor:pointer;font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.04em}'
+     +'html body:not(#_yz) #yada-ax .ax-tab.on{background:#f5f5f6;color:#0a0a0b}'
+     +'html body:not(#_yz) #yada-ax .ax-body{padding:16px 24px 6px;overflow-x:auto}'
+     +'html body:not(#_yz) #yada-ax .ax-t{width:100%;border-collapse:collapse;margin:8px 0}'
+     +'html body:not(#_yz) #yada-ax .ax-t th{font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#8b8b90;background:#121214;padding:6px 8px;text-align:left;font-weight:400;border-bottom:1px solid #242427}'
+     +'html body:not(#_yz) #yada-ax .ax-t td{padding:4px 8px;border-bottom:1px solid #1c1c1f;font-size:13px}'
+     +'html body:not(#_yz) #yada-ax .ax-t th.r,html body:not(#_yz) #yada-ax .ax-t td.r{text-align:right}'
+     +'html body:not(#_yz) #yada-ax .ax-t th.mono,html body:not(#_yz) #yada-ax .ax-t td.mono{font-family:ui-monospace,monospace;font-size:12px}'
+     +'html body:not(#_yz) #yada-ax .ax-t th.ck,html body:not(#_yz) #yada-ax .ax-t td.ck{width:28px}'
+     +'html body:not(#_yz) #yada-ax .ax-t td.tot{border-left:1px solid #35353a}'
+     +'html body:not(#_yz) #yada-ax .ax-t tr.fg td{background:#0b0b0c;border-top:1px solid #35353a}'
+     +'html body:not(#_yz) #yada-ax .ax-t tr.gen td{background:#121214;border-top:2px solid #f5f5f6}'
+     +'html body:not(#_yz) #yada-ax .ax-t tr.na td{color:#a8a9ad}'
+     +'html body:not(#_yz) #yada-ax .ax-tag{font-family:ui-monospace,monospace;font-size:9px;letter-spacing:.08em;padding:1px 5px;border:1px solid #35353a;color:#8b8b90;border-radius:3px;margin-left:6px}'
+     +'html body:not(#_yz) #yada-ax .ax-note{color:#8b8b90;font-size:12px;margin:6px 0}'
+     +'html body:not(#_yz) #yada-ax .ax-note2{color:#8b8b90;font-size:11px}'
+     +'html body:not(#_yz) #yada-ax .ax-bt{font-family:ui-monospace,monospace;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:#a8a9ad;margin:16px 0 2px}'
+     +'html body:not(#_yz) #yada-ax .ax-row{display:flex;align-items:center;gap:10px;margin:8px 0;font-size:13px;flex-wrap:wrap}'
+     +'html body:not(#_yz) #yada-ax .ax-in{background:#000;color:#f5f5f6;border:1px solid #242427;border-radius:3px;padding:4px 6px;font-family:ui-monospace,monospace;font-size:12px;max-width:100%}'
+     +'html body:not(#_yz) #yada-ax .ax-mt{text-align:right;max-width:150px}'
+     +'html body:not(#_yz) #yada-ax .ax-code{max-width:100px}'
+     +'html body:not(#_yz) #yada-ax .ax-x{background:#000;color:#8b8b90;border:1px solid #242427;border-radius:3px;cursor:pointer;padding:2px 6px;font-family:ui-monospace,monospace}'
+     +'html body:not(#_yz) #yada-ax .ax-pag{font-family:ui-monospace,monospace;font-size:11px;color:#8b8b90;margin:8px 0}'
+     +'html body:not(#_yz) #yada-ax .ax-acts{display:flex;gap:8px;align-items:center;margin:10px 0 20px;flex-wrap:wrap}'
+     +'html body:not(#_yz) #yada-ax .ax-b{background:#000;color:#f5f5f6;border:1px solid #35353a;border-radius:4px;padding:5px 11px;cursor:pointer;font-family:ui-monospace,monospace;font-size:11.5px}'
+     +'html body:not(#_yz) #yada-ax .ax-b.ax-pri{background:#f5f5f6;color:#0a0a0b;border-color:#f5f5f6}'
+     +'html body:not(#_yz) #yada-ax .ax-b[disabled]{opacity:.4;cursor:not-allowed}'
+     +'@media(max-width:820px){html body:not(#_yz) #yada-ax .ax-kpis{grid-template-columns:repeat(2,1fr)}}';
   }catch(e){}
 })();
 </script>

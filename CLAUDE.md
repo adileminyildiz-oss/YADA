@@ -36,7 +36,49 @@
 
 ---
 
-## 🟢 Dernière mise à jour — LIASSE FISCALE 2050-2059 : le résultat FISCAL, enfin distinct du résultat comptable — v647
+## 🟢 Dernière mise à jour — ANALYTIQUE PAR AFFAIRE : la rentabilité chantier par chantier — v648
+**Quoi :** le dossier charge un **plan comptable BTP** — on y trouve `704 TRAVAUX`, `611 SOUS-TRAITANCE`, `605 MATÉRIEL DE TRAVAUX`, `621 PERSONNEL INTÉRIMAIRE`. Mais **un plan comptable dit la NATURE d'une charge, jamais l'affaire à laquelle elle appartient** — et ce n'est pas davantage lisible sur le tiers : le même fournisseur de béton livre trois chantiers. La rentabilité par affaire ne peut donc venir que d'une information **portée par la LIGNE d'écriture**. Nouveau module **« Analytique par affaire »** (rubrique **Analyse**) qui l'ajoute — `l.axe` sur la ligne, **sans toucher un seul montant, compte ou équilibre**.
+
+| Onglet | Ce qu'il fait |
+| --- | --- |
+| **Rentabilité par affaire** | produits · charges · **marge directe** · taux · frais généraux imputés · **résultat** · budget de charges · **consommé %**, puis le détail **par nature** (sous-traitance · fournitures · matériel · intérim · personnel · autres) |
+| **Ventilation des écritures** | toutes les lignes de classe 6 et 7, filtrables (non affectées · affectées · charges · produits), **affectation ligne à ligne ou en lot**, paginée par 120 |
+| **Chantiers & projets** | création des axes : code, nom, type (chantier · projet · affaire · véhicule · agence), **budget de charges**, ouvert/clos, charges engagées et reste |
+| **Règles d'affectation** | « quand le libellé contient X » ou « quand le compte commence par Y » → affecter à tel chantier |
+
+**Trois points où cette analytique est honnête plutôt que jolie :**
+1. **Imputer des frais généraux est une CONVENTION, pas une écriture.** Le loyer du siège n'appartient à aucun chantier. L'option « imputer les frais généraux au prorata des produits » existe, mais la **marge directe reste affichée à côté** du résultat imputé — l'une ne se cache jamais derrière l'autre. Et les frais généraux non affectés ont leur **propre ligne**, toujours visible.
+2. **Une règle ne réécrit jamais la main.** Les règles ne s'appliquent qu'aux lignes **non encore affectées** — une affectation manuelle survit à tous les passages (vérifié par sonde). Et un critère de **moins de 3 caractères** (ou une racine de compte d'un seul chiffre) est **ignoré** : une règle « contient A » affecterait « Travaux B », qui contient un A.
+3. **L'analytique répartit le résultat, elle ne le change pas.** Le total du tableau est le **résultat de l'exercice** : Σ produits − Σ charges, frais généraux compris. Les **à-nouveaux** et l'**OD de résultat** sont exclus du périmètre — ce ne sont pas de l'activité.
+
+**Comment — nouvel addon `yada-addon-axes` (100% ADDITIF) + 2 éditions chirurgicales :** clé `axes:(typeof pageAxes==='function'?pageAxes:repli)` au **dispatch de `render()`** et `'axes'` ajouté à la rubrique **Analyse** de la barre v641. **Points techniques :** (1) l'axe est un **champ ajouté à la ligne** (`l.axe`), donc **aucune écriture n'est créée ni modifiée dans ses montants** — vérifié par égalité JSON stricte des couples compte/débit/crédit avant et après suppression d'un axe ; supprimer un axe **remet ses lignes en non affecté**, il ne détruit rien ; (2) les axes, règles et l'option d'imputation vivent dans `db.parametres.analytique` ; (3) la liste de ventilation est **paginée par 120 lignes** (même parade qu'en v640 pour le journal) ; (4) **export CSV** (séparateur `;`, décimale virgule, BOM UTF-8) et **impression** en `.doc-page` ; (5) la sortie s'appelle **`axFermer()`** pour que le filet v614 la reconnaisse — **invariant v626 : exactement 1 sortie « Fermer »**. Rendu **Registre N&B** scopé `#yada-ax`. `sw.js` yada-v243, badge v648, `version.json` 648.
+
+**Validé :** `node --check` (**317 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014) + balises (3/5/3) + **filet d'équilibre** ✅ + sonde Playwright sur un dossier BTP d'essai (2 chantiers, frais généraux de siège, un à-nouveau piège) :
+
+| Mesure | Résultat |
+| --- | --- |
+| Module rendu · onglets | ✓ · **4** |
+| **Chantier A** (travaux 40 000 · s/t 12 000 · matériaux 8 000) | marge **20 000,00** · **50 %** · budget 18 000 → **consommé 111,1 %** |
+| **Chantier B** (travaux 25 000 · matériaux 20 000) | marge **5 000,00** · **20 %** · budget 15 000 → **consommé 133,3 %** — le chantier qui dérape se voit |
+| Frais généraux non affectés | **9 000,00** (loyer du siège + assurance), sur leur propre ligne |
+| **TOTAL** | 65 000 − 49 000 = **16 000,00** = le **résultat de l'exercice** |
+| **Imputation au prorata** des produits | A **5 538,46** (40/65) · B **3 461,54** (25/65) — somme **9 000,00**, résultats 14 461,54 + 1 538,46 = **16 000,00** |
+| **À-nouveau de 99 999 €** | **jamais affiché**, jamais compté |
+| Règle « contient A » / « contient B » (1 caractère) | **ignorée** — 0 ligne affectée, message « critère trop court » |
+| 5 règles précises | **5 lignes affectées** |
+| **Affectation manuelle** + nouveau passage des règles | **non écrasée** |
+| Affectation **en lot** (cases à cocher) | 3 → **4 lignes** sur le chantier A |
+| **Suppression d'un axe** | lignes remises en non affecté · **montants strictement identiques** · **0 écriture modifiée** · 0 déséquilibrée |
+| Impression · export CSV | `.doc-page` « Rentabilité par affaire · exercice 2026 » · CSV |
+| Rubrique **Analyse** de la barre | « Tableau de bord » · « **Analytique par affaire** » · « Analytique & rentabilité » · … — **routage réel ✓** |
+| Sorties « Fermer » · boutons vides · gras · débordement | **1** · **0** · **0** · **0** |
+| pageerror · console.error | **0** · **0** |
+
+**Le programme de la v641 est terminé.** Les dix rubriques de la barre sont servies : Saisie · **Traitements** (Inventaire & cut-off, amortissement dégressif) · **Déclarations** (TVA sur les encaissements, Liasse fiscale) · **États** (Bilan, Compte de résultat, SIG) · **Révision** (Dossier de révision par cycles) · **Analyse** (Analytique par affaire).
+
+---
+
+## 🟢 MAJ précédente — LIASSE FISCALE 2050-2059 : le résultat FISCAL, enfin distinct du résultat comptable — v647
 **Quoi :** le bilan et le compte de résultat (v643) disent ce que l'entreprise **a gagné**. La liasse dit ce qu'elle **doit** — et ce sont **deux chiffres différents** : une amende, la TVS, l'IS lui-même ne sont pas déductibles. Tant que YADA n'avait pas cette passerelle, **Pilotage calculait l'IS sur le résultat comptable**, donc sur une base fausse. Nouveau module **« Liasse fiscale »** (rubrique **Déclarations**), **6 formulaires** :
 
 | Formulaire | Contenu |
