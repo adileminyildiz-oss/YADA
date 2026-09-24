@@ -4211,6 +4211,7 @@ function render(){
   liasse:(typeof pageLiasse==='function'?pageLiasse:function(){return'<div class="mod-wrap"><div class="card"><h2>Liasse fiscale</h2></div></div>';}),
   axes:(typeof pageAxes==='function'?pageAxes:function(){return'<div class="mod-wrap"><div class="card"><h2>Analytique par affaire</h2></div></div>';}),
   annexe:(typeof pageAnnexe==='function'?pageAnnexe:function(){return'<div class="mod-wrap"><div class="card"><h2>Annexe des comptes annuels</h2></div></div>';}),
+  flux:(typeof pageFlux==='function'?pageFlux:function(){return'<div class="mod-wrap"><div class="card"><h2>Tableau de flux de trésorerie</h2></div></div>';}),
   importbanque:(typeof pageImportBanque==='function'?pageImportBanque:function(){return'<div class="mod-wrap"><div class="card"><h2>Import bancaire</h2></div></div>';}),
   recurrentes:(typeof pageRecurrentes==='function'?pageRecurrentes:function(){return'<div class="mod-wrap"><div class="card"><h2>Écritures récurrentes</h2></div></div>';}),
   automatismes:(typeof pageAutomatismes==='function'?pageAutomatismes:function(){return'<div class="mod-wrap"><div class="card"><h2>Automatismes</h2></div></div>';}),
@@ -11096,7 +11097,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v649';
+    b.textContent='YADA · v650';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -37429,7 +37430,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     {id:'yb-trait',   lbl:'Traitements',  prend:[['sg-util','Utilitaires']],
      mods:['automatismes','inventaire','rappro','banque','immos']},
     {id:'yb-decl',    lbl:'Déclarations', prend:[], mods:['tva','liasse']},
-    {id:'yb-etats',   lbl:'États',        prend:[], mods:['editions','annexe']},
+    {id:'yb-etats',   lbl:'États',        prend:[], mods:['editions','annexe','flux']},
     {id:'yb-revis',   lbl:'Révision',     prend:[], mods:['revision','controles']},
     {id:'yb-analyse', lbl:'Analyse',      prend:[],
      mods:['dash','axes','analytique','reglements','pilotage','salarie']},
@@ -40422,6 +40423,371 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
      +'html body:not(#_yz) #yada-anx .anx-b{background:#000;color:#f5f5f6;border:1px solid #35353a;border-radius:4px;padding:5px 11px;cursor:pointer;font-family:ui-monospace,monospace;font-size:11.5px}'
      +'html body:not(#_yz) #yada-anx .anx-b.anx-pri{background:#f5f5f6;color:#0a0a0b;border-color:#f5f5f6}'
      +'@media(max-width:820px){html body:not(#_yz) #yada-anx .anx-kpis{grid-template-columns:repeat(2,1fr)}}';
+  }catch(e){}
+})();
+</script>
+<script id="yada-addon-flux">
+/* v650 — TABLEAU DE FLUX DE TRÉSORERIE (méthode indirecte).
+   Le bilan dit le PATRIMOINE, le compte de résultat la PERFORMANCE, l'annexe les RÈGLES.
+   Aucun des trois ne dit OÙ EST PASSÉ L'ARGENT — et c'est la question que pose tout
+   dirigeant qui lit un bénéfice sur un compte à sec. Un résultat n'est pas de la
+   trésorerie : l'amortissement est une charge qu'on ne décaisse pas, le stock et les
+   créances immobilisent de l'argent que le résultat ne voit pas, et rembourser un
+   emprunt vide la banque sans toucher au résultat.
+
+   Le tableau explique l'écart, en trois flux : ACTIVITÉ · INVESTISSEMENT · FINANCEMENT.
+
+   Il repose sur une identité, pas sur une opinion. En partie double, la somme de tous
+   les comptes est nulle à tout instant, donc :
+        Σ(classes 1 à 5) = − Σ(classes 6 et 7) = résultat
+   d'où, sur l'exercice :
+        Δ TRÉSORERIE = RÉSULTAT − Δ(tous les autres comptes de bilan)
+   Le tableau n'est que la lecture de cette identité, regroupée par nature. Il DOIT donc
+   boucler — et le module le vérifie à l'écran : la variation expliquée est confrontée à
+   la variation réellement lue sur les comptes de trésorerie. Ce qui ne serait pas
+   expliqué apparaît sur sa propre ligne, jamais en plug silencieux.
+   100% ADDITIF : aucune écriture n'est créée, modifiée ni supprimée. */
+(function(){
+  function S(){ try{ return db.societe||{}; }catch(e){ return {}; } }
+  function RENDER(){ try{ if(typeof render==='function') render(); }catch(e){} }
+  function r(v){ return Math.round((+v||0)*100)/100; }
+  function num(v){ if(v==null||v==='') return ''; try{ return eur(v); }catch(e){ return r(v)+' €'; } }
+  function n0(v){ if(v==null||Math.abs(v)<0.005) return '—'; return num(v); }
+  function C9(x){ try{ return c9(x); }catch(e){ return String(x||''); } }
+  function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function jour(d){ try{ return frDate(d); }catch(e){ return d||''; } }
+  function D0(){ return String(S().exoDebut||''); }
+  function D1(){ return String(S().exoFin||''); }
+  function pref(){ var L=[].slice.call(arguments);
+    return function(k){ for(var i=0;i<L.length;i++){ if(k.indexOf(L[i])===0) return true; } return false; }; }
+  function sauf(t,x){ return function(k){ return t(k)&&!x(k); }; }
+  /* exercice précédent, pour la colonne N-1 */
+  function exoPrec(){
+    var d0=D0(), d1=D1(); if(!d0||!d1) return null;
+    try{ if(typeof addAnnees==='function') return {d0:addAnnees(d0,-1), d1:addAnnees(d1,-1)}; }catch(e){}
+    return {d0:(+d0.slice(0,4)-1)+d0.slice(4), d1:(+d1.slice(0,4)-1)+d1.slice(4)};
+  }
+
+  /* ---------- mouvements de la période ----------------------------------------
+     Même lecture qu'en v649 : l'à-nouveau est daté DANS l'exercice mais il N'EST PAS
+     un mouvement — il est le solde d'ouverture. Le compter comme un flux ferait
+     apparaître tout le bilan de l'an dernier comme un encaissement de l'année. */
+  function mvt(test, d0, d1){
+    var o={ouv:0, aug:0, dim:0};
+    try{
+      (db.ecritures||[]).forEach(function(e){
+        if(!e) return;
+        var d=String(e.date||''), lib=String(e.libelle||'');
+        /* L'OD de résultat vire les classes 6 et 7 sur le 12x. Si elle est passée DANS
+           l'exercice, le 12x absorbe le résultat — que la première ligne du tableau
+           compte déjà : le tableau se dédoublerait. On l'écarte, comme le fait etnCR. */
+        if(lib.indexOf('OD RÉSULTAT')>=0 || lib.indexOf('OD RESULTAT')>=0) return;
+        var an=(lib.indexOf('À-NOUVEAUX')>=0 || lib.indexOf('A-NOUVEAUX')>=0);
+        var avant=(d0 && d<d0), dans=(!d0||d>=d0)&&(!d1||d<=d1);
+        if(!avant && !dans) return;
+        (e.lignes||[]).forEach(function(l){
+          var k=C9(l.compte); if(!k||!test(k)) return;
+          var dd=(+l.debit||0), cc=(+l.credit||0);
+          if(avant || an){ o.ouv=r(o.ouv+dd-cc); return; }   /* solde débiteur signé */
+          o.aug=r(o.aug+dd); o.dim=r(o.dim+cc);
+        });
+      });
+    }catch(e){}
+    o.clo=r(o.ouv+o.aug-o.dim);
+    o.delta=r(o.clo-o.ouv);            /* variation du solde débiteur signé */
+    return o;
+  }
+  /* contribution d'une famille à la trésorerie = −Δ de son solde débiteur signé :
+     un actif qui grossit consomme de l'argent, une dette qui grossit en fournit. */
+  function flux(test,d0,d1){ return r(-mvt(test,d0,d1).delta); }
+
+  /* ---------- familles : partition EXHAUSTIVE des classes 1 à 5 ---------------
+     Chaque compte de bilan tombe dans exactement une famille — c'est ce qui rend
+     l'identité vérifiable. Ce qui n'y tomberait pas est compté à part et AFFICHÉ. */
+  var T_TRESO  = pref('50','51','52','53','54','58'),
+      T_IMMO   = pref('20','21','22','23','25','26','27','28','29'),
+      T_DETIMM = pref('404','405'),
+      T_FINANC = pref('16','17','45','101','104','108','13'),
+      T_NOCASH = pref('105','106','107','109','11','12','14','15','18','19'),
+      T_STOCKS = pref('3'),
+      T_EXPL   = sauf(pref('4'), function(k){ return T_DETIMM(k)||pref('45')(k); });
+  function T_BILAN(k){ var c=k.charAt(0); return c>='1'&&c<='5'; }
+  function T_CLASSE(k){ return T_TRESO(k)||T_IMMO(k)||T_DETIMM(k)||T_FINANC(k)||T_NOCASH(k)||T_STOCKS(k)||T_EXPL(k); }
+  var T_RESTE = sauf(T_BILAN, T_CLASSE);
+
+  /* ---------- compte de résultat de la période ---------- */
+  function CR(d0,d1){ try{ if(typeof etnCR==='function') return etnCR(d0,d1); }catch(e){} return null; }
+  function cum(acc,test,sens){
+    var t=0; if(!acc) return 0;
+    Object.keys(acc).forEach(function(k){ if(!test(k)) return;
+      var a=acc[k]; t=r(t+(sens==='c'?(a.c-a.d):(a.d-a.c))); });
+    return t;
+  }
+
+  /* ---------- le tableau ---------- */
+  function calc(d0,d1){
+    var C=CR(d0,d1), acc=C?C.acc:null;
+    var net=C?C.net:0;
+
+    /* charges et produits calculés — sans mouvement de trésorerie */
+    var dot     = cum(acc,pref('681','686','687'),'d'),
+        repr    = cum(acc,pref('781','786','787'),'c'),
+        prixCes = cum(acc,pref('775'),'c'),          /* produit de cession = le prix */
+        vnc     = cum(acc,pref('675'),'d'),          /* valeur nette comptable sortie */
+        qpSubv  = cum(acc,pref('777'),'c');
+    var plusVal = r(prixCes-vnc);
+
+    /* I — ACTIVITÉ */
+    var mba = r(net + dot - repr - plusVal - qpSubv);
+    var dStock = flux(T_STOCKS,d0,d1);
+    var dExpl  = flux(T_EXPL,d0,d1);
+    var A = r(mba + dStock + dExpl);
+
+    /* II — INVESTISSEMENT */
+    var mImmo = mvt(T_IMMO,d0,d1);
+    /* acquisitions = débits des comptes d'immobilisation brute (hors amortissements) */
+    var acquis = mvt(pref('20','21','22','23','25','26','27'),d0,d1).aug;
+    var dDetImm = flux(T_DETIMM,d0,d1);
+    var B = r(-acquis + prixCes + dDetImm);
+
+    /* III — FINANCEMENT */
+    var mEmp = mvt(pref('16','17'),d0,d1);
+    var emis = mEmp.dim, remb = mEmp.aug;            /* crédit = émission · débit = remboursement */
+    var mCap = mvt(pref('101','104','108'),d0,d1);
+    var capit = r(mCap.dim-mCap.aug);
+    var mSub = mvt(pref('13'),d0,d1);
+    var subv = r(mSub.dim-mSub.aug);
+    /* LE DIVIDENDE N'EST PAS UNE VARIATION, C'EST UN DÉCAISSEMENT.
+       Décidé, il ne fait que déplacer des capitaux propres vers le 457 — aucune trésorerie
+       ne bouge. Versé, il sort de la banque. On lit donc les DÉBITS du 457 (les paiements),
+       jamais son solde : un dividende décidé et non encore versé ne doit rien retirer. */
+    var divers = mvt(pref('457'),d0,d1).aug;
+    var dAsso = flux(sauf(pref('45'),pref('457')),d0,d1);
+    var C3 = r(capit + subv + emis - remb - divers + dAsso);
+
+    /* contrôle : la variation expliquée face à la variation réellement lue */
+    var mT = mvt(T_TRESO,d0,d1);
+    var expliquee = r(A+B+C3);
+    var reelle = mT.delta;
+    var nocash = flux(T_NOCASH,d0,d1);
+    var reste  = flux(T_RESTE,d0,d1);
+    var ecart = r(reelle-expliquee);
+
+    return {net:net, dot:dot, repr:repr, plusVal:plusVal, prixCes:prixCes, vnc:vnc, qpSubv:qpSubv,
+            mba:mba, dStock:dStock, dExpl:dExpl, A:A,
+            acquis:acquis, dDetImm:dDetImm, B:B,
+            capit:capit, subv:subv, emis:emis, remb:remb, divers:divers, dAsso:dAsso, C:C3,
+            expliquee:expliquee, reelle:reelle, ecart:ecart,
+            nocash:nocash, reste:reste,
+            trOuv:mT.ouv, trClo:mT.clo, amortImmo:r(mImmo.delta)};
+  }
+
+  /* ---------- rendu ---------- */
+  function L(lbl,v,n1,cls,note){
+    return '<tr'+(cls?(' class="'+cls+'"'):'')+'><td>'+esc(lbl)
+      +(note?('<span class="fx-tag">'+esc(note)+'</span>'):'')+'</td>'
+      +'<td class="r tot">'+n0(v)+'</td>'
+      +'<td class="r n1">'+(n1==null?'':n0(n1))+'</td></tr>';
+  }
+  function tableau(F,P){
+    function p(k){ return P?P[k]:null; }
+    var h='<table class="fx-t"><thead><tr><th>Flux de trésorerie</th>'
+      +'<th class="r">Exercice</th><th class="r n1">Exercice N-1</th></tr></thead><tbody>';
+
+    h+='<tr class="sec"><td colspan="3">I · FLUX DE TRÉSORERIE LIÉS À L’ACTIVITÉ</td></tr>';
+    h+=L('Résultat net de l’exercice', F.net, p('net'));
+    h+=L('+ Dotations aux amortissements, dépréciations et provisions', F.dot, p('dot'), null, 'charge non décaissée');
+    h+=L('− Reprises sur amortissements, dépréciations et provisions', F.repr?r(-F.repr):0, p('repr')!=null?r(-P.repr):null, null, 'produit non encaissé');
+    h+=L('− Résultat des cessions d’éléments d’actif', F.plusVal?r(-F.plusVal):0, p('plusVal')!=null?r(-P.plusVal):null, null, 'relève de l’investissement');
+    h+=L('− Quote-part de subventions virée au résultat', F.qpSubv?r(-F.qpSubv):0, p('qpSubv')!=null?r(-P.qpSubv):null);
+    h+=L('= MARGE BRUTE D’AUTOFINANCEMENT', F.mba, p('mba'), 'sub');
+    h+=L('Variation des stocks', F.dStock, p('dStock'));
+    h+=L('Variation des créances et des dettes d’exploitation', F.dExpl, p('dExpl'), null, 'besoin en fonds de roulement');
+    h+=L('= FLUX NET GÉNÉRÉ PAR L’ACTIVITÉ  (A)', F.A, p('A'), 'tot1');
+
+    h+='<tr class="sec"><td colspan="3">II · FLUX LIÉS AUX OPÉRATIONS D’INVESTISSEMENT</td></tr>';
+    h+=L('− Acquisitions d’immobilisations', F.acquis?r(-F.acquis):0, p('acquis')!=null?r(-P.acquis):null);
+    h+=L('+ Prix de cession des immobilisations', F.prixCes, p('prixCes'), null, 'compte 775');
+    h+=L('Variation des dettes sur immobilisations (404, 405)', F.dDetImm, p('dDetImm'));
+    h+=L('= FLUX NET LIÉ À L’INVESTISSEMENT  (B)', F.B, p('B'), 'tot1');
+
+    h+='<tr class="sec"><td colspan="3">III · FLUX LIÉS AUX OPÉRATIONS DE FINANCEMENT</td></tr>';
+    h+=L('+ Augmentation de capital', F.capit, p('capit'));
+    h+=L('+ Subventions d’investissement reçues', F.subv, p('subv'));
+    h+=L('+ Émission d’emprunts', F.emis, p('emis'));
+    h+=L('− Remboursement d’emprunts', F.remb?r(-F.remb):0, p('remb')!=null?r(-P.remb):null);
+    h+=L('− Dividendes versés', F.divers?r(-F.divers):0, p('divers')!=null?r(-P.divers):null, null, 'décaissements du 457');
+    h+=L('Comptes courants d’associés', F.dAsso, p('dAsso'));
+    h+=L('= FLUX NET LIÉ AU FINANCEMENT  (C)', F.C, p('C'), 'tot1');
+
+    h+='<tr class="sec"><td colspan="3">VARIATION DE LA TRÉSORERIE</td></tr>';
+    h+=L('Variation expliquée  (A + B + C)', F.expliquee, p('expliquee'), 'sub');
+    if(Math.abs(F.ecart)>0.01 || (P&&Math.abs(P.ecart)>0.01))
+      h+=L('Variation NON EXPLIQUÉE (comptes hors classement)', F.ecart, p('ecart'), 'ko', 'à examiner');
+    h+=L('= VARIATION DE LA TRÉSORERIE', F.reelle, p('reelle'), 'gen');
+    h+=L('Trésorerie à l’ouverture', F.trOuv, p('trOuv'));
+    h+=L('Trésorerie à la clôture', F.trClo, p('trClo'), 'sub');
+    return h+'</tbody></table>';
+  }
+
+  function vTableau(){
+    var F=calc(D0(),D1()), pr=exoPrec(), P=null;
+    try{ if(pr) P=calc(pr.d0,pr.d1); }catch(e){}
+    var ok=Math.abs(F.ecart)<0.01;
+    var h='<div class="fx-verdict'+(ok?' ok':' ko')+'">'
+      +(ok?'Le tableau boucle : variation expliquée = variation réelle ✓'
+          :'Le tableau ne boucle pas — écart de '+num(F.ecart)+' porté sur sa propre ligne')+'</div>'
+      +'<div class="fx-note">En partie double, la somme de tous les comptes est nulle : <b>Δ trésorerie = résultat − Δ des autres comptes de bilan</b>. '
+      +'Le tableau n’est que la lecture de cette identité, regroupée par nature — il <b>doit</b> donc boucler. '
+      +'Ce contrôle confronte la variation expliquée par les trois flux à celle réellement lue sur les comptes 50 à 58.</div>'
+      +tableau(F,P);
+    /* la passerelle résultat → trésorerie, en une phrase */
+    var ecartRT=r(F.reelle-F.net);
+    h+='<div class="fx-bt">Du résultat à la trésorerie</div>'
+      +'<table class="fx-t"><tbody>'
+      +L('Résultat net de l’exercice', F.net)
+      +L('Écart entre le résultat et la trésorerie', ecartRT, null, 'sub')
+      +L('= Variation de la trésorerie', F.reelle, null, 'gen')
+      +'</tbody></table>'
+      +'<div class="fx-note2">'+(Math.abs(ecartRT)<0.01
+        ? 'Le résultat s’est intégralement retrouvé en trésorerie sur cet exercice.'
+        : (ecartRT<0
+           ? 'La trésorerie a progressé <b>moins</b> que le résultat de '+num(-ecartRT)+' : l’argent est immobilisé ailleurs — stocks, créances, investissements ou remboursements d’emprunt. Le détail est dans les trois flux ci-dessus.'
+           : 'La trésorerie a progressé <b>plus</b> que le résultat de '+num(ecartRT)+' : des charges n’ont pas été décaissées (amortissements), ou des financements sont entrés. Le détail est dans les trois flux ci-dessus.'))
+      +'</div>';
+    return h;
+  }
+
+  function vDetail(){
+    var d0=D0(), d1=D1();
+    var fam=[
+      ['Trésorerie (50, 51, 52, 53, 54, 58)', T_TRESO, 'cible du tableau'],
+      ['Immobilisations et amortissements (20 à 29)', T_IMMO, 'investissement'],
+      ['Dettes sur immobilisations (404, 405)', T_DETIMM, 'investissement'],
+      ['Stocks (classe 3)', T_STOCKS, 'activité'],
+      ['Exploitation (classe 4 hors 404, 405, 45)', T_EXPL, 'activité'],
+      ['Financement (16, 17, 45, 101, 104, 108, 13)', T_FINANC, 'financement'],
+      ['Capitaux propres et provisions (105, 106, 11, 12, 14, 15…)', T_NOCASH, 'sans incidence'],
+      ['Comptes de bilan hors classement', T_RESTE, 'doit rester vide']
+    ];
+    var h='<div class="fx-bt">Partition des comptes de bilan</div>'
+      +'<div class="fx-note">Chaque compte des classes 1 à 5 doit tomber dans <b>exactement une</b> famille : c’est ce qui rend l’identité vérifiable. '
+      +'La dernière ligne doit rester vide — si elle ne l’est pas, un compte échappe au tableau, et l’écart se lit plus haut.</div>'
+      +'<table class="fx-t"><thead><tr><th>Famille</th><th class="r">À l’ouverture</th><th class="r">À la clôture</th>'
+      +'<th class="r">Variation</th><th class="r">Effet trésorerie</th><th>Rattachement</th></tr></thead><tbody>';
+    var sTot=0;
+    fam.forEach(function(f){
+      var m=mvt(f[1],d0,d1);
+      if(f[1]!==T_TRESO) sTot=r(sTot-m.delta);
+      h+='<tr'+(f[1]===T_RESTE&&Math.abs(m.delta)>0.005?' class="ko"':'')+'><td>'+esc(f[0])+'</td>'
+        +'<td class="r">'+n0(m.ouv)+'</td><td class="r">'+n0(m.clo)+'</td><td class="r">'+n0(m.delta)+'</td>'
+        +'<td class="r tot">'+(f[1]===T_TRESO?'—':n0(r(-m.delta)))+'</td>'
+        +'<td><span class="fx-tag">'+esc(f[2])+'</span></td></tr>';
+    });
+    var C=CR(d0,d1), net=C?C.net:0, mT=mvt(T_TRESO,d0,d1);
+    h+='<tr class="sub"><td>Somme des effets (hors trésorerie)</td><td class="r"></td><td class="r"></td><td class="r"></td>'
+      +'<td class="r tot">'+n0(sTot)+'</td><td></td></tr>'
+      +'<tr class="sub"><td>+ Résultat de l’exercice</td><td class="r"></td><td class="r"></td><td class="r"></td>'
+      +'<td class="r tot">'+n0(net)+'</td><td></td></tr>'
+      +'<tr class="gen"><td>= Variation de la trésorerie</td><td class="r"></td><td class="r"></td><td class="r"></td>'
+      +'<td class="r tot">'+n0(r(sTot+net))+'</td><td><span class="fx-tag">'
+      +(Math.abs(r(sTot+net-mT.delta))<0.01?'= variation lue ✓':'écart '+num(r(sTot+net-mT.delta)))+'</span></td></tr>'
+      +'</tbody></table>';
+    return h;
+  }
+
+  var ONGLETS=[['tableau','Tableau de flux'],['detail','Contrôle & partition']];
+  function tabActif(){ var k=window.__fxTab; for(var i=0;i<ONGLETS.length;i++){ if(ONGLETS[i][0]===k) return k; } return 'tableau'; }
+  window.fxOnglet=function(k){ window.__fxTab=k; RENDER(); };
+
+  window.fxImprimer=function(){
+    var s=S(), F=calc(D0(),D1()), pr=exoPrec(), P=null;
+    try{ if(pr) P=calc(pr.d0,pr.d1); }catch(e){}
+    var h='<div class="doc-page"><h1 style="margin:0 0 2px">TABLEAU DE FLUX DE TRÉSORERIE</h1>'
+      +'<div style="font-size:12px;margin-bottom:10px">'+esc(s.raison||'')+' · SIREN '+esc(s.siren||'—')
+      +' · exercice du '+esc(jour(D0()))+' au '+esc(jour(D1()))+' · méthode indirecte · édité le '
+      +esc((function(){ try{ return jour(todayStr()); }catch(e){ return ''; } })())+'</div>'
+      +'<div class="fx-print">'+tableau(F,P)+'</div></div>';
+    try{
+      var pa=document.getElementById('print-area');
+      if(!pa){ pa=document.createElement('div'); pa.id='print-area'; document.body.appendChild(pa); }
+      pa.innerHTML=h; window.print();
+    }catch(e){}
+  };
+
+  window.pageFlux=function(){
+    var s=S(), k=tabActif(), F=calc(D0(),D1());
+    var ok=Math.abs(F.ecart)<0.01;
+    return '<div id="yada-fx">'
+      +'<div class="fx-mast"><div class="fx-eyebrow">YADA · TABLEAU DE FLUX DE TRÉSORERIE</div>'
+      +'<h1 class="fx-title">Flux de trésorerie</h1>'
+      +'<div class="fx-soc">'+esc(s.raison||'')+' · exercice '+esc(jour(D0()))+' → '+esc(jour(D1()))+' · méthode indirecte</div>'
+      +'<button class="fx-close" title="Fermer" onclick="fxFermer()">✕</button></div>'
+      +'<div class="fx-kpis">'
+      +'<div class="fx-k"><div class="l">Résultat net</div><div class="v">'+n0(F.net)+'</div></div>'
+      +'<div class="fx-k"><div class="l">Variation de trésorerie</div><div class="v">'+n0(F.reelle)+'</div></div>'
+      +'<div class="fx-k"><div class="l">Flux de l’activité</div><div class="v">'+n0(F.A)+'</div></div>'
+      +'<div class="fx-k"><div class="l">Bouclage</div><div class="v">'+(ok?'conforme':'écart')+'</div></div>'
+      +'</div>'
+      +'<div class="fx-note2b">Un <b>résultat n’est pas de la trésorerie</b> : l’amortissement est une charge qu’on ne décaisse pas, le stock et les créances immobilisent un argent que le résultat ne voit pas, '
+      +'et rembourser un emprunt vide la banque sans toucher au résultat. Ce tableau explique l’écart, en trois flux.</div>'
+      +'<div class="fx-tabs">'+ONGLETS.map(function(o){
+          return '<button class="fx-tab'+(o[0]===k?' on':'')+'" onclick="fxOnglet(\''+o[0]+'\')">'+esc(o[1])+'</button>'; }).join('')+'</div>'
+      +'<div class="fx-body">'+(k==='detail'?vDetail():vTableau())
+      +'<div class="fx-acts"><button class="fx-b fx-pri" onclick="fxImprimer()">Imprimer le tableau de flux</button></div>'
+      +'</div></div>';
+  };
+
+  /* La sortie s'appelle « …Fermer() » : le filet v614 la reconnait et n'en greffe pas une
+     seconde (invariant v626 : exactement 1 sortie par module). */
+  window.fxFermer=function(){ try{ if(typeof yadaFermerPage==='function') yadaFermerPage(); }catch(e){} };
+
+  window.YADA_OK=(window.YADA_OK||[]);
+  if(window.YADA_OK.indexOf('flux')<0) window.YADA_OK.push('flux');
+  window.YADA_LBL=(window.YADA_LBL||{});
+  window.YADA_LBL.flux='Tableau de flux de trésorerie';
+
+  try{
+    var st=document.getElementById('fx-mod');
+    if(!st){ st=document.createElement('style'); st.id='fx-mod'; document.head.appendChild(st); }
+    st.textContent=
+      'html body:not(#_yz) #yada-fx{background:#000;color:#f5f5f6;min-height:100dvh;padding:0 0 60px;font-family:Georgia,"Times New Roman",serif}'
+     +'html body:not(#_yz) #yada-fx *{font-family:inherit}'
+     +'html body:not(#_yz) #yada-fx .fx-mast{position:relative;padding:26px 24px 16px;border-bottom:1px solid #242427}'
+     +'html body:not(#_yz) #yada-fx .fx-eyebrow{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;letter-spacing:.14em;color:#8b8b90}'
+     +'html body:not(#_yz) #yada-fx .fx-title{font-size:27px;margin:6px 0 4px;font-weight:400}'
+     +'html body:not(#_yz) #yada-fx .fx-soc{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:#8b8b90}'
+     +'html body:not(#_yz) #yada-fx .fx-close{position:absolute;top:22px;right:22px;width:30px;height:30px;background:#000;color:#f5f5f6;border:1px solid #f5f5f6;border-radius:5px;cursor:pointer;font-family:ui-monospace,monospace;font-size:14px}'
+     +'html body:not(#_yz) #yada-fx .fx-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:#242427;margin:0 0 2px}'
+     +'html body:not(#_yz) #yada-fx .fx-k{background:#0b0b0c;padding:14px 16px}'
+     +'html body:not(#_yz) #yada-fx .fx-k .l{font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.07em;color:#8b8b90;text-transform:uppercase}'
+     +'html body:not(#_yz) #yada-fx .fx-k .v{font-size:19px;margin-top:5px}'
+     +'html body:not(#_yz) #yada-fx .fx-note2b{padding:14px 24px;color:#a8a9ad;font-size:13px;border-bottom:1px solid #242427}'
+     +'html body:not(#_yz) #yada-fx .fx-tabs{display:flex;flex-wrap:wrap;gap:1px;background:#242427;border-bottom:1px solid #242427}'
+     +'html body:not(#_yz) #yada-fx .fx-tab{flex:1;min-width:150px;background:#0b0b0c;color:#8b8b90;border:0;padding:10px 12px;cursor:pointer;font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.04em}'
+     +'html body:not(#_yz) #yada-fx .fx-tab.on{background:#f5f5f6;color:#0a0a0b}'
+     +'html body:not(#_yz) #yada-fx .fx-body{padding:16px 24px 6px;overflow-x:auto}'
+     +'html body:not(#_yz) #yada-fx .fx-t{width:100%;border-collapse:collapse;margin:8px 0;max-width:900px}'
+     +'html body:not(#_yz) #yada-fx .fx-t th{font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#8b8b90;background:#121214;padding:6px 8px;text-align:left;font-weight:400;border-bottom:1px solid #242427}'
+     +'html body:not(#_yz) #yada-fx .fx-t td{padding:4px 8px;border-bottom:1px solid #1c1c1f;font-size:13px}'
+     +'html body:not(#_yz) #yada-fx .fx-t th.r,html body:not(#_yz) #yada-fx .fx-t td.r{text-align:right}'
+     +'html body:not(#_yz) #yada-fx .fx-t td.tot{border-left:1px solid #35353a}'
+     +'html body:not(#_yz) #yada-fx .fx-t td.n1,html body:not(#_yz) #yada-fx .fx-t th.n1{color:#8b8b90}'
+     +'html body:not(#_yz) #yada-fx .fx-t tr.sec td{background:#121214;font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.07em;color:#a8a9ad;padding:8px;border-top:1px solid #35353a}'
+     +'html body:not(#_yz) #yada-fx .fx-t tr.sub td{background:#0b0b0c}'
+     +'html body:not(#_yz) #yada-fx .fx-t tr.tot1 td{background:#0b0b0c;border-top:1px solid #35353a}'
+     +'html body:not(#_yz) #yada-fx .fx-t tr.gen td{background:#121214;border-top:2px solid #f5f5f6}'
+     +'html body:not(#_yz) #yada-fx .fx-t tr.ko td{background:#0b0b0c;border-left:2px solid #f5f5f6}'
+     +'html body:not(#_yz) #yada-fx .fx-bt{font-family:ui-monospace,monospace;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:#a8a9ad;margin:20px 0 2px}'
+     +'html body:not(#_yz) #yada-fx .fx-verdict{font-size:16px;margin:8px 0;padding:8px 12px;border:1px solid #35353a;border-radius:4px;display:inline-block}'
+     +'html body:not(#_yz) #yada-fx .fx-verdict.ok{background:#f5f5f6;color:#0a0a0b;border-color:#f5f5f6}'
+     +'html body:not(#_yz) #yada-fx .fx-note{color:#a8a9ad;font-size:13px;margin:8px 0;max-width:900px}'
+     +'html body:not(#_yz) #yada-fx .fx-note2{color:#8b8b90;font-size:12px;margin:6px 0;max-width:900px}'
+     +'html body:not(#_yz) #yada-fx .fx-tag{font-family:ui-monospace,monospace;font-size:9px;letter-spacing:.08em;padding:1px 5px;border:1px solid #35353a;color:#8b8b90;border-radius:3px;margin-left:6px}'
+     +'html body:not(#_yz) #yada-fx .fx-acts{display:flex;gap:8px;align-items:center;margin:16px 0 20px;flex-wrap:wrap}'
+     +'html body:not(#_yz) #yada-fx .fx-b{background:#000;color:#f5f5f6;border:1px solid #35353a;border-radius:4px;padding:5px 11px;cursor:pointer;font-family:ui-monospace,monospace;font-size:11.5px}'
+     +'html body:not(#_yz) #yada-fx .fx-b.fx-pri{background:#f5f5f6;color:#0a0a0b;border-color:#f5f5f6}'
+     +'@media(max-width:820px){html body:not(#_yz) #yada-fx .fx-kpis{grid-template-columns:repeat(2,1fr)}}';
   }catch(e){}
 })();
 </script>

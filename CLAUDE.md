@@ -36,7 +36,55 @@
 
 ---
 
-## 🟢 Dernière mise à jour — ANNEXE DES COMPTES ANNUELS : la troisième pièce obligatoire, enfin produite — v649
+## 🟢 Dernière mise à jour — TABLEAU DE FLUX DE TRÉSORERIE : où est passé l'argent — v650
+**Quoi :** le **bilan dit le PATRIMOINE**, le **compte de résultat la PERFORMANCE**, l'**annexe les RÈGLES** (v649). **Aucun des trois ne dit OÙ EST PASSÉ L'ARGENT** — et c'est la question que pose tout dirigeant qui lit un bénéfice sur un compte à sec. Un résultat **n'est pas** de la trésorerie : l'amortissement est une charge qu'on ne décaisse pas, le stock et les créances immobilisent un argent que le résultat ne voit pas, et **rembourser un emprunt vide la banque sans toucher au résultat**. Nouveau module **« Tableau de flux de trésorerie »** (rubrique **États**), **méthode indirecte**, avec comparatif **N-1** :
+
+| Flux | Contenu |
+| --- | --- |
+| **I · ACTIVITÉ** | résultat net **+** dotations **−** reprises **−** résultat de cession **−** quote-part de subventions = **marge brute d'autofinancement**, puis variation des **stocks** et du **besoin en fonds de roulement** |
+| **II · INVESTISSEMENT** | − acquisitions d'immobilisations · + **prix de cession** (compte 775) · variation des dettes sur immobilisations (404, 405) |
+| **III · FINANCEMENT** | + augmentation de capital · + subventions reçues · + émission d'emprunts · − remboursements · − **dividendes versés** · comptes courants d'associés |
+| **Contrôle** | variation **expliquée** (A+B+C) confrontée à la variation **réellement lue** sur les comptes 50 à 58 |
+
+**Le tableau repose sur une identité, pas sur une opinion.** En partie double, la somme de tous les comptes est nulle à tout instant, donc `Σ(classes 1 à 5) = −Σ(classes 6 et 7) = résultat`, d'où sur l'exercice :
+
+> **Δ TRÉSORERIE = RÉSULTAT − Δ(tous les autres comptes de bilan)**
+
+Le tableau n'est que la **lecture de cette identité**, regroupée par nature — il **doit** donc boucler. Un second onglet, **« Contrôle & partition »**, l'**expose** : les comptes de bilan sont répartis en **7 familles qui se partagent les classes 1 à 5 sans recouvrement**, chacune avec son solde d'ouverture, de clôture, sa variation et son **effet trésorerie** ; la dernière ligne, **« comptes de bilan hors classement », doit rester vide** — si elle ne l'est pas, un compte échappe au tableau et l'écart se lit plus haut. Le pied refait le calcul : **Σ des effets + résultat = variation lue**.
+
+**Corrigés avant la sonde, par le calcul à la main — deux pièges d'identité :**
+1. **L'OD de résultat est écartée des mouvements.** Elle vire les classes 6 et 7 sur le `12x`. Passée **dans** l'exercice, elle fait absorber le résultat par le `12x` — que la **première ligne du tableau compte déjà** : le tableau se dédoublerait, d'un écart exactement égal au résultat. Écartée (comme le fait `etnCR`), le tableau donne **le même résultat que l'OD soit passée ou non** — vérifié par sonde.
+2. **Le dividende n'est pas une variation, c'est un décaissement.** *Décidé*, il ne fait que déplacer des capitaux propres vers le `457` — **aucune trésorerie ne bouge**. *Versé*, il sort de la banque. On lit donc les **débits du 457** (les paiements), jamais son solde. Un premier jet prenait `−Δ(45)` : un dividende décidé **et** versé dans la même année donnait `Δ457 = 0` → la sortie de 1 500 € devenait **invisible**, et le tableau ne bouclait plus. Sonde : un dividende **décidé mais non versé** laisse la ligne à **—** et le tableau boucle.
+
+**Comment — nouvel addon `yada-addon-flux` (100% ADDITIF) + 2 éditions chirurgicales :** clé `flux:(typeof pageFlux==='function'?pageFlux:repli)` au **dispatch de `render()`** et `'flux'` ajouté à la rubrique **États** de la barre v641. **Points techniques :** (1) **lecture seule stricte** — vérifié par égalité JSON des écritures avant/après ; **le module n'écrit rien du tout**, pas même un paramètre ; (2) `mvt(test,d0,d1)` calcule **ouverture / augmentations / diminutions / clôture** du **solde débiteur signé**, en versant les à-nouveaux à l'ouverture (même lecture qu'en v649) et en écartant l'OD de résultat ; (3) la contribution d'une famille à la trésorerie est **`−Δ`** — un actif qui grossit consomme de l'argent, une dette qui grossit en fournit ; (4) le **résultat net** vient de **`etnCR()`** (v643), donc la première ligne du tableau **est** celle du compte de résultat ; (5) la colonne **N-1** rejoue le calcul sur l'exercice précédent (`addAnnees(−1)`) ; (6) une passerelle **« Du résultat à la trésorerie »** conclut en une phrase, dans le sens réellement constaté. Rendu **Registre N&B** scopé `#yada-fx`. La sortie s'appelle **`fxFermer()`** pour que le filet v614 la reconnaisse — **invariant v626 : exactement 1 sortie « Fermer »**. `sw.js` yada-v245, badge v650, `version.json` 650.
+
+**Validé :** `node --check` (**319 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014) + balises (3/5/3) + **filet d'équilibre** ✅ + sonde Playwright sur un dossier dont **chaque ligne du tableau a été calculée à la main avant d'être mesurée** (à-nouveaux, vente, encaissement, achat, paiement, acquisition à crédit puis payée, cession, dotation, emprunt nouveau, remboursement avec intérêts, augmentation de capital, dividende décidé puis versé, variation de stock) :
+
+| Mesure | Attendu (à la main) | Obtenu |
+| --- | --- | --- |
+| Résultat net | 13 000 − 7 100 = **5 900,00** | **5 900,00** ✓ |
+| Marge brute d'autofinancement | 5 900 + 1 800 − 1 500 = **6 200,00** | **6 200,00** ✓ |
+| **Flux de l'ACTIVITÉ (A)** | 6 200 − 500 (stocks) − 2 000 (BFR) = **3 700,00** | **3 700,00** ✓ |
+| **Flux d'INVESTISSEMENT (B)** | −6 000 + 3 000 + 2 000 = **−1 000,00** | **−1 000,00** ✓ |
+| **Flux de FINANCEMENT (C)** | 5 000 + 10 000 − 2 000 − 1 500 = **11 500,00** | **11 500,00** ✓ |
+| **Variation expliquée (A+B+C)** | **14 200,00** | **14 200,00** ✓ |
+| **Variation réellement lue** (comptes 512) | 8 000 → 22 200 = **14 200,00** | **14 200,00** — **écart 0, bouclage conforme ✓** |
+| **Partition** — Σ des effets + résultat | 8 300 + 5 900 = **14 200,00** | **= variation lue ✓** |
+| Ligne « comptes de bilan hors classement » | **vide** | **vide** ✓ |
+| **OD de résultat passée dans l'exercice** | boucle, chiffres **identiques** au cas sans OD | **identiques** ✓ (sans le correctif : écart −6 000) |
+| **Dividende décidé mais non versé** | ligne à **—**, aucune sortie | **—** · boucle ✓ |
+| Passerelle « Du résultat à la trésorerie » | +8 300 d'écart, expliqué | rendue |
+| **Lecture seule stricte** | écritures **identiques** (JSON) · **0 écriture créée** · **0 paramètre écrit** |
+| Impression | **1 `.doc-page`** « TABLEAU DE FLUX DE TRÉSORERIE » |
+| Rubrique **États** de la barre | « Éditions comptables » · « Annexe des comptes annuels » · « **Tableau de flux de trésorerie** » — **routage réel ✓** |
+| Sorties « Fermer » · boutons vides · gras · débordement | **1** · **0** · **0** · **0** |
+| Écritures déséquilibrées · pageerror · console.error | **0** · **0** · **0** |
+
+**Les quatre états de synthèse sont désormais produits :** **bilan** · **compte de résultat + SIG** (v643) · **annexe** (v649) · **tableau de flux de trésorerie** (v650) — plus la **liasse fiscale** (v647) qui en tire le résultat fiscal.
+
+---
+
+## 🟢 MAJ précédente — ANNEXE DES COMPTES ANNUELS : la troisième pièce obligatoire, enfin produite — v649
 **Quoi :** le **bilan dit COMBIEN**, le **compte de résultat dit COMMENT** — mais **aucun des deux ne dit SELON QUELLES RÈGLES ni PAR QUELS MOUVEMENTS**. C'est le rôle de l'**annexe**, et elle est la **troisième composante obligatoire des comptes annuels** (art. L123-12 du Code de commerce) : sans elle, les comptes sont **incomplets**. YADA produisait le bilan (v643) et la liasse (v647), jamais d'annexe. Nouveau module **« Annexe des comptes annuels »** (rubrique **États**), **6 volets** :
 
 | Volet | Ce qu'il produit |
