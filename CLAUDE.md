@@ -36,7 +36,54 @@
 
 ---
 
-## 🟢 Dernière mise à jour — DOSSIER DE RÉVISION PAR CYCLES : chaque solde rapproché d'une pièce extérieure — v646
+## 🟢 Dernière mise à jour — LIASSE FISCALE 2050-2059 : le résultat FISCAL, enfin distinct du résultat comptable — v647
+**Quoi :** le bilan et le compte de résultat (v643) disent ce que l'entreprise **a gagné**. La liasse dit ce qu'elle **doit** — et ce sont **deux chiffres différents** : une amende, la TVS, l'IS lui-même ne sont pas déductibles. Tant que YADA n'avait pas cette passerelle, **Pilotage calculait l'IS sur le résultat comptable**, donc sur une base fausse. Nouveau module **« Liasse fiscale »** (rubrique **Déclarations**), **6 formulaires** :
+
+| Formulaire | Contenu |
+| --- | --- |
+| **2050** | Bilan **ACTIF** — repères AA · AB · AD · AF · **BJ** · BL · BV · BX · BZ · CF · CH · **CJ** · CL · **CO**, colonnes **Brut · Amortissements & dépréciations · Net · Net N-1** |
+| **2051** | Bilan **PASSIF** — DA → DK · **DL** (capitaux propres) · DP · **DR** · DU → EB · **EC** (dettes) · ED · **EE** |
+| **2052** | Compte de résultat — **exploitation** (FA · FD · FG · **FJ** chiffre d'affaires · FM → FQ · **FR** · FS → GE · **GF** · **GG**), avec N-1 |
+| **2053** | Compte de résultat — **financier** (GJ → **GP**, GQ/GR → **GU**, **GV**, **GW**), **exceptionnel** (HA → **HD**, HE → **HH**, **HI**), puis HJ · HK · **HL** · **HM** · **HN** |
+| **2058-A** | **Détermination du résultat fiscal** : WA → réintégrations (**WL**) − déductions (**XA**) = **XF**, imputation des déficits (**XL**) = **XN**, puis le **calcul de l'IS** |
+| **2059-A** | **Plus et moins-values** de cession de l'exercice (prix · VNC · +/− value) |
+
+**Les 2050 à 2053 ne se recalculent pas — ils se lisent.** Ils sont **entièrement dérivés** des états normalisés de la v643 (`etnBilan`/`etnCR`) : aucun second calcul, donc **aucune divergence possible** entre le bilan des Éditions et celui de la liasse. Le module remet seulement les rubriques dans l'ordre du CERFA et y ajoute les **totaux** (BJ · CJ · CO / DL · DR · EC · EE). Deux repères de la v643 sont **renommés au passage** pour coller au formulaire : le résultat de l'exercice est **DI** (et non DL, qui est le **total** des capitaux propres) et les écarts de conversion passif sont **ED** (et non EC, qui est le **total** des dettes).
+
+**Corrigé au passage — le compte 12x ne porte PAS le résultat de l'exercice.** Tant que la clôture n'est pas passée, le `12x` porte les **résultats ANTÉRIEURS que l'assemblée n'a pas affectés** ; le résultat de l'exercice, lui, est celui du compte de résultat. La v643 les intervertissait à l'affichage. Désormais **DI = résultat de l'exercice** (toujours `etnCR().net`, qui exclut l'OD de résultat) et le `12x` résiduel rejoint **DH**, nommé (« dont N € de résultats antérieurs non affectés »). **Le total des capitaux propres est identique dans les deux cas de figure** (clôture passée ou non) — seule l'imputation est corrigée, et le bilan reste équilibré par construction.
+
+**Le 2058-A est le seul endroit où l'humain tranche — et YADA propose ce qu'il sait LIRE.** Trois réintégrations sont relevées dans le dossier, avec leur **motif écrit en clair** : **amendes et pénalités (671200)** — jamais déductibles (art. 39-2 du CGI) ·  **TVS (635140)** — non déductible pour une société à l'IS · **impôt sur les sociétés (695/698)** — une charge ne se déduit pas de sa propre base. Un bouton **« Reprendre ces réintégrations »** les reporte (**idempotent** : re-cliquer ne duplique rien, il met le montant à jour). Le reste — amortissements excédentaires sur véhicules de tourisme, provisions non déductibles, déductions — **se saisit à la main** : le logiciel ne devine pas ce qu'il ne sait pas.
+
+**L'imputation des déficits est plafonnée pour de vrai** : **1 000 000 € majorés de 50 % de la fraction du bénéfice qui dépasse ce montant** (art. 209 I du CGI). Puis l'**IS** : **15 % jusqu'à 42 500 €** de bénéfice (case « taux réduit PME », avec le rappel de ses conditions) puis **25 %**.
+
+**Comment — nouvel addon `yada-addon-liasse` (100% ADDITIF) + 2 éditions chirurgicales :** clé `liasse:(typeof pageLiasse==='function'?pageLiasse:repli)` au **dispatch de `render()`** et `'liasse'` ajouté à la rubrique **Déclarations** de la barre v641. **Points techniques :** (1) les lignes du compte de résultat sont bâties **compte par compte** sur l'agrégat `etnCR().acc` — chaque repère porte ses préfixes PCG, et **une même charge n'est jamais comptée deux fois** (les différences négatives de change 666 sont dans GR, pas dans une ligne GS distincte) ; (2) le module est en **lecture seule** sur la comptabilité — le seul écrit est `db.parametres.liasse[exercice]` (réintégrations, déductions, stock de déficits, régime PME) ; (3) chaque formulaire s'imprime seul, et **« Imprimer la liasse complète »** sort les 6 en `.doc-page`, chacun avec son nom (l'en-tête est écrit par le module, `docEnteteCourte` ignorant son titre) ; (4) la sortie s'appelle **`liFermer()`** pour que le filet v614 la reconnaisse — **invariant v626 : exactement 1 sortie « Fermer »**. Rendu **Registre N&B** scopé `#yada-li`. `sw.js` yada-v242, badge v647, `version.json` 647.
+
+**Validé :** `node --check` (**316 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014) + balises (3/5/3) + **filet d'équilibre** ✅ + sonde Playwright sur un dossier à deux exercices (2025 clôturé, 2026 avec ventes, achats, paie, immobilisation, amende, TVS, IS et une cession) :
+
+| Mesure | Résultat |
+| --- | --- |
+| Module rendu · formulaires | ✓ · **6** |
+| **2050** — actif | brut **78 900,00** · amort. **2 000,00** · **net 76 900,00** · colonne **N-1 remplie** (32 600,00) |
+| **2051** — passif | **TOTAL GÉNÉRAL 76 900,00** = actif net → **bilan équilibré ✓** |
+| **DH / DI** (correctif) | DH **7 000,00** « dont 7 000,00 € de résultats antérieurs non affectés » · DI **−500,00** = résultat 2026 — **n'étaient pas au bon endroit avant** |
+| **2052** | CA net **30 000,00** (FA 20 000 + FG 10 000) · charges **28 800,00** · **résultat d'exploitation 1 200,00** |
+| **2053** | résultat courant **1 200,00** · exceptionnel **−500,00** (amende) · IS **1 200,00** · **HN −500,00** = le plug du bilan |
+| **2058-A** — propositions lues | **3** : amende **500,00** · TVS **800,00** · IS **1 200,00**, chacune avec son motif |
+| Reprise · **idempotence** | 3 lignes · **3 lignes** après un second clic |
+| Chaîne fiscale | −500 comptable **+ 2 500** réintégrations **− 1 000** déduction = **1 000** fiscal avant imputation |
+| Déficits (stock 3 000) | imputé **1 000** → **résultat fiscal 0** · reportable **2 000** |
+| **Plafond art. 209 I** (bénéfice 2 002 500, stock 5 000 000) | imputé **1 501 250** = 1 000 000 + 50 % × 1 002 500 → fiscal **501 250** |
+| **IS** sur 501 250 (PME) | **121 062,50** = 42 500 × 15 % + 458 750 × 25 % |
+| **2059-A** | cession du 30/09/2026 : prix **3 000,00** − VNC **2 400,00** = **+600,00** |
+| Impression | **6 pages** `.doc-page`, chacune avec son nom de formulaire |
+| **Lecture seule stricte** | écritures **identiques** avant / après, **0 écriture créée** |
+| Rubrique **Déclarations** de la barre | « Module TVA » · « **Liasse fiscale** » — **routage réel ✓** |
+| Sorties « Fermer » · boutons vides · gras · débordement | **1** · **0** · **0** · **0** |
+| Écritures déséquilibrées · pageerror · console.error | **0** · **0** · **0** |
+
+---
+
+## 🟢 MAJ précédente — DOSSIER DE RÉVISION PAR CYCLES : chaque solde rapproché d'une pièce extérieure — v646
 **Quoi :** YADA savait enregistrer, déclarer et clôturer — mais **rien ne disait si un solde était JUSTIFIÉ**. Or une comptabilité n'est pas juste parce qu'elle est équilibrée : elle l'est quand **chaque solde du bilan est rapproché d'une pièce extérieure**. Nouveau module **« Dossier de révision »** (rubrique **Révision**) : **6 cycles**, chacun avec son **solde comptable**, son **justificatif**, l'**écart**, un **commentaire** et un **visa** — et surtout son **contrôle de bouclage calculé sur le dossier**.
 
 | Cycle | Comptes | Contrôle de bouclage |
