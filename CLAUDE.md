@@ -36,7 +36,38 @@
 
 ---
 
-## 🟢 Dernière mise à jour — LA BANDE DU HAUT DEVIENT LE POSTE DE COMMANDE (10 rubriques métier) — v641
+## 🟢 Dernière mise à jour — TVA SUR LES ENCAISSEMENTS : l'exigibilité devient RÉELLE — v642
+**Quoi :** le réglage **« Sur les encaissements / Sur les débits »** n'était qu'une **mention imprimée sur la facture** : l'écriture créditait `445710000` dès la facturation. Autrement dit, quel que soit le réglage, YADA déclarait la TVA **sur les débits** — donc, pour un **prestataire de services** au régime des encaissements, la CA3 réclamait la TVA **avant son encaissement**, tous les mois. C'était le défaut le plus lourd du logiciel : un **risque fiscal**, pas un défaut d'affichage.
+
+**Comment la TVA devient exigible, maintenant :**
+1. **À la facturation** — sous le régime des **encaissements**, la TVA d'une vente est portée **en attente** sur **`445800000` « TVA à régulariser »**. Le compte d'attente n'étant ni un `4457x` ni un `4456x`, **la CA3 ne la voit pas** : rien n'est déclaré tant que rien n'est encaissé (aucune modification du calcul CA3 n'a été nécessaire).
+2. **À l'encaissement** — un **10ᵉ automatisme**, **« Exigibilité de la TVA (encaissements) »**, constate la part **réellement encaissée** de chaque facture et bascule la TVA correspondante **`445800000` (débit) → `4457x` (crédit)** par une OD au journal **ODTVA**. Elle devient alors exigible et **entre dans la CA3 du mois du règlement**.
+
+**La part encaissée est lue, jamais devinée :** `reglement.regle / facture.ttc` quand le suivi des règlements existe (donc **les encaissements partiels basculent au prorata**), sinon le **lettrage** du compte de tiers fait foi (lettré = soldé). L'automatisme est **idempotent** : il compare le cumul exigible à ce qu'il a déjà basculé (`ecriture.tvaExig`) et ne poste que le **delta**.
+
+**Le régime par défaut reste « sur les débits ».** Aucun dossier existant ne change de comportement tant que l'exigibilité n'est pas **explicitement** réglée sur les encaissements — vérifié par sonde. Le choix se fait dans la carte **« Exigibilité de la TVA »** du module TVA (rubrique **Déclarations**), qui affiche aussi la **TVA en attente**, la **TVA devenue exigible**, et **facture par facture** ce qui reste à encaisser.
+
+**Comment — nouvel addon `yada-addon-tva-exigibilite` (100% ADDITIF, aucune édition chirurgicale)**, injecté **avant** l'addon des contrôles pour que celui-ci **reste en dernier** du registre (invariant v636). **Points techniques :** (1) l'interception se fait sur **`genEcriture`** (enveloppe du binding global) et non sur `posterFacture` — donc **tous les chemins de facturation** en bénéficient (saisie, fenêtre A4, dépôt comptabilisé, récurrences) ; (2) le compte de TVA **d'origine est mémorisé** sur l'écriture (`tvaAtt:[{cpt,montant}]`) → la bascule recrédite **le bon compte par taux** (20 / 10 / 5,5 %), jamais un compte générique ; (3) les OD de bascule sont **équilibrées par construction** (débit attente = crédit collectée) ; (4) **aucune facture d'achat n'est touchée** (la TVA déductible sur services suit ses propres règles et n'entre pas dans ce lot). `sw.js` yada-v237, badge v642, `version.json` 642.
+
+**Validé :** `node --check` (**312 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014) + balises (3/5/3) + **filet d'équilibre** ✅ + sonde Playwright sur un dossier d'essai (facture 2 000 HT / 400 TVA) :
+
+| Mesure | Résultat |
+| --- | --- |
+| Régime **par défaut** | **« débits »** — TVA sur `445710000`, CA3 = 200,00 € : **comportement inchangé** |
+| Facturation sous **encaissements** | `411CLIE00 2 400 D · **445800000 400 C** · 706 2 000 C` — **écriture équilibrée** |
+| **CA3 du mois de facturation** | **0,00 €** — la TVA non encaissée n'est plus déclarée |
+| Simulation tant que rien n'est encaissé | **0 action**, dossier **strictement inchangé** (JSON identique) |
+| **Encaissement partiel (50 %)** | **1 facture basculée**, CA3 du mois de paiement = **200,00 €** (la moitié), mois de facturation toujours 0 |
+| Second passage (idempotence) | **0 action** |
+| **Solde du reste** | CA3 = **200,00 €**, **solde `445800000` = 0,00 €** — le compte d'attente est apuré |
+| Troisième passage | **0 action** |
+| Registre des automatismes | **10**, contrôles **toujours en dernier** |
+| Écritures déséquilibrées · pageerror · console.error | **0** · **0** · **0** |
+| Carte « Exigibilité de la TVA » | rendue dans le module TVA, **2 boutons**, **0 bouton vide** |
+
+---
+
+## 🟢 MAJ précédente — LA BANDE DU HAUT DEVIENT LE POSTE DE COMMANDE (10 rubriques métier) — v641
 **Quoi :** demande — *« je veux que la bande du haut soit l'acteur majeur des paramètres »*, chaque module placé dans une rubrique. La barre de menus de la Consultation (Fichier · Exercice · Journal · Compte · Balances · Paramètres · Utilitaires · Navigation · **Modules** · Aide) est restructurée en **10 rubriques métier** qui suivent la chaîne comptable :
 
 | Rubrique | Ce qu'elle reprend | Modules qu'elle liste |

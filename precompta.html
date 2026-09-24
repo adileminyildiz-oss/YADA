@@ -11084,7 +11084,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v641';
+    b.textContent='YADA · v642';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -36649,6 +36649,228 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       window.pageAutomatismes=function(){
         var h=_pa.apply(this,arguments);
         try{ var i=h.lastIndexOf('</div></div>'); if(i>0) return h.slice(0,i)+cartePeriodiques()+h.slice(i); }catch(e){}
+        return h;
+      };
+    }
+  }catch(e){}
+})();
+</script>
+<script id="yada-addon-tva-exigibilite">
+/* v642 — TVA SUR LES ENCAISSEMENTS : l'exigibilité devient RÉELLE.
+   Jusqu'ici le réglage « Sur les encaissements / Sur les débits » n'était qu'une MENTION
+   imprimée sur la facture : l'écriture créditait 445710000 dès la facturation, donc la CA3
+   déclarait la TVA des prestations de services TROP TÔT (exigibilité sur les débits).
+   Désormais, sous le régime des ENCAISSEMENTS :
+     1) à la facturation, la TVA est portée en ATTENTE sur 445800000 « TVA à régulariser »
+        (elle n'entre donc pas dans la CA3, qui ne lit que les 4457x) ;
+     2) un 10e automatisme — « Exigibilité de la TVA (encaissements) » — constate la part
+        RÉELLEMENT ENCAISSÉE de chaque facture et bascule la TVA correspondante
+        445800000 (débit) → 4457x (crédit) : elle devient alors exigible, et la CA3 la prend.
+   Le régime par défaut reste « sur les débits » : AUCUN dossier existant ne change de
+   comportement tant que l'exigibilité n'est pas explicitement réglée sur les encaissements.
+   100% ADDITIF (aucune édition chirurgicale) — injecté AVANT l'addon des contrôles pour que
+   celui-ci reste EN DERNIER du registre (invariant v636). */
+(function(){
+  var ATT='445800000';                 /* TVA à régulariser — TVA collectée non encore exigible */
+
+  function S(){ try{ return db.societe||{}; }catch(e){ return {}; } }
+  function SAVE(){ try{ if(typeof save==='function') save(); }catch(e){} }
+  function n2(v){ return Math.round((+v||0)*100)/100; }
+
+  /* Régime d'exigibilité — explicite, défaut « débits » (= comportement d'avant v642). */
+  window.tvaExigibilite=function(){
+    var v=S().tvaExigibilite;
+    return (v==='encaissements')?'encaissements':'debits';
+  };
+  window.tvaSetExigibilite=function(v){
+    try{
+      db.societe=db.societe||{};
+      db.societe.tvaExigibilite=(v==='encaissements')?'encaissements':'debits';
+      SAVE();
+      if(typeof toast==='function') toast('Exigibilité de la TVA : '+(v==='encaissements'?'sur les encaissements':'sur les débits'));
+      if(typeof render==='function') render();
+    }catch(e){}
+  };
+
+  /* ---------- 1) À LA FACTURATION : la TVA d'une VENTE part en attente ---------- */
+  try{
+    if(typeof window.genEcriture==='function' && !window.__tvaExigWrap){
+      window.__tvaExigWrap=true;
+      var _gen=window.genEcriture;
+      window.genEcriture=function(f){
+        var ecr=_gen.apply(this,arguments);
+        try{
+          if(!f || f.type==='achat') return ecr;
+          if(window.tvaExigibilite()!=='encaissements') return ecr;
+          var att=[];
+          (ecr.lignes||[]).forEach(function(l){
+            var c=c9(l.compte);
+            if(c.indexOf('4457')!==0) return;
+            var mt=n2(l.credit);
+            if(mt<=0.005) return;
+            att.push({cpt:c, montant:mt});
+            l.compte=ATT;
+            l.lib=(COMPTES[ATT]||'TVA à régulariser')+' — en attente d’encaissement';
+          });
+          if(att.length){ ecr.tvaAtt=att; ecr.tvaExig=0; }
+        }catch(e){}
+        return ecr;
+      };
+    }
+  }catch(e){}
+
+  /* ---------- 2) LA PART ENCAISSÉE de chaque facture ---------- */
+  function partEncaissee(e){
+    /* renvoie le ratio [0..1] réellement encaissé pour l'écriture de vente e */
+    try{
+      var f=(db.factures||[]).filter(function(x){ return x.id===e.factureId; })[0];
+      var ttc=f?n2(f.ttc):0;
+      if(f && ttc>0.005){
+        var r=(db.reglements||[]).filter(function(x){ return x.factureId===f.id; })[0];
+        if(r){
+          if(r.statut==='regle') return 1;
+          var paye=n2(r.regle);
+          if(paye<=0.005 && n2(r.restant)<=0.005) return 1;   /* soldé sans montant détaillé */
+          return Math.max(0, Math.min(1, paye/ttc));
+        }
+      }
+      /* pas de suivi de règlement : le LETTRAGE du compte de tiers fait foi */
+      var lettre=(e.lignes||[]).some(function(l){ return /^(411)/.test(c9(l.compte)) && l.lettre; });
+      return lettre?1:0;
+    }catch(err){ return 0; }
+  }
+
+  function dateExig(e){
+    try{
+      var f=(db.factures||[]).filter(function(x){ return x.id===e.factureId; })[0];
+      var r=f?(db.reglements||[]).filter(function(x){ return x.factureId===f.id; })[0]:null;
+      if(r&&r.datePaiement) return String(r.datePaiement).slice(0,10);
+    }catch(err){}
+    try{ return todayStr(); }catch(err){ return new Date().toISOString().slice(0,10); }
+  }
+
+  /* ---------- 3) L'AUTOMATISME : bascule 445800000 → 4457x de ce qui est encaissé ---------- */
+  function enAttente(){
+    return (db.ecritures||[]).filter(function(e){ return e && e.tvaAtt && e.tvaAtt.length; });
+  }
+
+  function autoExigibilite(sim){
+    var res={n:0, det:[]};
+    try{
+      if(window.tvaExigibilite()!=='encaissements'){
+        res.det.push('Régime « sur les débits » — la TVA est exigible dès la facturation, rien à basculer.');
+        return res;
+      }
+      var lot=[], total=0;
+      enAttente().forEach(function(e){
+        var att=n2(e.tvaAtt.reduce(function(a,x){ return a+n2(x.montant); },0));
+        if(att<=0.005) return;
+        var part=partEncaissee(e);
+        var du=n2(att*part);                       /* TVA exigible à ce jour */
+        var deja=n2(e.tvaExig);
+        var delta=n2(du-deja);
+        if(delta<=0.005) return;                   /* rien de neuf — idempotent */
+        lot.push({e:e, delta:delta, att:att, part:part});
+        total=n2(total+delta);
+      });
+      if(!lot.length){
+        var reste=n2(enAttente().reduce(function(a,e){
+          return a+n2(e.tvaAtt.reduce(function(b,x){ return b+n2(x.montant); },0))-n2(e.tvaExig); },0));
+        res.det.push(reste>0.005
+          ? ('Aucun encaissement nouveau — '+(typeof eur==='function'?eur(reste):reste)+' de TVA restent en attente')
+          : 'Aucune TVA en attente d’encaissement');
+        return res;
+      }
+      res.n=lot.length;
+      lot.slice(0,8).forEach(function(x){
+        res.det.push((x.e.libelle||'Facture')+' : '+(typeof eur==='function'?eur(x.delta):x.delta)
+          +' exigible'+(x.part<0.999?(' ('+Math.round(x.part*100)+' % encaissé)'):''));
+      });
+      if(sim) return res;
+
+      /* passage réel : une OD par facture, toujours équilibrée (débit attente = crédit collectée) */
+      lot.forEach(function(x){
+        var e=x.e, restant=x.delta, lignes=[];
+        var deja=n2(e.tvaExig);
+        /* on répartit le delta sur les comptes de TVA d'origine, dans l'ordre, au prorata du restant */
+        var cumul=0;
+        e.tvaAtt.forEach(function(a){
+          if(restant<=0.005) return;
+          var dispo=n2(a.montant - Math.max(0, Math.min(a.montant, deja-cumul)));
+          cumul=n2(cumul+a.montant);
+          if(dispo<=0.005) return;
+          var m=n2(Math.min(dispo, restant));
+          restant=n2(restant-m);
+          lignes.push({compte:ATT, lib:'TVA devenue exigible', debit:m, credit:0});
+          lignes.push({compte:a.cpt, lib:(COMPTES[a.cpt]||'TVA collectée'), debit:0, credit:m});
+        });
+        if(!lignes.length) return;
+        posterOD({ date:dateExig(e), libelle:'TVA EXIGIBLE — '+(e.libelle||''),
+                   lignes:lignes, journal:'ODTVA' });
+        e.tvaExig=n2(deja+x.delta);
+      });
+      SAVE();
+    }catch(err){ res.det.push('Interrompu : '+(err&&err.message?err.message:'erreur')); }
+    return res;
+  }
+  window.tvaExigibiliteRun=function(sim){ return autoExigibilite(!!sim); };
+
+  window.YADA_AUTOS=window.YADA_AUTOS||[];
+  if(!window.YADA_AUTOS.filter(function(a){ return a.cle==='tvaexig'; }).length){
+    window.YADA_AUTOS.push({
+      cle:'tvaexig',
+      nom:'Exigibilité de la TVA (encaissements)',
+      desc:'Sous le régime des encaissements, la TVA d’une facture de vente reste en attente sur 445800000 jusqu’à son règlement. Cet automatisme constate la part réellement encaissée et bascule la TVA correspondante vers le compte de TVA collectée : elle devient alors exigible et entre dans la CA3. Ne bascule jamais ce qui n’est pas encaissé.',
+      unite:'facture',
+      run:function(sim){ return autoExigibilite(sim); }
+    });
+  }
+
+  /* ---------- 4) La carte du module TVA (rubrique Déclarations) ---------- */
+  function eu(v){ try{ return eur(v); }catch(e){ return (Math.round(v*100)/100)+' €'; } }
+  function carte(){
+    var reg=window.tvaExigibilite(), enc=(reg==='encaissements');
+    var lignes=enAttente(), att=0, exi=0;
+    lignes.forEach(function(e){
+      var a=n2(e.tvaAtt.reduce(function(s,x){ return s+n2(x.montant); },0));
+      att=n2(att+a-n2(e.tvaExig)); exi=n2(exi+n2(e.tvaExig));
+    });
+    var rows=lignes.filter(function(e){
+      return n2(e.tvaAtt.reduce(function(s,x){ return s+n2(x.montant); },0))-n2(e.tvaExig)>0.005;
+    }).slice(0,25).map(function(e){
+      var a=n2(e.tvaAtt.reduce(function(s,x){ return s+n2(x.montant); },0));
+      var p=partEncaissee(e);
+      return '<tr><td>'+(e.date||'')+'</td><td>'+((e.libelle||'').replace(/</g,'&lt;'))+'</td>'
+        +'<td class="r num">'+eu(a)+'</td><td class="r num">'+eu(n2(e.tvaExig))+'</td>'
+        +'<td class="r num">'+eu(n2(a-n2(e.tvaExig)))+'</td>'
+        +'<td class="r">'+(p>=0.999?'encaissée':(p>0.005?(Math.round(p*100)+' % encaissé'):'non encaissée'))+'</td></tr>';
+    }).join('');
+
+    return '<div class="card" id="tva-exig-card"><h2>Exigibilité de la TVA</h2>'
+      +'<div class="sub">Sur les <b>débits</b>, la TVA est due dès la facturation. Sur les <b>encaissements</b> (prestations de services), elle n’est due qu’au règlement : elle attend sur <b>'+ATT+'</b> et ne figure pas dans la CA3 tant qu’elle n’est pas encaissée.</div>'
+      +'<div class="row g2" style="margin:10px 0">'
+      +'<button class="btn'+(reg==='debits'?' btn-pri':'')+'" onclick="tvaSetExigibilite(\'debits\')">Sur les débits</button>'
+      +'<button class="btn'+(enc?' btn-pri':'')+'" onclick="tvaSetExigibilite(\'encaissements\')">Sur les encaissements</button>'
+      +'</div>'
+      +(enc
+        ? ('<div class="grid g2" style="margin:8px 0 12px">'
+           +'<div class="kpi"><div class="lbl">TVA en attente d’encaissement</div><div class="val">'+eu(att)+'</div></div>'
+           +'<div class="kpi"><div class="lbl">TVA devenue exigible</div><div class="val">'+eu(exi)+'</div></div></div>'
+           +(rows
+             ? ('<table><thead><tr><th>Date</th><th>Facture</th><th class="r">TVA facturée</th><th class="r">Déjà exigible</th><th class="r">En attente</th><th class="r">Encaissement</th></tr></thead><tbody>'+rows+'</tbody></table>')
+             : '<div class="sub">Aucune TVA en attente : tout ce qui est facturé est encaissé.</div>')
+           +'<div class="sub" style="margin-top:10px">La bascule est faite par l’automatisme <b>« Exigibilité de la TVA (encaissements) »</b> — il ne bascule que ce qui est réellement encaissé.</div>')
+        : '<div class="sub">Régime actuel : <b>sur les débits</b>. La TVA est créditée sur 4457x dès la facturation — c’est le comportement attendu pour les livraisons de biens.</div>')
+      +'</div>';
+  }
+
+  try{
+    if(typeof window.pageTVA==='function' && !window.__tvaExigCard){
+      window.__tvaExigCard=true;
+      var _p=window.pageTVA;
+      window.pageTVA=function(){
+        var h=_p.apply(this,arguments);
+        try{ if(String(h).indexOf('tva-exig-card')<0) h=h+carte(); }catch(e){}
         return h;
       };
     }
