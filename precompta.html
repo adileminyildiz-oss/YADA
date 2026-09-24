@@ -11084,7 +11084,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v633';
+    b.textContent='YADA · v634';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -33432,6 +33432,9 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
   ];
   function suggere(op){
     var n=norm(op.lib);
+    /* 0) mémoire d'imputation apprise sur les écritures du dossier (étape 2) */
+    try{ if(typeof window.impProposer==='function'){ var mem=window.impProposer(op.lib);
+      if(mem && mem.compte) return {compte:C9(mem.compte), tiersId:mem.tiersId||null, appris:mem.source||'apprise'}; } }catch(e){}
     /* 1) un tiers du dossier reconnu dans le libellé */
     try{
       var best=null;
@@ -33490,7 +33493,9 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     fr.readAsArrayBuffer(f);
   };
   window.ibSetCompte=function(i,v){ if(ST.ops[i]){ ST.ops[i].compte=C9(v); ST.ops[i].tiersId=null;
-    try{ var t=(db.tiers||[]).filter(function(x){return C9(x.compteAux||'')===C9(v);})[0]; if(t) ST.ops[i].tiersId=t.id; }catch(e){} } };
+    try{ var t=(db.tiers||[]).filter(function(x){return C9(x.compteAux||'')===C9(v);})[0]; if(t) ST.ops[i].tiersId=t.id; }catch(e){}
+    /* la correction devient une règle d'imputation retenue (étape 2) */
+    try{ if(typeof window.impRetenir==='function') window.impRetenir(ST.ops[i].lib, v, 'banque'); }catch(e){} } };
   window.ibToggle=function(i,v){ if(ST.ops[i]) ST.ops[i].ok=!!v; ibMajCompteur(); };
   window.ibToggleAll=function(v){ ST.ops.forEach(function(o){ o.ok=!!v; }); if(typeof render==='function') render(); };
   function ibMajCompteur(){ var el=document.getElementById('ib-sel'); if(el) el.textContent=ST.ops.filter(function(o){return o.ok;}).length; };
@@ -35657,14 +35662,16 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
   }
 
   /* ---------- registre des automatismes ---------- */
-  var AUTOS=[
+  window.YADA_AUTOS=window.YADA_AUTOS||[];
+  var AUTOS=window.YADA_AUTOS;
+  [
     { cle:'lettrage', nom:'Lettrage des comptes de tiers',
       desc:'Rapproche facture et règlement sur les comptes fournisseurs et clients : paire de même montant, ou règlement qui solde exactement plusieurs pièces. Ne lettre que des ensembles équilibrés.',
       unite:'lettrage', run:autoLettrage },
     { cle:'recurrentes', nom:'Échéances récurrentes échues',
       desc:'Poste les écritures des modèles récurrents dont la date d’échéance est atteinte (loyer, abonnement, redevance). Une échéance déjà générée n’est jamais reprise.',
       unite:'écriture', run:autoRecurrentes }
-  ];
+  ].forEach(function(A){ if(!AUTOS.filter(function(x){return x.cle===A.cle;}).length) AUTOS.push(A); });
   function auto(cle){ for(var i=0;i<AUTOS.length;i++){ if(AUTOS[i].cle===cle) return AUTOS[i]; } return null; }
 
   /* ---------- actions ---------- */
@@ -35825,6 +35832,245 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     }
   }catch(e){}
   setInterval(ensure,1500);
+})();
+</script>
+<script id="yada-addon-imputation">
+/* ═══ ÉTAPE 2 — MOTEUR D'IMPUTATION QUI APPREND ═══
+   Le logiciel retient quel compte a été retenu pour quel libellé, et le repropose.
+   Deux mémoires, toutes deux construites à partir des ÉCRITURES DU DOSSIER (donc d'un FEC
+   importé comme d'une saisie) :
+     · « banque »  — libellé d'une écriture BQ  → la contrepartie du 512 ;
+     · « nature »  — libellé d'une écriture ACH/VTE → le compte de charge (6) ou de produit (7).
+   Une correction faite à la main dans l'Import bancaire est retenue comme RÈGLE MANUELLE :
+   elle prime sur l'apprentissage et survit à un réapprentissage.
+   100% ADDITIF — le moteur ne PROPOSE que : aucune écriture n'est créée ni modifiée ici.
+   Il se branche par trois points de garde (window.impProposer / window.impRetenir) qui sont
+   sans effet si cet addon est absent. Troisième ligne du module Automatismes (étape 1). */
+(function(){
+  function e2(x){ return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+  function C9(c){ return (typeof c9==='function')?c9(c):String(c==null?'':c); }
+  function SAVE(){ try{ if(typeof save==='function') save(); }catch(e){} }
+  function libCompte(code){ var c=C9(code);
+    try{ if(typeof COMPTES!=='undefined'&&COMPTES){ if(COMPTES[c])return COMPTES[c]; var s6=c.slice(0,6),s3=c.slice(0,3); if(COMPTES[s6])return COMPTES[s6]; if(COMPTES[s3])return COMPTES[s3]; } }catch(e){}
+    try{ var p=(db.plan||[]).filter(function(x){return C9(x.code)===c;})[0]; if(p)return p.lib; }catch(e){}
+    return ''; }
+
+  /* ---------- signature d'un libellé ----------
+     On retire ce qui ne dit rien de la nature de l'opération : les mots de transport
+     (VIR, PRLV, SEPA, CB…), les formes juridiques, les mots de liaison, les nombres et
+     les références. Ce qui reste — le nom du tiers ou de la prestation — fait la clé. */
+  var STOP={};
+  ('VIR VIREMENT VIRT PRLV PRELEVEMENT PRELEVEMENTS SEPA CB CARTE PAIEMENT PAIE PAIEMENTS RECU RECUE EMIS EMISE '
+  +'ECHEANCE ECHEANCES FACTURE FACT FRE REF REFERENCE MANDAT DU LE LA LES DE DES ET AU AUX PAR POUR SUR AVEC CHEZ '
+  +'MR MME MLLE SARL SAS SASU EURL SCI SNC SCS SCA SCM SELARL EI EIRL ETS STE SOCIETE GROUPE '
+  +'ACHAT ACHATS VENTE VENTES REGLEMENT RGLT REGLT AVOIR SOLDE MOIS ANNEE NUM NO CHQ CHEQUE ESP ESPECES '
+  +'REMISE BANQUE COMPTE OPERATION OP DIVERS DIVERSE ANNULATION RETOUR IMPAYE').split(' ').forEach(function(m){ if(m) STOP[m]=1; });
+
+  function impTokens(lib){
+    var n=String(lib||'').toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^A-Z0-9]+/g,' ');
+    var out=[], vus={};
+    n.split(' ').forEach(function(t){
+      if(!t || t.length<3) return;
+      if(/^[0-9]+$/.test(t)) return;          /* références, dates, montants */
+      if(/^[A-Z]?[0-9]{3,}/.test(t)) return;  /* F2024001, X12345 */
+      if(STOP[t]) return;
+      if(vus[t]) return; vus[t]=1; out.push(t);
+    });
+    return out;
+  }
+  window.impTokens=impTokens;
+  function cleDe(lib){ var t=impTokens(lib); return t.length?t.slice().sort().join(' '):''; }
+  window.impCle=cleDe;
+
+  /* ---------- mémoire persistante ---------- */
+  function memoire(){
+    try{
+      db.parametres=db.parametres||{};
+      var M=db.parametres.imputations;
+      if(!M||typeof M!=='object'){ M={banque:{},nature:{},manuel:{banque:{},nature:{}},ts:0}; db.parametres.imputations=M; }
+      if(!M.banque||typeof M.banque!=='object') M.banque={};
+      if(!M.nature||typeof M.nature!=='object') M.nature={};
+      if(!M.manuel||typeof M.manuel!=='object') M.manuel={};
+      if(!M.manuel.banque||typeof M.manuel.banque!=='object') M.manuel.banque={};
+      if(!M.manuel.nature||typeof M.manuel.nature!=='object') M.manuel.nature={};
+      return M;
+    }catch(e){ return {banque:{},nature:{},manuel:{banque:{},nature:{}},ts:0}; }
+  }
+
+  /* ---------- lecture des écritures ---------- */
+  function compteBanque(ec){
+    var best=null, bm=0;
+    (ec.lignes||[]).forEach(function(l){
+      var c=C9(l.compte); if(!c || c==='000000000') return;
+      if(c.indexOf('512')===0) return;                 /* la banque elle-même */
+      var m=Math.abs((+l.debit||0)-(+l.credit||0));
+      if(m>bm){ bm=m; best=c; }
+    });
+    return bm>0.004?best:null;
+  }
+  function compteNature(ec){
+    var best=null, bm=0;
+    (ec.lignes||[]).forEach(function(l){
+      var c=C9(l.compte); if(!c || c==='000000000') return;
+      var t=c.charAt(0); if(t!=='6' && t!=='7') return;  /* charge ou produit */
+      var m=Math.abs((+l.debit||0)-(+l.credit||0));
+      if(m>bm){ bm=m; best=c; }
+    });
+    return bm>0.004?best:null;
+  }
+  function construire(){
+    var neuf={banque:{},nature:{}};
+    var ecs=[]; try{ ecs=(db.ecritures||[]); }catch(e){ return neuf; }
+    ecs.forEach(function(ec){
+      var lib=String(ec.libelle||''); if(!lib) return;
+      if(/OD RESULTAT|OD RÉSULTAT|A NOUVEAU|À NOUVEAU|NOUVEAUX/i.test(lib)) return;
+      var cle=cleDe(lib); if(!cle) return;
+      var j=String(ec.journal||'').toUpperCase();
+      var fam=null, cpt=null;
+      if(j==='BQ'){ fam='banque'; cpt=compteBanque(ec); }
+      else if(j==='ACH'||j==='VTE'){ fam='nature'; cpt=compteNature(ec); }
+      if(!fam||!cpt) return;
+      var b=neuf[fam]; if(!b[cle]) b[cle]={c:{},n:0};
+      b[cle].c[cpt]=(b[cle].c[cpt]||0)+1; b[cle].n++;
+    });
+    return neuf;
+  }
+  function gagnant(entree){
+    if(!entree||!entree.c) return null;
+    var best=null, bn=0;
+    Object.keys(entree.c).forEach(function(k){ if(entree.c[k]>bn){ bn=entree.c[k]; best=k; } });
+    return best?{compte:best, n:bn, total:entree.n||bn}:null;
+  }
+
+  /* ---------- apprentissage (idempotent : reconstruit depuis les écritures) ---------- */
+  window.impApprendre=function(simulation){
+    var M=memoire(), neuf=construire(), diff=0, det=[];
+    ['banque','nature'].forEach(function(f){
+      var a=M[f]||{}, b=neuf[f]||{};
+      Object.keys(b).forEach(function(k){
+        var av=a[k]?JSON.stringify(a[k].c):'', ap=JSON.stringify(b[k].c);
+        if(av!==ap){ diff++; if(det.length<8){ var g=gagnant(b[k]); det.push(k+' → '+(g?g.compte:'?')); } }
+      });
+      Object.keys(a).forEach(function(k){ if(!b[k]){ diff++; if(det.length<8) det.push(k+' → oublié'); } });
+    });
+    if(!simulation && diff){ M.banque=neuf.banque; M.nature=neuf.nature; M.ts=Date.now(); SAVE(); }
+    return {n:diff, det:det};
+  };
+
+  /* ---------- proposition ----------
+     Règle manuelle > clé exacte > clé apprise entièrement contenue dans le libellé
+     (la plus spécifique gagne). En deçà, on ne propose rien : le compte d'attente
+     du module appelant prend le relais. */
+  function cherche(base, man, toks, cle){
+    if(man[cle]) return {compte:man[cle], n:0, source:'règle manuelle', cle:cle};
+    if(base[cle]){ var g=gagnant(base[cle]); if(g) return {compte:g.compte, n:g.n, source:'libellé connu', cle:cle}; }
+    var set={}; toks.forEach(function(t){ set[t]=1; });
+    var best=null, score=0;
+    function essai(k, compte, n, src){
+      var kt=k.split(' '); if(!kt.length) return;
+      for(var i=0;i<kt.length;i++){ if(!set[kt[i]]) return; }
+      var sc=kt.length*10 + kt.join('').length;
+      if(kt.length<2 && kt[0].length<5) return;   /* un seul mot court : trop faible */
+      if(sc>score){ score=sc; best={compte:compte, n:n, source:src, cle:k}; }
+    }
+    Object.keys(man).forEach(function(k){ essai(k, man[k], 0, 'règle manuelle'); });
+    Object.keys(base).forEach(function(k){ var g=gagnant(base[k]); if(g) essai(k, g.compte, g.n, 'libellé proche'); });
+    return best;
+  }
+  window.impProposer=function(lib, famille){
+    try{
+      var toks=impTokens(lib); if(!toks.length) return null;
+      var cle=toks.slice().sort().join(' '), M=memoire();
+      var ordre = famille ? [famille] : ['banque','nature'];
+      for(var i=0;i<ordre.length;i++){
+        var f=ordre[i];
+        var r=cherche(M[f]||{}, (M.manuel||{})[f]||{}, toks, cle);
+        if(r){ r.famille=f; r.tiersId=null;
+          try{ var t=(db.tiers||[]).filter(function(x){ return C9(x.compteAux||'')===C9(r.compte); })[0]; if(t) r.tiersId=t.id; }catch(e){}
+          return r; }
+      }
+    }catch(e){}
+    return null;
+  };
+
+  /* ---------- correction retenue (règle manuelle) ---------- */
+  window.impRetenir=function(lib, compte, famille){
+    try{
+      var cle=cleDe(lib); if(!cle) return false;
+      var c=C9(compte); if(!c || c==='000000000' || c==='471000000') return false;
+      var M=memoire(), f=famille||'banque';
+      if(!M.manuel[f]) M.manuel[f]={};
+      if(M.manuel[f][cle]===c) return false;
+      M.manuel[f][cle]=c; M.ts=Date.now(); SAVE();
+      return true;
+    }catch(e){ return false; }
+  };
+  window.impOublier=function(famille, cle){
+    function go(){
+      var M=memoire();
+      if(M.manuel[famille]) delete M.manuel[famille][cle];
+      if(M[famille]) delete M[famille][cle];
+      SAVE(); try{ if(typeof render==='function') render(); }catch(e){}
+      try{ if(typeof toast==='function') toast('Règle oubliée'); }catch(e){}
+    }
+    var msg='Oublier la règle « '+cle+' » ? Les écritures déjà passées ne changent pas.';
+    if(typeof yadaConfirm==='function') yadaConfirm(msg,go); else go();
+  };
+
+  /* ---------- inscription dans le module Automatismes (étape 1) ---------- */
+  window.YADA_AUTOS=window.YADA_AUTOS||[];
+  if(!window.YADA_AUTOS.filter(function(a){return a.cle==='imputation';}).length){
+    window.YADA_AUTOS.push({
+      cle:'imputation',
+      nom:'Imputation apprise sur les écritures',
+      desc:'Retient quel compte a été retenu pour quel libellé — depuis les écritures de banque et les factures du dossier, import FEC compris — et le repropose à l’Import bancaire. Une correction faite à la main devient une règle qui prime et qui survit au réapprentissage.',
+      unite:'règle',
+      run:function(sim){ return window.impApprendre(sim); }
+    });
+  }
+
+  /* ---------- table des règles, greffée sous le module Automatismes ---------- */
+  function lignesRegles(){
+    var M=memoire(), out=[];
+    ['banque','nature'].forEach(function(f){
+      var man=(M.manuel||{})[f]||{}, base=M[f]||{};
+      Object.keys(man).forEach(function(k){ out.push({f:f,cle:k,compte:man[k],n:0,src:'manuelle'}); });
+      Object.keys(base).forEach(function(k){
+        if(man[k]) return; var g=gagnant(base[k]); if(!g) return;
+        out.push({f:f,cle:k,compte:g.compte,n:g.n,src:'apprise'});
+      });
+    });
+    out.sort(function(a,b){ if(a.src!==b.src) return a.src==='manuelle'?-1:1; return (b.n-a.n)||(a.cle<b.cle?-1:1); });
+    return out;
+  }
+  function carteRegles(){
+    var R=lignesRegles();
+    var rows=R.slice(0,60).map(function(r){
+      return '<tr><td>'+e2(r.cle)+'</td><td>'+e2(r.f==='banque'?'Banque':'Nature')+'</td>'
+        +'<td>'+e2(r.compte)+'</td><td>'+e2(libCompte(r.compte)||'—')+'</td>'
+        +'<td class="r">'+(r.src==='manuelle'?'—':r.n)+'</td><td>'+e2(r.src==='manuelle'?'Manuelle':'Apprise')+'</td>'
+        +'<td class="r"><button class="au-btn" onclick="impOublier(\''+e2(r.f)+'\',\''+e2(r.cle).replace(/'/g,'&#39;')+'\')">Oublier</button></td></tr>';
+    }).join('');
+    return '<div class="au-card">'
+      +'<div class="au-cardh"><span class="au-ttl">Règles d’imputation retenues</span>'
+      +'<span class="au-tag'+(R.length?' au-ok':' au-off')+'">'+R.length+' RÈGLE'+(R.length>1?'S':'')+'</span></div>'
+      +'<div class="au-pad">'
+      +(R.length
+        ? '<table class="au-t"><thead><tr><th>Libellé retenu</th><th>Mémoire</th><th>Compte</th><th>Intitulé</th><th class="r">Observations</th><th>Origine</th><th class="r">Action</th></tr></thead><tbody>'+rows+'</tbody></table>'
+          +(R.length>60?'<div class="au-note">… et '+(R.length-60)+' de plus.</div>':'')
+        : '<div class="au-note">Aucune règle. Lancez l’automatisme « Imputation apprise » pour lire les écritures du dossier, ou corrigez un compte dans l’Import bancaire : la correction sera retenue.</div>')
+      +'</div></div>';
+  }
+  try{
+    if(typeof window.pageAutomatismes==='function'){
+      var _pa=window.pageAutomatismes;
+      window.pageAutomatismes=function(){
+        var h=_pa.apply(this,arguments);
+        try{ var i=h.lastIndexOf('</div></div>'); if(i>0) return h.slice(0,i)+carteRegles()+h.slice(i); }catch(e){}
+        return h;
+      };
+    }
+  }catch(e){}
 })();
 </script>
 </body>

@@ -36,7 +36,49 @@
 
 ---
 
-## 🟢 Dernière mise à jour — ÉTAPE 1 de l'automatisation : module AUTOMATISMES (lettrage automatique + échéances récurrentes échues) — v633
+## 🟢 Dernière mise à jour — ÉTAPE 2 de l'automatisation : moteur d'IMPUTATION QUI APPREND (libellé → compte) — v634
+**Quoi :** suite de *« Développement de tout le système étape par étape pour automatiser et rapidement »*. **Étape 2 : le logiciel retient quel compte a été retenu pour quel libellé, et le repropose.** Deux mémoires, toutes deux construites **à partir des écritures du dossier** — donc d'un **FEC importé** comme d'une saisie :
+
+| Mémoire | Lue sur | Ce qu'elle retient |
+| --- | --- | --- |
+| **banque** | écritures du journal **BQ** | le libellé → la **contrepartie du 512** (le compte en face de la banque) |
+| **nature** | écritures **ACH / VTE** | le libellé → le compte de **charge (6)** ou de **produit (7)** |
+
+**Ce qui en sort, tout de suite :** l'**Import bancaire** (v611) consulte la mémoire **avant** ses mots-clés intégrés. Une opération dont le libellé a déjà été imputé arrive **pré-imputée sur le compte retenu la dernière fois** ; une opération inconnue tombe comme avant sur le **471 compte d'attente**. Et une **correction faite à la main** dans l'Import bancaire devient une **règle manuelle** : elle **prime** sur l'apprentissage et **survit à un réapprentissage** — on corrige une fois, c'est retenu.
+
+**Comment un libellé devient une clé.** Un relevé écrit « PRLV SEPA ORANGE SA REF 4451 » : presque tout est du transport. On retire les **mots de transport** (VIR, PRLV, SEPA, CB, PAIEMENT, ÉCHÉANCE, FACTURE, RÉF…), les **formes juridiques** (SARL, SAS, SCI, STE…), les **mots de liaison**, les **nombres** et les **références** (`F2026-001`, `X12345`). Il reste **ORANGE** — le nom du tiers ou de la prestation, c'est-à-dire la seule chose qui dit la nature de l'opération. Mesuré : `PRLV SEPA ORANGE SA REF 4451` → **[ORANGE]** · `VIR LOYER SCI DUPONT` → **[LOYER, DUPONT]** · `F2026-001 · GASOIL SA` → **[GASOIL]** · `VIR 12345` → **[]** (rien de signifiant, aucune règle créée).
+
+**Comment une clé retrouve un compte.** Dans l'ordre : **règle manuelle** → **clé exacte** → **clé apprise entièrement contenue dans le libellé** (la plus spécifique gagne). En deçà, **le moteur ne propose rien** et laisse le compte d'attente du module appelant prendre le relais — il ne devine jamais. Une clé d'un seul mot court (< 5 lettres) est **refusée** comme trop faible. Quand un même libellé a reçu plusieurs comptes au fil du temps, c'est le **plus fréquent** qui gagne : la mémoire se corrige d'elle-même.
+
+**Comment — nouvel addon `yada-addon-imputation` (100% ADDITIF) + 3 éditions chirurgicales :**
+1. **`suggere(op)`** de l'Import bancaire reçoit une **étape 0** : `window.impProposer(op.lib)` — garde `try/catch`, **sans effet si l'addon est absent** ; les mots-clés intégrés et le 471 restent en repli.
+2. **`ibSetCompte(i,v)`** appelle `window.impRetenir(ST.ops[i].lib, v, 'banque')` — une ligne, gardée : c'est le point où la correction devient une règle.
+3. **Le registre `AUTOS`** du module Automatismes (v633) devient le **global `window.YADA_AUTOS`** : chaque étape suivante s'y inscrit d'un `push`, **sans toucher au module** — la promesse « une ligne de plus dans le même module » est désormais tenue par la structure.
+
+**Points techniques :** (1) l'apprentissage **reconstruit** la mémoire depuis les écritures plutôt que de l'incrémenter — donc il est **idempotent** et une écriture corrigée est **reprise** au passage suivant ; les règles manuelles vivent dans une branche séparée (`manuel`) que la reconstruction ne touche pas ; (2) les **à-nouveaux** et l'**OD de résultat** sont exclus de la lecture (leur libellé ne dit rien d'une nature) ; (3) la contrepartie bancaire retenue est la ligne **non-512 au plus fort mouvement** (une écriture de banque multi-lignes ne produit donc qu'une observation, la principale) ; (4) **aucune écriture n'est créée ni modifiée par cette étape** — le moteur ne fait que proposer. `sw.js` yada-v229, badge v634, `version.json` 634.
+
+**Validé :** `node --check` (**305 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014) + balises `</head>`/`</body>`/`</html>` inchangées (3/5/3) + **filet d'équilibre** (`YADA_CHROME=… node tests/equilibre-ecritures.mjs` : vente 1200=1200, achat 600=600 ✅) + **rendu Playwright sur dossier d'essai** (6 écritures de banque, 1 achat, 1 à-nouveau) :
+
+| Mesure | Résultat |
+| --- | --- |
+| Règles apprises | **3** en banque (ORANGE · LOYER DUPONT · URSSAF PICARDIE) + **1** en nature (GASOIL) |
+| À-nouveaux absorbés | **0** (exclus) |
+| `PRLV SEPA ORANGE SA REF 9999` (libellé neuf, clé connue) | **626000000** · 3 observations · « libellé connu » |
+| `VIRT LOYER SCI DUPONT MARS` (libellé plus long) | **613200000** · « libellé proche » |
+| `CB GASOIL SA STATION` (bascule sur la mémoire *nature*) | **606000000** |
+| `ACHAT INCONNU XYZ` | **rien** → le module garde son 471 |
+| **Second apprentissage** (idempotence) | **0 action** |
+| Correction manuelle ORANGE → 627 | prime **et** survit au réapprentissage ✓ |
+| **Import bancaire réel** (OFX, opération connue / inconnue) | pré-imputée **606400000** / **471000000** |
+| Écritures créées ou modifiées par l'étape | **0** · 0 déséquilibrée |
+
++ **routage 25/25** + module Automatismes : **3 automatismes** + journal + table des règles, **1 sortie « Fermer »**, **0 en-tête vide**, **0 bouton vide**, **0 gras**, **0 débordement** + **0 pageerror**, **0 console.error**. Badge → **v634**.
+
+**Reste des étapes :** **3.** rapprochement bancaire automatique (pointage relevé ↔ écritures par montant et fenêtre de dates) ; **4.** contrôles de cohérence en continu ; **5.** traitements périodiques (OD de TVA, dotations en lot, relances, clôture).
+
+---
+
+## 🟢 MAJ précédente — ÉTAPE 1 de l'automatisation : module AUTOMATISMES (lettrage automatique + échéances récurrentes échues) — v633
 **Quoi :** demande — *« Développement de tout le système étape par étape pour automatiser et rapidement »*. **Étape 1 : le socle.** Un nouveau module **« Automatismes »** rassemble en une page les traitements répétitifs du dossier : chaque automatisme s'y déclare avec **ce qui l'attend** (compteur d'actions en attente, calculé en direct), un **interrupteur** (actif / suspendu), son **dernier passage**, son **compteur d'actions depuis l'origine**, et un bouton **« Exécuter maintenant »**. Un bouton unique **« Lancer tous les automatismes actifs »** fait passer tout le dossier d'un clic. Un **journal des passages** (40 derniers) garde l'horodatage, le nombre d'actions et le détail.
 
 **Deux automatismes livrés à cette étape :**
