@@ -4207,6 +4207,7 @@ function render(){
   rapport:(typeof pageRapport==='function'?pageRapport:function(){return'<div class="mod-wrap"><div class="card"><h2>Rapport</h2></div></div>';}),
   controles:(typeof pageControles==='function'?pageControles:function(){return'<div class="mod-wrap"><div class="card"><h2>Contrôles</h2></div></div>';}),
   inventaire:(typeof pageInventaire==='function'?pageInventaire:function(){return'<div class="mod-wrap"><div class="card"><h2>Inventaire &amp; cut-off</h2></div></div>';}),
+  revision:(typeof pageRevision==='function'?pageRevision:function(){return'<div class="mod-wrap"><div class="card"><h2>Dossier de révision</h2></div></div>';}),
   importbanque:(typeof pageImportBanque==='function'?pageImportBanque:function(){return'<div class="mod-wrap"><div class="card"><h2>Import bancaire</h2></div></div>';}),
   recurrentes:(typeof pageRecurrentes==='function'?pageRecurrentes:function(){return'<div class="mod-wrap"><div class="card"><h2>Écritures récurrentes</h2></div></div>';}),
   automatismes:(typeof pageAutomatismes==='function'?pageAutomatismes:function(){return'<div class="mod-wrap"><div class="card"><h2>Automatismes</h2></div></div>';}),
@@ -11092,7 +11093,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v645';
+    b.textContent='YADA · v646';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -37426,7 +37427,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
      mods:['automatismes','inventaire','rappro','banque','immos']},
     {id:'yb-decl',    lbl:'Déclarations', prend:[], mods:['tva']},
     {id:'yb-etats',   lbl:'États',        prend:[], mods:['editions']},
-    {id:'yb-revis',   lbl:'Révision',     prend:[], mods:['controles']},
+    {id:'yb-revis',   lbl:'Révision',     prend:[], mods:['revision','controles']},
     {id:'yb-analyse', lbl:'Analyse',      prend:[],
      mods:['dash','analytique','reglements','pilotage','salarie']},
     {id:'yb-param',   lbl:'Paramètres',   prend:[['sg-param','Réglages de la consultation']],
@@ -38186,7 +38187,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       +'<div class="inv-mast"><div class="inv-eyebrow">YADA · INVENTAIRE &amp; CUT-OFF</div>'
       +'<h1 class="inv-title">Inventaire &amp; cut-off</h1>'
       +'<div class="inv-soc">'+esc(s.raison||'')+' · exercice '+esc(s.exoDebut||'')+' → '+esc(s.exoFin||'')+'</div>'
-      +'<button class="inv-close" title="Fermer" onclick="yadaFermerPage&&yadaFermerPage()">✕</button></div>'
+      +'<button class="inv-close" title="Fermer" onclick="invFermer()">✕</button></div>'
       +'<div class="inv-kpis">'
       +'<div class="inv-k"><div class="l">Travaux générés</div><div class="v">'+faits+' / '+TRAVAUX.length+'</div></div>'
       +'<div class="inv-k"><div class="l">Effet sur le résultat</div><div class="v">'+num(imp)+'</div></div>'
@@ -38197,6 +38198,8 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       +TRAVAUX.map(carteTravail).join('')
       +'</div>';
   };
+
+  window.invFermer=function(){ try{ if(typeof yadaFermerPage==='function') yadaFermerPage(); }catch(e){} };
 
   /* ---------- enregistrement du module ---------- */
   window.YADA_OK=(window.YADA_OK||[]);
@@ -38242,6 +38245,516 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
      +'html body:not(#_yz) #yada-inv .inv-b.inv-pri{background:#f5f5f6;color:#0a0a0b;border-color:#f5f5f6}'
      +'html body:not(#_yz) #yada-inv .inv-b[disabled]{opacity:.4;cursor:not-allowed}'
      +'@media(max-width:820px){html body:not(#_yz) #yada-inv .inv-kpis{grid-template-columns:repeat(2,1fr)}}';
+  }catch(e){}
+})();
+</script>
+<script id="yada-addon-revision">
+/* v646 — DOSSIER DE RÉVISION PAR CYCLES + CONTRÔLES DE BOUCLAGE.
+   Jusqu'ici YADA savait enregistrer, déclarer et clôturer — mais rien ne disait si un solde
+   était JUSTIFIÉ. Or une comptabilité n'est pas « juste » parce qu'elle est équilibrée : elle
+   l'est quand chaque solde du bilan est rapproché d'une pièce EXTÉRIEURE, cycle par cycle.
+   Ce module ouvre le dossier de révision de l'exercice :
+     1. Trésorerie                51x 53x 54x   ↔ dernier relevé de rapprochement
+     2. Tiers (clients/fourn.)    40x 41x       ↔ créances et dettes NON LETTRÉES (balance âgée)
+     3. TVA                       445x          ↔ CA3 déposées (déclaré ↔ comptabilisé ↔ CA)
+     4. Immobilisations           20x 21x 28x   ↔ fichier des immobilisations (VNC)
+     5. Paie & organismes         42x 43x       ↔ journal de paie / bulletins (641 ↔ bruts)
+     6. Capitaux & emprunts       10x→16x       ↔ tableau d'amortissement (capital restant dû)
+   Chaque cycle porte son SOLDE COMPTABLE, son JUSTIFICATIF, l'ÉCART, un COMMENTAIRE et un VISA.
+   Et surtout son CONTRÔLE DE BOUCLAGE, calculé sur le dossier : un contrôle qui tombe en défaut
+   pose une ANOMALIE — quel que soit le visa. Le dossier s'imprime.
+   100% ADDITIF. */
+(function(){
+  function S(){ try{ return db.societe||{}; }catch(e){ return {}; } }
+  function SAVE(){ try{ if(typeof save==='function') save(); }catch(e){} }
+  function RENDER(){ try{ if(typeof render==='function') render(); }catch(e){} }
+  function r(v){ return Math.round((+v||0)*100)/100; }
+  function num(v){ if(v==null) return '—'; try{ return eur(v); }catch(e){ return r(v)+' €'; } }
+  function C9(x){ try{ return c9(x); }catch(e){ return String(x||''); } }
+  function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function nomCpt(k){ k=C9(k); var l=''; try{ l=COMPTES[k]||''; }catch(e){} return k+(l?(' — '+l):''); }
+  function FIN(){ return String(S().exoFin||''); }
+  function DEB(){ return String(S().exoDebut||''); }
+  function exo(){ return FIN().slice(0,4)||String(new Date().getFullYear()); }
+  function moisL(m){ try{ return moisLabel(m); }catch(e){ return m; } }
+  function jour(d){ try{ return frDate(d); }catch(e){ return d||''; } }
+  function auj(){ try{ return todayStr(); }catch(e){ return new Date().toISOString().slice(0,10); } }
+
+  /* ---------- soldes à la clôture ---------- */
+  function soldesA(fin){
+    var T={};
+    try{
+      (db.ecritures||[]).forEach(function(e){
+        if(fin && String(e.date||'')>fin) return;
+        (e.lignes||[]).forEach(function(l){
+          var k=C9(l.compte); if(!k) return;
+          T[k]=r((T[k]||0)+(+l.debit||0)-(+l.credit||0));
+        });
+      });
+    }catch(e){}
+    return T;
+  }
+  function somme(T,prefs){
+    var t=0;
+    Object.keys(T).forEach(function(k){
+      for(var i=0;i<prefs.length;i++){ if(k.indexOf(prefs[i])===0){ t=r(t+T[k]); return; } }
+    });
+    return t;
+  }
+  function comptesDe(T,prefs){
+    return Object.keys(T).filter(function(k){
+      if(Math.abs(T[k])<0.005) return false;
+      for(var i=0;i<prefs.length;i++){ if(k.indexOf(prefs[i])===0) return true; }
+      return false;
+    }).sort();
+  }
+
+  /* ---------- état persistant du dossier ---------- */
+  function etat(){
+    db.parametres=db.parametres||{};
+    var R=db.parametres.revision; if(!R||typeof R!=='object'){ R={}; db.parametres.revision=R; }
+    var e=exo(); if(!R[e]||typeof R[e]!=='object') R[e]={};
+    return R[e];
+  }
+  function fiche(cle){
+    var E=etat();
+    if(!E[cle]||typeof E[cle]!=='object') E[cle]={justif:null, com:'', visa:'', visaDate:''};
+    return E[cle];
+  }
+  function viseurDefaut(){
+    try{ return (db.cabinet&&db.cabinet.collaborateur)||''; }catch(e){ return ''; }
+  }
+
+  /* ============================ CONTRÔLES DE BOUCLAGE ============================ */
+  /* Chaque contrôle renvoie :
+       {titre, ok:true|false|null, ecart:Number|null, ref:Number|null, refLbl, note, det:[...]}
+     ok===null : contrôle non applicable (la donnée extérieure n'existe pas dans le dossier). */
+
+  function dernierReleve(cpt){
+    var mf=FIN().slice(0,7), L=[];
+    try{ L=(db.releves||[]).filter(function(x){ return C9(x.compte)===C9(cpt) && String(x.mois||'')<=mf; }); }catch(e){}
+    L.sort(function(a,b){ return String(a.mois)<String(b.mois)?-1:1; });
+    return L[L.length-1]||null;
+  }
+  function bTreso(T,fin){
+    var det=[], ref=0, sans=0, decal=0, ec=0;
+    comptesDe(T,['51','53','54']).forEach(function(k){
+      var solde=r(T[k]), rel=dernierReleve(k);
+      if(!rel){ sans++; det.push({l:nomCpt(k), a:solde, b:null, t:'aucun rapprochement'}); return; }
+      var st=null; try{ st=rapStats(rel); }catch(e){}
+      var just=st?r((st.soldeBancaire||0)+(st.justifs||0)):r(rel.solde||0);
+      ref=r(ref+just);
+      var d=r(solde-just); ec=r(ec+d);
+      if(String(rel.mois)!==fin.slice(0,7)) decal++;
+      det.push({l:nomCpt(k)+' — relevé au '+jour(rel.dateFin||rel.mois), a:solde, b:just, e:d,
+                t:(String(rel.mois)!==fin.slice(0,7))?('dernier relevé : '+moisL(rel.mois)):''});
+    });
+    if(!det.length) return {titre:'Solde de trésorerie ↔ dernier rapprochement', ok:null, ecart:null, ref:null,
+      note:'Aucun compte de trésorerie mouvementé.', det:det};
+    return {titre:'Solde de trésorerie ↔ dernier rapprochement', ok:(sans===0 && Math.abs(ec)<0.01),
+      ecart:r(ec), ref:r(ref), refLbl:'Σ des soldes de relevés (justificatifs inclus)',
+      note:(sans?(sans+' compte(s) de trésorerie sans aucun rapprochement — leur solde n’est justifié par rien. '):'')
+          +(decal?(decal+' compte(s) dont le dernier rapprochement est antérieur à la clôture.'):''),
+      det:det};
+  }
+
+  function bTiers(T,fin){
+    var nonLet=0, lettre=0, grp={}, nb=0;
+    try{
+      (db.ecritures||[]).forEach(function(e){
+        if(fin && String(e.date||'')>fin) return;
+        (e.lignes||[]).forEach(function(l){
+          var k=C9(l.compte);
+          if(k.indexOf('40')!==0 && k.indexOf('41')!==0) return;
+          var m=r((+l.debit||0)-(+l.credit||0));
+          if(l.lettre){ lettre=r(lettre+m); var g=k+' · lettre '+l.lettre; grp[g]=r((grp[g]||0)+m); }
+          else { nonLet=r(nonLet+m); nb++; }
+        });
+      });
+    }catch(e){}
+    var faux=Object.keys(grp).filter(function(g){ return Math.abs(grp[g])>0.005; }).sort();
+    var det=[{l:'Créances clients (41x)', a:r(somme(T,['41'])), b:null, t:'solde débiteur = ce qui reste à encaisser'},
+             {l:'Dettes fournisseurs (40x)', a:r(-somme(T,['40'])), b:null, t:'solde créditeur = ce qui reste à payer'},
+             {l:'Créances et dettes NON lettrées (base de la balance âgée)', a:null, b:r(nonLet), t:nb+' ligne(s)'},
+             {l:'Lignes lettrées — leur somme doit être nulle', a:null, b:r(lettre),
+              t:(Math.abs(lettre)<0.005?'lettrage équilibré':'lettrage déséquilibré')}];
+    faux.slice(0,12).forEach(function(g){ det.push({l:g, a:null, b:r(grp[g]), t:'lettre non équilibrée'}); });
+    if(faux.length>12) det.push({l:'… et '+(faux.length-12)+' autre(s) lettre(s) déséquilibrée(s)', a:null, b:null, t:''});
+    return {titre:'Balance âgée ↔ créances et dettes non lettrées', ok:(faux.length===0 && Math.abs(lettre)<0.01),
+      ecart:r(lettre), ref:r(nonLet), refLbl:'Σ des lignes non lettrées (40x et 41x)',
+      note:faux.length?('Un groupe lettré doit toujours s’équilibrer : '+faux.length+' lettre(s) ne s’équilibre(nt) pas — la balance âgée ne peut pas rejoindre le solde du compte.')
+                      :'Le solde des comptes de tiers est exactement ce qui reste non lettré : la balance âgée boucle.',
+      det:det};
+  }
+
+  function bTVA(T,fin){
+    var det=[], ec=0, nonDecl=[], mois=[];
+    try{ mois=moisExoListe()||[]; }catch(e){}
+    var decls=(S().tvaDeclaree)||{};
+    mois.forEach(function(m){
+      var d=null; try{ d=tvaDuMois(m); }catch(e){}
+      if(!d) return;
+      var compta=r((d.aDecaisser||0)-(d.credit||0));
+      var dec=decls[m];
+      if(!dec){ if(Math.abs(compta)>0.005){ nonDecl.push(m); det.push({l:moisL(m), a:compta, b:null, t:'CA3 non déposée'}); } return; }
+      var decl=r((dec.aDecaisser||0)-(dec.credit||0));
+      var d2=r(compta-decl); ec=r(ec+d2);
+      det.push({l:moisL(m), a:compta, b:decl, e:d2});
+    });
+    /* concordance avec le chiffre d'affaires — indicative (ventes exonérées, autoliquidation) */
+    var col=0, ca=0;
+    try{
+      (db.ecritures||[]).forEach(function(e){
+        if(String(e.date||'')<DEB()||String(e.date||'')>fin) return;
+        if(String(e.libelle||'').indexOf('OD RÉSULTAT')>=0) return;
+        (e.lignes||[]).forEach(function(l){ var k=C9(l.compte);
+          if(k.indexOf('4457')===0) col=r(col+(+l.credit||0)-(+l.debit||0));
+          if(k.charAt(0)==='7') ca=r(ca+(+l.credit||0)-(+l.debit||0)); });
+      });
+    }catch(e){}
+    det.push({l:'Chiffre d’affaires de l’exercice (classe 7)', a:null, b:r(ca), t:''});
+    det.push({l:'TVA collectée comptabilisée (4457x)', a:null, b:r(col),
+              t:(ca>0.005?('soit '+(Math.round(col/ca*1000)/10)+' % du CA — ventes exonérées et autoliquidation expliquent l’écart au taux nominal'):'')});
+    if(!det.length) return {titre:'TVA déclarée ↔ comptabilisée ↔ chiffre d’affaires', ok:null, ecart:null, ref:null, note:'Aucun mois d’exercice.', det:det};
+    var ok=(nonDecl.length===0 && Math.abs(ec)<0.01);
+    return {titre:'TVA déclarée ↔ comptabilisée ↔ chiffre d’affaires', ok:ok, ecart:r(ec),
+      ref:ok?r(-somme(T,['445'])):null, refLbl:'Solde justifié par les CA3 déposées',
+      note:nonDecl.length?(nonDecl.length+' mois taxable(s) sans CA3 déposée : '+nonDecl.map(moisL).join(', ')+'.')
+                        :'Chaque mois de l’exercice est déclaré et la déclaration reprend exactement la comptabilité.',
+      det:det};
+  }
+
+  function bImmo(T,fin){
+    var an=+String(fin).slice(0,4), brutF=0, cumF=0, vncF=0, n=0, det=[];
+    try{
+      (db.immos||[]).forEach(function(im){
+        if(im.sortie && im.sortie.date && String(im.sortie.date)<=fin) return;   /* cédée : sortie du bilan */
+        var row=null; try{ row=immoRowAnnee(im,an); }catch(e){}
+        if(!row) return;
+        brutF=r(brutF+(+im.montantHT||0)); cumF=r(cumF+(+row.cumul||0)); vncF=r(vncF+(+row.vnc||0)); n++;
+      });
+    }catch(e){}
+    var brutC=somme(T,['20','21']), amortC=r(-somme(T,['28'])), vncC=r(brutC-amortC);
+    det.push({l:'Valeur brute', a:brutC, b:brutF, e:r(brutC-brutF), t:'comptabilité ↔ fichier'});
+    det.push({l:'Amortissements cumulés', a:amortC, b:cumF, e:r(amortC-cumF), t:'comptabilité ↔ fichier'});
+    det.push({l:'Valeur nette comptable', a:vncC, b:vncF, e:r(vncC-vncF), t:n+' immobilisation(s) au fichier'});
+    if(!n && Math.abs(vncC)<0.005) return {titre:'Valeur nette comptable ↔ fichier des immobilisations', ok:null,
+      ecart:null, ref:null, note:'Aucune immobilisation au fichier ni au bilan.', det:det};
+    return {titre:'Valeur nette comptable ↔ fichier des immobilisations', ok:(Math.abs(r(vncC-vncF))<0.01),
+      ecart:r(vncC-vncF), ref:r(vncF), refLbl:'Σ des VNC du fichier des immobilisations',
+      note:(!n?'Le bilan porte des immobilisations qu’aucune fiche ne justifie.'
+              :'Le fichier des immobilisations est la pièce justificative du poste : brut, amortissements et VNC doivent s’y retrouver au centime.'),
+      det:det};
+  }
+
+  function bPaie(T,fin){
+    var c641=0, det=[];
+    try{
+      (db.ecritures||[]).forEach(function(e){
+        if(String(e.date||'')<DEB()||String(e.date||'')>fin) return;
+        (e.lignes||[]).forEach(function(l){ if(C9(l.compte).indexOf('641')===0) c641=r(c641+(+l.debit||0)-(+l.credit||0)); });
+      });
+    }catch(e){}
+    var mois=[]; try{ mois=moisExoListe()||[]; }catch(e){}
+    var brutB=0, nb=0;
+    try{
+      var fs=(db.parametres&&db.parametres.bulletins&&db.parametres.bulletins.fiches)||[];
+      fs.forEach(function(f){ if(mois.indexOf(f.mois)<0) return;
+        var c=null; try{ c=window.bpCalc&&window.bpCalc(f); }catch(e){}
+        if(c){ brutB=r(brutB+(+c.brut||0)); nb++; } });
+    }catch(e){}
+    var brutJ=0;
+    try{ var pj=(db.parametres&&db.parametres.paieJournal)||{};
+      mois.forEach(function(m){ brutJ=r(brutJ+(+((pj[m]||{}).brut)||0)); }); }catch(e){}
+    var ref=(brutB>0.005)?brutB:brutJ;
+    var src=(brutB>0.005)?(nb+' bulletin(s) de paie'):'journal de paie';
+    det.push({l:'Salaires bruts comptabilisés (641)', a:c641, b:null, t:''});
+    det.push({l:'Bruts des bulletins de paie', a:null, b:r(brutB), t:nb+' bulletin(s) sur l’exercice'});
+    det.push({l:'Bruts du journal de paie', a:null, b:r(brutJ), t:''});
+    det.push({l:'Dettes envers le personnel (42x)', a:r(-somme(T,['42'])), b:null, t:'net à payer restant dû à la clôture'});
+    det.push({l:'Dettes envers les organismes sociaux (43x)', a:r(-somme(T,['43'])), b:null, t:''});
+    if(ref<0.005 && Math.abs(c641)<0.005) return {titre:'Compte 641 ↔ journal de paie', ok:null, ecart:null, ref:null,
+      note:'Aucune paie sur l’exercice.', det:det};
+    if(ref<0.005) return {titre:'Compte 641 ↔ journal de paie', ok:false, ecart:r(c641), ref:null,
+      note:'Des salaires sont comptabilisés en 641 sans aucun bulletin ni journal de paie pour les justifier.', det:det};
+    return {titre:'Compte 641 ↔ journal de paie', ok:(Math.abs(r(c641-ref))<0.01), ecart:r(c641-ref), ref:null,
+      note:'Les salaires bruts comptabilisés doivent être exactement ceux du '+src+'.', det:det};
+  }
+
+  function bCap(T,fin){
+    var crd=0, det=[], n=0;
+    try{
+      (db.emprunts||[]).forEach(function(e){
+        var ec=null; try{ ec=empEcheancier(e); }catch(x){}
+        if(!ec) return;
+        var last=null;
+        ec.rows.forEach(function(row){ if(String(row.date)<=fin) last=row; });
+        var c=last?r(last.crd):r(+e.capital||0);
+        crd=r(crd+c); n++;
+        det.push({l:(e.libelle||'Emprunt')+(e.banque?(' · '+e.banque):''), a:null, b:c, t:'capital restant dû'});
+      });
+    }catch(e){}
+    var c16=r(-somme(T,['16']));
+    det.unshift({l:'Emprunts et dettes assimilées (16x)', a:c16, b:crd, e:r(c16-crd), t:'comptabilité ↔ tableau d’amortissement'});
+    det.push({l:'Capital et réserves (10x)', a:r(-somme(T,['10'])), b:null, t:''});
+    det.push({l:'Report à nouveau (11x)', a:r(-somme(T,['11'])), b:null, t:''});
+    det.push({l:'Résultat de l’exercice (12x)', a:r(-somme(T,['12'])), b:null, t:''});
+    if(!n && Math.abs(c16)<0.005) return {titre:'Emprunts (16x) ↔ tableau d’amortissement', ok:null, ecart:null, ref:null,
+      note:'Aucun emprunt au tableau ni au bilan.', det:det};
+    return {titre:'Emprunts (16x) ↔ tableau d’amortissement', ok:(Math.abs(r(c16-crd))<0.01), ecart:r(c16-crd), ref:null,
+      note:(!n?'Le bilan porte des emprunts qu’aucun tableau d’amortissement ne justifie.'
+              :'Le capital restant dû au tableau d’amortissement est la pièce justificative du poste 16x.'),
+      det:det};
+  }
+
+  /* ---------- les 6 cycles ---------- */
+  var CYCLES=[
+    {cle:'treso', nom:'Trésorerie', prefs:['51','53','54'], sens:'D',
+     desc:'Un solde de banque n’est justifié que par un relevé. Tant qu’un compte n’est pas rapproché, son solde n’est l’avis de personne.',
+     boucle:bTreso},
+    {cle:'tiers', nom:'Tiers — clients & fournisseurs', prefs:['40','41'], sens:'M',
+     desc:'Ce qui reste au compte d’un tiers, ce sont les factures non réglées : le solde doit être exactement la somme des lignes non lettrées.',
+     boucle:bTiers},
+    {cle:'tva', nom:'TVA', prefs:['445'], sens:'C',
+     desc:'La TVA comptabilisée doit être celle qui a été déclarée, mois après mois — et la collectée doit s’expliquer par le chiffre d’affaires.',
+     boucle:bTVA},
+    {cle:'immo', nom:'Immobilisations', prefs:['20','21','28'], sens:'D',
+     desc:'Le fichier des immobilisations est la pièce du poste : valeur brute, amortissements cumulés et VNC doivent s’y retrouver au centime.',
+     boucle:bImmo},
+    {cle:'paie', nom:'Paie & organismes sociaux', prefs:['42','43'], sens:'C',
+     desc:'Les salaires bruts comptabilisés doivent être ceux des bulletins ; ce qui reste au bilan est ce qui n’a pas encore été versé.',
+     boucle:bPaie},
+    {cle:'cap', nom:'Capitaux & emprunts', prefs:['10','11','12','13','16'], sens:'C',
+     desc:'Le capital restant dû du tableau d’amortissement justifie le poste 16x ; les capitaux propres se lisent de l’exercice précédent.',
+     boucle:bCap}
+  ];
+
+  function soldeCycle(C,T){
+    var s=somme(T,C.prefs);
+    return (C.sens==='C')?r(-s):s;      /* affiché dans le sens naturel du poste */
+  }
+  function boucleDe(C,T){
+    try{ return C.boucle(T,FIN())||null; }catch(e){ return null; }
+  }
+  function statut(C,T){
+    var F=fiche(C.cle), b=boucleDe(C,T), s=soldeCycle(C,T);
+    if(b && b.ok===false) return 'ko';
+    var j=(F.justif==null||F.justif==='')?null:r(F.justif);
+    if(j==null) return 'todo';
+    if(Math.abs(r(s-j))>0.01) return 'ko';
+    if(!F.visa) return 'todo';
+    return 'ok';
+  }
+  var STAT={ok:['JUSTIFIÉ','on'], todo:['À JUSTIFIER',''], ko:['ANOMALIE','ko']};
+
+  /* ---------- actions ---------- */
+  window.revSet=function(cle,champ,v){
+    var F=fiche(cle);
+    if(champ==='justif'){ var s=String(v).replace(/\s/g,'').replace(',','.'); F.justif=(s==='')?null:(parseFloat(s)||0); }
+    else F[champ]=v;
+    SAVE(); if(champ==='justif') RENDER();
+  };
+  window.revReprendre=function(cle){
+    var C=CYCLES.filter(function(x){ return x.cle===cle; })[0]; if(!C) return;
+    var b=boucleDe(C,soldesA(FIN()));
+    if(!b||b.ref==null){ if(typeof toast==='function') toast('Aucun justificatif calculable pour ce cycle — saisissez le montant de la pièce.'); return; }
+    fiche(cle).justif=r(b.ref); SAVE();
+    if(typeof toast==='function') toast('Justificatif repris : '+num(b.ref)+'.');
+    RENDER();
+  };
+  window.revViser=function(cle){
+    var F=fiche(cle);
+    if(F.visa){ F.visa=''; F.visaDate=''; SAVE(); RENDER(); return; }
+    var n=String(F.viseur||viseurDefaut()||'').trim();
+    if(!n){ if(typeof toast==='function') toast('Saisissez le nom du réviseur avant de viser.'); return; }
+    F.visa=n; F.visaDate=auj(); SAVE();
+    if(typeof toast==='function') toast('Cycle visé par '+n+'.');
+    RENDER();
+  };
+
+  /* ---------- impression du dossier ---------- */
+  function docRevision(){
+    var T=soldesA(FIN()), s=S();
+    var rows=CYCLES.map(function(C){
+      var F=fiche(C.cle), st=statut(C,T), sc=soldeCycle(C,T), b=boucleDe(C,T);
+      var j=(F.justif==null||F.justif==='')?null:r(F.justif);
+      return '<tr><td>'+esc(C.nom)+'</td><td style="text-align:right">'+num(sc)+'</td>'
+        +'<td style="text-align:right">'+(j==null?'—':num(j))+'</td>'
+        +'<td style="text-align:right">'+(j==null?'—':num(r(sc-j)))+'</td>'
+        +'<td>'+STAT[st][0]+'</td>'
+        +'<td>'+(b?(b.ok===null?'non applicable':(b.ok?'bouclé':'EN DÉFAUT')):'—')+'</td>'
+        +'<td>'+esc(F.visa||'')+(F.visaDate?(' · '+jour(F.visaDate)):'')+'</td></tr>';
+    }).join('');
+    var blocs=CYCLES.map(function(C){
+      var F=fiche(C.cle), b=boucleDe(C,T);
+      var det=(b&&b.det&&b.det.length)
+        ? ('<table style="width:100%;border-collapse:collapse;margin:4px 0 8px"><tbody>'+b.det.map(function(d){
+            return '<tr><td style="padding:2px 4px">'+esc(d.l)+'</td>'
+              +'<td style="padding:2px 4px;text-align:right">'+(d.a==null?'':num(d.a))+'</td>'
+              +'<td style="padding:2px 4px;text-align:right">'+(d.b==null?'':num(d.b))+'</td>'
+              +'<td style="padding:2px 4px;text-align:right">'+(d.e==null?'':num(d.e))+'</td>'
+              +'<td style="padding:2px 4px;font-size:10px">'+esc(d.t||'')+'</td></tr>'; }).join('')+'</tbody></table>')
+        : '';
+      return '<div style="margin:10px 0 14px;page-break-inside:avoid">'
+        +'<div style="font-weight:700">'+esc(C.nom)+'</div>'
+        +'<div style="font-size:11px;margin:2px 0 4px">Contrôle de bouclage : '+esc((b&&b.titre)||'—')
+        +' — '+(b?(b.ok===null?'non applicable':(b.ok?'bouclé ✓':'EN DÉFAUT (écart '+num(b.ecart)+')')):'—')+'</div>'
+        +det
+        +(F.com?('<div style="font-size:11px"><i>Commentaire du réviseur :</i> '+esc(F.com)+'</div>'):'')
+        +'</div>';
+    }).join('');
+    return '<div class="doc-page">'
+      +'<h1 style="margin:0 0 2px">Dossier de révision — exercice '+esc(exo())+'</h1>'
+      +'<div style="font-size:12px;margin-bottom:10px">'+esc(s.raison||'')+' · SIREN '+esc(s.siren||'—')
+      +' · exercice du '+jour(DEB())+' au '+jour(FIN())+' · édité le '+jour(auj())+'</div>'
+      +'<table style="width:100%;border-collapse:collapse;font-size:12px" border="1" cellpadding="4">'
+      +'<thead><tr><th>Cycle</th><th>Solde comptable</th><th>Justificatif</th><th>Écart</th><th>Statut</th><th>Bouclage</th><th>Visa</th></tr></thead>'
+      +'<tbody>'+rows+'</tbody></table>'
+      +'<h2 style="margin:16px 0 4px;font-size:15px">Détail des contrôles de bouclage</h2>'
+      +blocs
+      +'</div>';
+  }
+  window.revImprimer=function(){
+    try{ var z=document.getElementById('print-area'); if(!z) return;
+      z.innerHTML=docRevision(); window.print(); }catch(e){}
+  };
+
+  /* ---------- page ---------- */
+  function ligneDet(d){
+    return '<tr><td>'+esc(d.l)+'</td>'
+      +'<td class="r">'+(d.a==null?'':num(d.a))+'</td>'
+      +'<td class="r">'+(d.b==null?'':num(d.b))+'</td>'
+      +'<td class="r">'+(d.e==null?'':num(d.e))+'</td>'
+      +'<td class="rev-note">'+esc(d.t||'')+'</td></tr>';
+  }
+  function carte(C,T){
+    var F=fiche(C.cle), b=boucleDe(C,T), st=statut(C,T), sc=soldeCycle(C,T);
+    var j=(F.justif==null||F.justif==='')?null:r(F.justif);
+    var ecart=(j==null)?null:r(sc-j);
+    var bt=b?(b.ok===null?'<span class="rev-tag">NON APPLICABLE</span>'
+             :(b.ok?'<span class="rev-tag on">BOUCLÉ</span>':'<span class="rev-tag ko">EN DÉFAUT</span>')):'';
+    var det=(b&&b.det&&b.det.length)
+      ? ('<table class="rev-t"><thead><tr><th>Élément</th><th class="r">Comptabilité</th><th class="r">Pièce / calcul</th><th class="r">Écart</th><th></th></tr></thead>'
+         +'<tbody>'+b.det.map(ligneDet).join('')+'</tbody></table>')
+      : '';
+    var cpts=comptesDe(T,C.prefs);
+    var lst=cpts.length
+      ? ('<details class="rev-cpts"><summary>'+cpts.length+' compte(s) au solde — voir le détail</summary><table class="rev-t"><tbody>'
+         +cpts.map(function(k){ return '<tr><td class="mono">'+esc(nomCpt(k))+'</td><td class="r">'+num(C.sens==='C'?r(-T[k]):T[k])+'</td></tr>'; }).join('')
+         +'</tbody></table></details>')
+      : '';
+    return '<div class="rev-card" id="rev-'+C.cle+'">'
+      +'<div class="rev-h"><span class="rev-nom">'+esc(C.nom)+'</span>'
+      +'<span class="rev-tag '+STAT[st][1]+'">'+STAT[st][0]+'</span>'+bt+'</div>'
+      +'<div class="rev-sub">'+esc(C.desc)+'</div>'
+      +'<div class="rev-boucle"><div class="rev-bt">Contrôle de bouclage — '+esc((b&&b.titre)||'—')+'</div>'
+      +((b&&b.note)?('<div class="rev-note">'+esc(b.note)+'</div>'):'')
+      +det+'</div>'
+      +'<div class="rev-grid">'
+      +'<div class="rev-k"><div class="l">Solde comptable au '+esc(jour(FIN()))+'</div><div class="v">'+num(sc)+'</div></div>'
+      +'<div class="rev-k"><div class="l">Justificatif extérieur</div><div class="v">'
+      +'<input class="rev-in rev-mt" type="number" step="0.01" value="'+(j==null?'':j)+'" onchange="revSet(\''+C.cle+'\',\'justif\',this.value)" placeholder="montant de la pièce">'
+      +'</div></div>'
+      +'<div class="rev-k"><div class="l">Écart</div><div class="v'+((ecart!=null&&Math.abs(ecart)>0.01)?' ko':'')+'">'+(ecart==null?'—':num(ecart))+'</div></div>'
+      +'</div>'
+      +lst
+      +'<textarea class="rev-com" rows="2" placeholder="Commentaire du réviseur — nature de la pièce, réserve, point à suivre…" oninput="revSet(\''+C.cle+'\',\'com\',this.value)">'+esc(F.com||'')+'</textarea>'
+      +'<div class="rev-acts">'
+      +((b&&b.ref!=null)?('<button class="rev-b" onclick="revReprendre(\''+C.cle+'\')">Reprendre le justificatif calculé</button>'):'')
+      +'<span style="flex:1"></span>'
+      +(F.visa
+        ? ('<span class="rev-visa">Visé par '+esc(F.visa)+' le '+esc(jour(F.visaDate))+'</span>'
+           +'<button class="rev-b" onclick="revViser(\''+C.cle+'\')">Retirer le visa</button>')
+        : ('<input class="rev-in rev-visain" type="text" value="'+esc(F.viseur||viseurDefaut())+'" placeholder="nom du réviseur" oninput="revSet(\''+C.cle+'\',\'viseur\',this.value)">'
+           +'<button class="rev-b rev-pri" onclick="revViser(\''+C.cle+'\')">Viser le cycle</button>'))
+      +'</div>'
+      +'</div>';
+  }
+
+  window.pageRevision=function(){
+    var T=soldesA(FIN()), s=S();
+    var sts=CYCLES.map(function(C){ return statut(C,T); });
+    var ok=sts.filter(function(x){ return x==='ok'; }).length;
+    var ko=sts.filter(function(x){ return x==='ko'; }).length;
+    var bou=CYCLES.map(function(C){ return boucleDe(C,T); });
+    var bok=bou.filter(function(b){ return b && b.ok===true; }).length;
+    var bna=bou.filter(function(b){ return !b || b.ok===null; }).length;
+    return '<div id="yada-rev">'
+      +'<div class="rev-mast"><div class="rev-eyebrow">YADA · DOSSIER DE RÉVISION</div>'
+      +'<h1 class="rev-title">Dossier de révision par cycles</h1>'
+      +'<div class="rev-soc">'+esc(s.raison||'')+' · exercice '+esc(DEB())+' → '+esc(FIN())+'</div>'
+      +'<button class="rev-close" title="Fermer" onclick="revFermer()">✕</button></div>'
+      +'<div class="rev-kpis">'
+      +'<div class="rev-kk"><div class="l">Cycles justifiés</div><div class="v">'+ok+' / '+CYCLES.length+'</div></div>'
+      +'<div class="rev-kk"><div class="l">Anomalies</div><div class="v'+(ko?' ko':'')+'">'+ko+'</div></div>'
+      +'<div class="rev-kk"><div class="l">Contrôles bouclés</div><div class="v">'+bok+' / '+(CYCLES.length-bna)+'</div></div>'
+      +'<div class="rev-kk"><div class="l">Clôture</div><div class="v">'+esc(jour(FIN())||'—')+'</div></div>'
+      +'</div>'
+      +'<div class="rev-note2">Un cycle n’est justifié que lorsque son solde est rapproché d’une pièce extérieure <b>et</b> visé. Un contrôle de bouclage en défaut pose une anomalie, quel que soit le visa : c’est le dossier qui tranche, pas la signature.'
+      +' <button class="rev-b" onclick="revImprimer()">Imprimer le dossier de révision</button></div>'
+      +CYCLES.map(function(C){ return carte(C,T); }).join('')
+      +'</div>';
+  };
+
+  /* La sortie s'appelle bien « …Fermer() » : le filet de sortie v614 reconnait le bouton
+     et n'en greffe pas un second (invariant v626 : exactement 1 sortie par module). */
+  window.revFermer=function(){ try{ if(typeof yadaFermerPage==='function') yadaFermerPage(); }catch(e){} };
+
+  /* ---------- enregistrement du module ---------- */
+  window.YADA_OK=(window.YADA_OK||[]);
+  if(window.YADA_OK.indexOf('revision')<0) window.YADA_OK.push('revision');
+  window.YADA_LBL=(window.YADA_LBL||{});
+  window.YADA_LBL.revision='Dossier de révision';
+
+  /* ---------- style Registre N&B, scopé #yada-rev ---------- */
+  try{
+    var st=document.getElementById('rev-mod');
+    if(!st){ st=document.createElement('style'); st.id='rev-mod'; document.head.appendChild(st); }
+    st.textContent=
+      'html body:not(#_yz) #yada-rev{background:#000;color:#f5f5f6;min-height:100dvh;padding:0 0 60px;font-family:Georgia,"Times New Roman",serif}'
+     +'html body:not(#_yz) #yada-rev *{font-family:inherit}'
+     +'html body:not(#_yz) #yada-rev .rev-mast{position:relative;padding:26px 24px 16px;border-bottom:1px solid #242427}'
+     +'html body:not(#_yz) #yada-rev .rev-eyebrow{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;letter-spacing:.14em;color:#8b8b90}'
+     +'html body:not(#_yz) #yada-rev .rev-title{font-size:27px;margin:6px 0 4px;font-weight:400}'
+     +'html body:not(#_yz) #yada-rev .rev-soc{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:#8b8b90}'
+     +'html body:not(#_yz) #yada-rev .rev-close{position:absolute;top:22px;right:22px;width:30px;height:30px;background:#000;color:#f5f5f6;border:1px solid #f5f5f6;border-radius:5px;cursor:pointer;font-family:ui-monospace,monospace;font-size:14px}'
+     +'html body:not(#_yz) #yada-rev .rev-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:#242427;margin:0 0 2px}'
+     +'html body:not(#_yz) #yada-rev .rev-kk{background:#0b0b0c;padding:14px 16px}'
+     +'html body:not(#_yz) #yada-rev .rev-kk .l{font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.07em;color:#8b8b90;text-transform:uppercase}'
+     +'html body:not(#_yz) #yada-rev .rev-kk .v{font-size:20px;margin-top:5px}'
+     +'html body:not(#_yz) #yada-rev .rev-kk .v.ko,html body:not(#_yz) #yada-rev .rev-k .v.ko{color:#f5f5f6;text-decoration:none;border-bottom:2px solid #f5f5f6;display:inline-block}'
+     +'html body:not(#_yz) #yada-rev .rev-note2{padding:14px 24px;color:#a8a9ad;font-size:13px;border-bottom:1px solid #242427}'
+     +'html body:not(#_yz) #yada-rev .rev-card{border-bottom:1px solid #242427;padding:18px 24px 22px}'
+     +'html body:not(#_yz) #yada-rev .rev-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap}'
+     +'html body:not(#_yz) #yada-rev .rev-nom{font-size:18px}'
+     +'html body:not(#_yz) #yada-rev .rev-tag{font-family:ui-monospace,monospace;font-size:9.5px;letter-spacing:.09em;padding:2px 7px;border:1px solid #35353a;color:#8b8b90;border-radius:3px}'
+     +'html body:not(#_yz) #yada-rev .rev-tag.on{background:#f5f5f6;color:#0a0a0b;border-color:#f5f5f6}'
+     +'html body:not(#_yz) #yada-rev .rev-tag.ko{border-color:#f5f5f6;color:#f5f5f6;border-width:2px}'
+     +'html body:not(#_yz) #yada-rev .rev-sub{color:#8b8b90;font-size:12.5px;margin:6px 0 10px}'
+     +'html body:not(#_yz) #yada-rev .rev-boucle{border:1px solid #242427;border-radius:4px;padding:10px 12px;margin:8px 0}'
+     +'html body:not(#_yz) #yada-rev .rev-bt{font-family:ui-monospace,monospace;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:#a8a9ad}'
+     +'html body:not(#_yz) #yada-rev .rev-note{color:#8b8b90;font-size:11.5px;margin:4px 0}'
+     +'html body:not(#_yz) #yada-rev .rev-t{width:100%;border-collapse:collapse;margin:6px 0}'
+     +'html body:not(#_yz) #yada-rev .rev-t th{font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#8b8b90;background:#121214;padding:5px 8px;text-align:left;font-weight:400;border-bottom:1px solid #242427}'
+     +'html body:not(#_yz) #yada-rev .rev-t td{padding:4px 8px;border-bottom:1px solid #1c1c1f;font-size:13px}'
+     +'html body:not(#_yz) #yada-rev .rev-t th.r,html body:not(#_yz) #yada-rev .rev-t td.r{text-align:right}'
+     +'html body:not(#_yz) #yada-rev .rev-t .mono{font-family:ui-monospace,monospace;font-size:12px}'
+     +'html body:not(#_yz) #yada-rev .rev-t td.rev-note{font-size:11px;color:#8b8b90}'
+     +'html body:not(#_yz) #yada-rev .rev-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#242427;margin:10px 0}'
+     +'html body:not(#_yz) #yada-rev .rev-k{background:#0b0b0c;padding:10px 12px}'
+     +'html body:not(#_yz) #yada-rev .rev-k .l{font-family:ui-monospace,monospace;font-size:9.5px;letter-spacing:.06em;color:#8b8b90;text-transform:uppercase}'
+     +'html body:not(#_yz) #yada-rev .rev-k .v{font-size:17px;margin-top:4px}'
+     +'html body:not(#_yz) #yada-rev .rev-in{background:#000;color:#f5f5f6;border:1px solid #242427;border-radius:3px;padding:4px 6px;font-family:ui-monospace,monospace;font-size:13px}'
+     +'html body:not(#_yz) #yada-rev .rev-mt{width:100%;text-align:right}'
+     +'html body:not(#_yz) #yada-rev .rev-visain{width:180px;font-size:11.5px}'
+     +'html body:not(#_yz) #yada-rev .rev-com{width:100%;box-sizing:border-box;background:#000;color:#f5f5f6;border:1px solid #242427;border-radius:3px;padding:6px 8px;font-size:12.5px;margin:6px 0}'
+     +'html body:not(#_yz) #yada-rev .rev-cpts{margin:6px 0}'
+     +'html body:not(#_yz) #yada-rev .rev-cpts summary{font-family:ui-monospace,monospace;font-size:11px;color:#8b8b90;cursor:pointer}'
+     +'html body:not(#_yz) #yada-rev .rev-acts{display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap}'
+     +'html body:not(#_yz) #yada-rev .rev-visa{font-family:ui-monospace,monospace;font-size:11px;color:#a8a9ad}'
+     +'html body:not(#_yz) #yada-rev .rev-b{background:#000;color:#f5f5f6;border:1px solid #35353a;border-radius:4px;padding:5px 11px;cursor:pointer;font-family:ui-monospace,monospace;font-size:11.5px}'
+     +'html body:not(#_yz) #yada-rev .rev-b.rev-pri{background:#f5f5f6;color:#0a0a0b;border-color:#f5f5f6}'
+     +'@media(max-width:820px){html body:not(#_yz) #yada-rev .rev-kpis{grid-template-columns:repeat(2,1fr)}html body:not(#_yz) #yada-rev .rev-grid{grid-template-columns:1fr}}';
   }catch(e){}
 })();
 </script>

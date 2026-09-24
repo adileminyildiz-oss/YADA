@@ -36,7 +36,57 @@
 
 ---
 
-## 🟢 Dernière mise à jour — AMORTISSEMENT DÉGRESSIF : la bascule vers le linéaire est enfin APPLIQUÉE — v645
+## 🟢 Dernière mise à jour — DOSSIER DE RÉVISION PAR CYCLES : chaque solde rapproché d'une pièce extérieure — v646
+**Quoi :** YADA savait enregistrer, déclarer et clôturer — mais **rien ne disait si un solde était JUSTIFIÉ**. Or une comptabilité n'est pas juste parce qu'elle est équilibrée : elle l'est quand **chaque solde du bilan est rapproché d'une pièce extérieure**. Nouveau module **« Dossier de révision »** (rubrique **Révision**) : **6 cycles**, chacun avec son **solde comptable**, son **justificatif**, l'**écart**, un **commentaire** et un **visa** — et surtout son **contrôle de bouclage calculé sur le dossier**.
+
+| Cycle | Comptes | Contrôle de bouclage |
+| --- | --- | --- |
+| **Trésorerie** | 51x · 53x · 54x | solde comptable ↔ **dernier relevé de rapprochement** (justificatifs inclus) |
+| **Tiers — clients & fournisseurs** | 40x · 41x | **balance âgée ↔ créances et dettes NON LETTRÉES** |
+| **TVA** | 445x | **TVA déclarée ↔ comptabilisée ↔ chiffre d'affaires**, mois par mois |
+| **Immobilisations** | 20x · 21x · 28x | brut / amortissements / **VNC ↔ fichier des immobilisations** |
+| **Paie & organismes sociaux** | 42x · 43x | **compte 641 ↔ journal de paie** (ou bulletins) |
+| **Capitaux & emprunts** | 10x → 16x | **16x ↔ capital restant dû du tableau d'amortissement** |
+
+**Le contrôle prime sur la signature.** Un cycle n'est **justifié** que si son solde est rapproché d'une pièce **et** visé ; mais **un contrôle de bouclage en défaut pose une ANOMALIE quel que soit le visa** — c'est le dossier qui tranche, pas la signature. Trois états seulement : **justifié · à justifier · anomalie**.
+
+**Ce que le logiciel calcule, et ce qu'il refuse de calculer.** Là où la pièce existe déjà dans le dossier, un bouton **« Reprendre le justificatif calculé »** la reporte : Σ des soldes de relevés (trésorerie), Σ des lignes non lettrées (tiers), Σ des VNC du fichier (immobilisations), solde justifié par les CA3 déposées (TVA). Là où la justification est un **flux** et non un solde — **paie** (641 ↔ bruts) et **capitaux** (16x ↔ tableau) — **aucun montant n'est proposé** : le réviseur saisit la DSN ou l'état des capitaux. Le logiciel ne signe rien à la place de l'humain.
+
+**Deux points où la révision se joue vraiment :**
+1. **Un compte de trésorerie sans rapprochement n'est justifié par rien.** Le contrôle ne se contente pas de comparer ce qui est rapproché : les comptes **sans aucun relevé** n'entrent pas dans le justificatif, donc leur solde **apparaît en écart** — et le cycle tombe en anomalie. De même, un dernier relevé **antérieur à la clôture** est signalé nommément.
+2. **Le lettrage est un contrôle, pas un confort.** Le solde d'un compte de tiers doit être **exactement** la somme de ses lignes non lettrées — donc la somme des lignes **lettrées doit être nulle**. Le contrôle liste les **lettres qui ne s'équilibrent pas** : tant qu'il en reste une, la balance âgée ne peut pas rejoindre le solde du compte.
+
+**Le dossier s'imprime** (« Imprimer le dossier de révision ») : tableau des 6 cycles (solde · justificatif · écart · statut · bouclage · visa) puis le **détail de chaque contrôle** et le commentaire du réviseur, en `.doc-page`.
+
+**Comment — nouvel addon `yada-addon-revision` (100% ADDITIF) + 3 éditions chirurgicales :** clé `revision:(typeof pageRevision==='function'?pageRevision:repli)` au **dispatch de `render()`**, `'revision'` ajouté **en tête** de la rubrique **Révision** de la barre v641, et — correctif de la v644 — la sortie du module **Inventaire** renommée `invFermer()`. **Points techniques :** (1) les six contrôles sont **purement lecture** — vérifié par égalité JSON stricte des écritures avant/après ; le seul écrit est `db.parametres.revision[exercice]` (justificatif, commentaire, visa) ; (2) chaque contrôle sait dire **« non applicable »** (`ok:null`) quand la donnée extérieure n'existe pas dans le dossier, au lieu de conclure à tort ; (3) les soldes sont affichés **dans le sens naturel du poste** (créditeur positif pour TVA, paie, capitaux) et le justificatif repris suit la même convention ; (4) la **sortie s'appelle `revFermer()`** pour que le filet de sortie v614 la reconnaisse et n'en greffe pas une seconde — **invariant v626 : exactement 1 sortie « Fermer »** (le même défaut existait dans l'Inventaire depuis la v644, il est corrigé ici). Rendu **Registre N&B** scopé `#yada-rev`. `sw.js` yada-v241, badge v646, `version.json` 646.
+
+**Validé :** `node --check` (**315 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014) + balises (3/5/3) + **filet d'équilibre** ✅ + sonde Playwright sur un dossier d'essai construit avec **un défaut volontaire par cycle**, puis corrigé :
+
+| Cycle | Défaut posé | Ce que le contrôle a dit | Après correction |
+| --- | --- | --- | --- |
+| **Trésorerie** | 2ᵉ banque (512200000) **sans aucun relevé**, relevé BNP à 5 000 pour 6 600 comptabilisés | **EN DÉFAUT** — « aucun rapprochement » + écart **1 600,00** | **BOUCLÉ** |
+| **Tiers** | facture 600 réglée 400, **tout lettré « B »** | **EN DÉFAUT** — « **411BBB000 · lettre B** : 200,00 — lettre non équilibrée » | **BOUCLÉ** |
+| **TVA** | **aucune CA3 déposée** | **EN DÉFAUT** — « 2 mois taxable(s) sans CA3 déposée : mai 2026, juin 2026 » | **BOUCLÉ** |
+| **Immobilisations** | acquisition comptabilisée, **dotation non passée** | **EN DÉFAUT** — amortissements **0,00 comptable ↔ 2 000,00 fichier**, VNC 10 000 ↔ 8 000 | **BOUCLÉ** |
+| **Paie** | 641 = 24 000, journal de paie = **20 000** | **EN DÉFAUT** — écart **4 000,00** | **BOUCLÉ** |
+| **Capitaux & emprunts** | tableau d'amortissement **sans aucune écriture** | **EN DÉFAUT** — « le bilan porte des emprunts qu'aucun tableau ne justifie » puis écart **5 500,00** (11 échéances non comptabilisées) | **BOUCLÉ** |
+
+| Mesure | Résultat |
+| --- | --- |
+| Module rendu · cycles | ✓ · **6** |
+| Contrôles en défaut au départ · après correction | **6 / 6** · **0 / 6** |
+| Cycles justifiés après reprise des justificatifs **et** visa | **6 / 6** |
+| Visa | « Visé par Sarah Durand le 24/09/2026 », retirable |
+| **Lecture seule stricte** | écritures **identiques** avant / après (JSON), **0 écriture créée** |
+| État persisté (`db.parametres.revision`) | **oui** |
+| Dossier imprimé | titre + **27 lignes**, statuts repris (5 justifiés · 1 anomalie au moment du tirage) |
+| Rubrique **Révision** de la barre | « **Dossier de révision** » · « Contrôles de cohérence » — **routage réel ✓** |
+| Sorties « Fermer » · boutons vides · gras · italique · débordement | **1** · **0** · **0** · **0** · **0** |
+| Écritures déséquilibrées · pageerror · console.error | **0** · **0** · **0** |
+
+---
+
+## 🟢 MAJ précédente — AMORTISSEMENT DÉGRESSIF : la bascule vers le linéaire est enfin APPLIQUÉE — v645
 **Quoi :** dans `immoPlan` (ligne 7433), la bascule du dégressif vers le linéaire était **calculée puis jamais appliquée** — `dot = deg` dans tous les cas, les variables `lin` et `restAns` n'étant utilisées nulle part. Le plan d'amortissement était donc **faux sur les dernières annuités** (dotations qui continuent de décroître au lieu de se stabiliser), et c'est **obligatoire** au sens de l'article 39 A du CGI : dès que l'annuité dégressive tombe **sous** l'annuité linéaire calculée sur la **durée restante**, on bascule — et la bascule est définitive, puisque le linéaire reste ensuite supérieur.
 
 **Le correctif :** `lin` est désormais calculé sur la **durée restante du plan** (`VNC × jours de la période / jours restants`) — et non sur les mois de l'année en cours, ce que faisait `imAnnee_remainingMonths` — puis `dot = max(deg, lin)`. La dernière annuité solde exactement la base (`base − cumul`), donc la somme des dotations tombe au centime.
@@ -196,7 +246,7 @@
 | Débordement de barre à 1440 / 1280 / 1024 / 900 px | **aucun** (`scrollWidth = clientWidth`, document sans défilement horizontal) |
 | pageerror · console.error | **0** · **0** |
 
-**Le programme qui suit** (chaque étape rejoint sa rubrique) : **v642** TVA sur les encaissements (Déclarations) · **v643** Bilan & Compte de résultat normalisés + SIG + N-1 (États) · **v644** Inventaire & cut-off (Traitements) · **v645** Dossier de révision par cycles (Révision) · **v646** Liasse fiscale 2050-2059 (Déclarations) · **v647** Analytique par axes / chantiers (Analyse) · **v648** amortissement dégressif — bascule linéaire (Traitements).
+**Le programme qui suit** (chaque étape rejoint sa rubrique) : **v642** TVA sur les encaissements (Déclarations) · **v643** Bilan & Compte de résultat normalisés + SIG + N-1 (États) · **v644** Inventaire & cut-off (Traitements) · **v645** amortissement dégressif — bascule linéaire (Traitements) · **v646** Dossier de révision par cycles (Révision) · **v647** Liasse fiscale 2050-2059 (Déclarations) · **v648** Analytique par axes / chantiers (Analyse).
 
 ---
 
