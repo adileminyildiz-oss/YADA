@@ -36,7 +36,64 @@
 
 ---
 
-## 🟢 Dernière mise à jour — PARCOURS COMPTABLE GUIDÉ : les 22 étapes, dans l'ordre, verrouillées — v651
+## 🟢 Dernière mise à jour — CONSTITUTION DE SOCIÉTÉ : la naissance de la société s'écrit — v652
+**Quoi :** **étape 2 du parcours** (v651) — la seule des 22 qui ne renvoyait vers aucun module. Le cahier des charges donne les écritures à la lettre ; elles sont désormais produites :
+
+| Situation | Débit | Crédit |
+| --- | --- | --- |
+| Apport en numéraire, **capital libéré** | **512** Banque | **101** Capital social |
+| Capital **appelé, NON libéré** | **4562** Associés capital appelé non versé | **101** Capital social |
+| **Lors du versement** | **512** Banque | **4562** Associés capital appelé non versé |
+| **Frais de constitution** | **201** Frais d'établissement **+ 44562** TVA | **401** Fournisseur |
+
+Trois cartes — **capital**, **versements**, **frais** — et une quatrième qui n'existe que pour dire non : **« Contrôles — aucune validation sans contrôle »**, **10 points** mesurés sur le dossier.
+
+**Le module ne croit pas ce qu'on lui saisit — il lit le dossier.** Les quatre KPI (capital crédité au `101`, reste à verser au `4562`, frais portés au `201`, écritures générées) sont **agrégés sur les écritures**, jamais sur le formulaire, et un contrôle **confronte les deux** (« saisi 20 000,00 € · comptabilisé 20 000,00 € »). Les **à-nouveaux sont exclus** de l'agrégation : un report de capital de l'exercice précédent ne peut pas se faire passer pour une souscription — vérifié (à-nouveau de 5 000 posé sur le `101` : le KPI reste à 10 000).
+
+**Quatre refus, chacun motivé en clair** — et, à chaque fois, **le dossier reste strictement inchangé** (égalité JSON stricte des écritures) :
+
+| Ce qui est refusé | Motif écrit |
+| --- | --- |
+| Écriture déséquilibrée | « écriture déséquilibrée (X ≠ Y) » — aucune écriture du module ne peut naître non soldée |
+| **Versement > capital souscrit** (99 999 sur 20 000) | « les versements dépassent le capital souscrit » |
+| **Date hors exercice** (2099) | « date 01/01/2099 hors exercice (01/01/2026 → 31/12/2026) » |
+| Capital nul, versement en mode « libéré intégralement » | « rien à comptabiliser » / « aucun versement à constater » |
+
+**Le module dit aussi quand il n'a rien à faire.** En libération **intégrale**, la carte des versements affiche **SANS OBJET** et refuse de générer : le capital est déjà entré en banque, il n'y a pas de créance sur les associés à solder. Et si l'on **change d'avis après coup** (partiel → intégral alors que des versements existent), le module **ne cache pas l'incohérence** : le contrôle « Capital libéré en banque » passe à **à revoir**, avec le détail — « débits 512 : 4 000,00 € · capital 10 000,00 € ».
+
+**Deux finesses comptables :** (1) les frais de constitution sont des **frais d'établissement** (compte `201`), pas une charge de l'exercice — leur TVA suit donc l'**immobilisation** (`44562`, et non `44566`) ; décocher « TVA déductible » la fait **rejoindre le coût** (`201` débité du TTC, plus de ligne de TVA) — vérifié : 1 200 + 240 → `201` 1 440 ; (2) la dette va sur le **compte auxiliaire du fournisseur** quand il est choisi (`401AVOC00`), sur le **collectif** `401000000` sinon — même règle que partout ailleurs dans YADA.
+
+**Comment — nouvel addon `yada-addon-constitution` (100% ADDITIF) + 2 éditions chirurgicales :** clé `constitution:(typeof pageConstitution==='function'?pageConstitution:repli)` au **dispatch de `render()`** et `'constitution'` ajouté **juste après `'parcours'`** dans la rubrique **Traitements** de la barre v641. **Points techniques :** (1) **une seule porte d'écriture**, `poster(cle,date,lignes)` — elle vérifie l'équilibre **et** l'appartenance à l'exercice **avant** d'appeler `posterOD`, si bien qu'aucun chemin ne peut contourner le contrôle ; (2) libellés stables `CONSTITUTION CAPITAL|VERSEMENT|FRAIS <exercice>` → **régénérer remplace** (la détection utilise `indexOf(...)>=0`, `posterOD` préfixant le libellé du numéro de pièce) ; (3) les six comptes nécessaires sont **ajoutés au plan s'ils manquent** — le `445620000` n'y était posé que par l'addon Immobilisations ; (4) rendu **Registre N&B** scopé `#yada-cst`, sortie **`cstFermer()`** pour que le filet v614 la reconnaisse — **invariant v626 : exactement 1 sortie « Fermer »**. `sw.js` yada-v247, badge v652, `version.json` 652.
+
+**Validé :** `node --check` (**321 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014 statiques · 37/37 pour `cst-mod`) + balises (3/5/3) + **filet d'équilibre** ✅ + deux sondes Playwright sur un dossier monté pour couvrir **chaque branche** :
+
+| Mesure | Résultat |
+| --- | --- |
+| **Capital libéré intégralement** (10 000) | `512000000` **10 000,00 D** · `101000000` **10 000,00 C** — équilibrée ✓ |
+| Régénérer 3 fois | **1 écriture** — idempotent |
+| Versements en mode intégral | **SANS OBJET** · génération forcée → **0 écriture** |
+| **Capital appelé non versé** (20 000) | `456200000` **20 000,00 D** · `101000000` **20 000,00 C** · reste à verser **20 000,00** |
+| **Versements** 5 000 puis 15 000 | **2 écritures** `512 D` / `4562 C` · reste à verser → **0,00** ✓ · régénérer → toujours **2** |
+| **Refus** — versement de 99 999 | dossier **strictement inchangé** (JSON) |
+| **Refus** — versement daté 2099 | dossier **strictement inchangé** (JSON) |
+| **Refus** — capital nul | dossier **strictement inchangé** (JSON) |
+| **Frais** 1 200 @20 % (avocat) + 60 @0 % (greffe) | `201` 1 200 + `44562` 240 / **`401AVOC00`** 1 440 · `201` 60 / `401000000` 60 — équilibrée ✓ |
+| **TVA non déductible** | `201` **1 440,00** / `401AVOC00` 1 440 — la taxe rejoint le coût |
+| **Contrôles** | **10 / 10 tenus** |
+| Bascule partiel → intégral avec versements | **7 / 8 tenus** — « Capital libéré en banque · à revoir · débits 512 : 4 000,00 € · capital 10 000,00 € » |
+| **À-nouveaux** | bandeau affiché · **exclus du KPI** (AN de 5 000 sur le `101` → capital crédité **inchangé**) |
+| **Lecture seule à l'ouverture** | deux rendus → écritures **identiques** (JSON) |
+| **Étape 2 du parcours** | « **terminé** · capital souscrit : 20 000,00 € · intégralement versé » |
+| **`pcAller('constitution')`** | route réellement sur `constitution` — **le point mort de la v651 est comblé** |
+| Rubrique **Traitements** | « Parcours comptable guidé » · « **Constitution de société** » · « Automatismes » · … — **routage réel ✓** |
+| Sorties « Fermer » · boutons · vides · retour · gras · italique · souligné · débordement | **1** · 15 · **0** · **0** · **0** · **0** · **0** · **0** |
+| Écritures déséquilibrées · pageerror · console.error | **0** · **0** · **0** |
+
+**La suite du cahier des charges :** **v653** factures non rapprochées — conditions et **modes de paiement** (espèces, carte bancaire, virement, prélèvement, chèque), caisse `530`, balance âgée **0-30 / 31-60 / 61-90 / 90+** et liste de relance · **v654** provisions (`6815`/`151`) et **provision d'impôt** (`695`/`444`, puis `444`/`512`) tirée du résultat fiscal de la liasse v647.
+
+---
+
+## 🟢 MAJ précédente — PARCOURS COMPTABLE GUIDÉ : les 22 étapes, dans l'ordre, verrouillées — v651
 **Quoi :** cahier des charges reçu — un **moteur comptable** qui suit un **ordre obligatoire** de 22 étapes, avec des contrôles permanents et une **règle absolue : aucune écriture validée sans contrôle**. Les modules existaient (banque, rapprochement, achats, ventes, TVA, paie, immobilisations, révision, liasse, clôture) mais **rien ne les ordonnait ni ne les verrouillait** : on pouvait valider une banque en écart, lettrer avant d'avoir comptabilisé, clôturer sans réviser. Nouveau module **« Parcours comptable guidé »** (rubrique **Traitements**, en tête) : les **22 étapes**, chacune **MESURÉE sur le dossier** (jamais déclarée), **verrouillée par ses prérequis**, avec **une seule action à faire maintenant** et le bouton qui ouvre le module qui fait le travail.
 
 | # | Étape | Ce qui est mesuré |

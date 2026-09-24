@@ -4213,6 +4213,7 @@ function render(){
   annexe:(typeof pageAnnexe==='function'?pageAnnexe:function(){return'<div class="mod-wrap"><div class="card"><h2>Annexe des comptes annuels</h2></div></div>';}),
   flux:(typeof pageFlux==='function'?pageFlux:function(){return'<div class="mod-wrap"><div class="card"><h2>Tableau de flux de trésorerie</h2></div></div>';}),
   parcours:(typeof pageParcours==='function'?pageParcours:function(){return'<div class="mod-wrap"><div class="card"><h2>Parcours comptable guidé</h2></div></div>';}),
+  constitution:(typeof pageConstitution==='function'?pageConstitution:function(){return'<div class="mod-wrap"><div class="card"><h2>Constitution de société</h2></div></div>';}),
   importbanque:(typeof pageImportBanque==='function'?pageImportBanque:function(){return'<div class="mod-wrap"><div class="card"><h2>Import bancaire</h2></div></div>';}),
   recurrentes:(typeof pageRecurrentes==='function'?pageRecurrentes:function(){return'<div class="mod-wrap"><div class="card"><h2>Écritures récurrentes</h2></div></div>';}),
   automatismes:(typeof pageAutomatismes==='function'?pageAutomatismes:function(){return'<div class="mod-wrap"><div class="card"><h2>Automatismes</h2></div></div>';}),
@@ -11098,7 +11099,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v651';
+    b.textContent='YADA · v652';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -37429,7 +37430,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     {id:'yb-saisie',  lbl:'Saisie',       prend:[],
      mods:['journal','achats','recurrentes','importbanque','chargespaie']},
     {id:'yb-trait',   lbl:'Traitements',  prend:[['sg-util','Utilitaires']],
-     mods:['parcours','automatismes','inventaire','rappro','banque','immos']},
+     mods:['parcours','constitution','automatismes','inventaire','rappro','banque','immos']},
     {id:'yb-decl',    lbl:'Déclarations', prend:[], mods:['tva','liasse']},
     {id:'yb-etats',   lbl:'États',        prend:[], mods:['editions','annexe','flux']},
     {id:'yb-revis',   lbl:'Révision',     prend:[], mods:['revision','controles']},
@@ -41472,6 +41473,467 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
   +'#yada-pc .pc-t .r{text-align:right}'
   +'@media(max-width:900px){#yada-pc .pc-kpis{grid-template-columns:repeat(2,1fr)}}';
   document.head.appendChild(st);
+})();
+</script>
+<script id="yada-addon-constitution">
+/* ===== YADA — CONSTITUTION DE SOCIÉTÉ (v652) — 100% ADDITIF =====
+   Étape 2 du parcours comptable : la société naît, et sa naissance s'écrit.
+   Les trois écritures du cahier des charges, à la lettre :
+
+     Apport en numéraire, capital libéré        débit 512  / crédit 101
+     Capital appelé NON libéré (souscription)   débit 4562 / crédit 101
+     Lors du versement                          débit 512  / crédit 4562
+     Frais de constitution                      débit 201 + débit 44562 / crédit 401
+
+   Le module MESURE le dossier (capital réellement crédité au 101, solde du 4562,
+   frais portés au 201) plutôt que de croire ce qui a été saisi, et confronte les deux.
+   Aucune écriture n'est générée sans contrôle : déséquilibre, libération supérieure au
+   capital, versement supérieur au reste dû, date hors exercice — chacun est un refus
+   motivé, écrit en clair. */
+(function(){
+  if(window.__yadaConstitution) return; window.__yadaConstitution=true;
+
+  function r(n){ return Math.round((+n||0)*100)/100; }
+  function eu(n){ try{ return eur(n); }catch(e){ return r(n).toFixed(2)+' €'; } }
+  function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function C9(x){ try{ return c9(String(x||'')); }catch(e){ return String(x||''); } }
+  function S(){ try{ return db.societe||{}; }catch(e){ return {}; } }
+  function SAVE(){ try{ if(typeof save==='function') save(); }catch(e){} }
+  function RENDER(){ try{ if(typeof render==='function') render(); }catch(e){} }
+  function TOAST(m){ try{ if(typeof toast==='function') toast(m); }catch(e){} }
+  function D0(){ return String(S().exoDebut||''); }
+  function D1(){ return String(S().exoFin||''); }
+  function exo(){ return (D1()||D0()||String(new Date().getFullYear())).slice(0,4); }
+  function dansExo(d){ var a=D0(), b=D1(); d=String(d||''); return !!d && (!a||d>=a) && (!b||d<=b); }
+  function fr(d){ try{ return frDate(d); }catch(e){ return String(d||''); } }
+
+  /* ---------- comptes, ajoutés au plan s'ils manquent ---------- */
+  var PLAN={
+    '101000000':'Capital social',
+    '456200000':'Associés — capital appelé, non versé',
+    '512000000':'Banque',
+    '201000000':'Frais d’établissement',
+    '445620000':'TVA déductible sur immobilisations',
+    '401000000':'Fournisseurs'
+  };
+  try{
+    Object.keys(PLAN).forEach(function(k){
+      if(typeof COMPTES==='object' && !COMPTES[k]) COMPTES[k]=PLAN[k];
+      if(Array.isArray(db.plan) && !db.plan.filter(function(c){ return C9(c.code)===k; }).length)
+        db.plan.push({code:k, lib:PLAN[k]});
+    });
+  }catch(e){}
+  function lib(k){ k=C9(k); try{ return COMPTES[k]||PLAN[k]||k; }catch(e){ return PLAN[k]||k; } }
+
+  /* ---------- ce que le dossier porte RÉELLEMENT ---------- */
+  function ecrExo(){ return (db.ecritures||[]).filter(function(e){ return dansExo(e.date); }); }
+  function estAN(e){ var l=String(e.libelle||''); return l.indexOf('À-NOUVEAUX')>=0||l.indexOf('A-NOUVEAUX')>=0; }
+  function mvt(prefixe, sansAN){
+    var o={d:0,c:0,n:0};
+    ecrExo().forEach(function(e){
+      if(sansAN&&estAN(e)) return;
+      (e.lignes||[]).forEach(function(l){
+        var k=C9(l.compte); if(!k||k.indexOf(prefixe)!==0) return;
+        o.d=r(o.d+(+l.debit||0)); o.c=r(o.c+(+l.credit||0)); o.n++;
+      });
+    });
+    o.solde=r(o.d-o.c); return o;
+  }
+  function mesure(){
+    return {
+      capital: mvt('101', true),        /* crédit = capital souscrit */
+      nonVerse: mvt('4562', true),      /* solde débiteur = reste à verser */
+      banque: mvt('512', true),
+      frais: mvt('201', true),
+      tvaImmo: mvt('44562', true),
+      fourn: mvt('401', true),
+      anouveaux: ecrExo().some(estAN)
+    };
+  }
+
+  /* ---------- état saisi ---------- */
+  function etat(){
+    db.parametres=db.parametres||{};
+    var C=db.parametres.constitution; if(!C||typeof C!=='object'){ C={}; db.parametres.constitution=C; }
+    var e=exo();
+    if(!C[e]||typeof C[e]!=='object') C[e]={};
+    var E=C[e];
+    if(typeof E.capital!=='number') E.capital=0;
+    if(E.mode!=='partiel'&&E.mode!=='integral') E.mode='integral';
+    if(!E.dateSous) E.dateSous=D0()||'';
+    if(!Array.isArray(E.versements)) E.versements=[];
+    if(!Array.isArray(E.frais)) E.frais=[];
+    return E;
+  }
+
+  /* ---------- écritures du module : libellés stables, régénérer remplace ---------- */
+  function LIB(cle){ return 'CONSTITUTION '+cle+' '+exo(); }
+  function ecrituresDe(cle){
+    var a=LIB(cle);
+    return (db.ecritures||[]).filter(function(e){ return String(e.libelle||'').indexOf(a)>=0; });
+  }
+  function retirer(cle){
+    var ids=ecrituresDe(cle).map(function(e){ return e.id; });
+    if(!ids.length) return 0;
+    db.ecritures=(db.ecritures||[]).filter(function(e){ return ids.indexOf(e.id)<0; });
+    db.odiv=(db.odiv||[]).filter(function(o){ return ids.indexOf(o.ecritureId)<0; });
+    return ids.length;
+  }
+  /* toute écriture du module passe par ici : jamais de déséquilibre, jamais hors exercice */
+  function poster(cle, date, lignes, journal){
+    var d=r(lignes.reduce(function(a,l){ return a+(+l.debit||0); },0));
+    var c=r(lignes.reduce(function(a,l){ return a+(+l.credit||0); },0));
+    if(Math.abs(r(d-c))>0.005) return {ok:false, motif:'écriture déséquilibrée ('+eu(d)+' ≠ '+eu(c)+')'};
+    if(!dansExo(date)) return {ok:false, motif:'date '+fr(date)+' hors exercice ('+fr(D0())+' → '+fr(D1())+')'};
+    try{ posterOD({date:date, libelle:LIB(cle), lignes:lignes, journal:journal||'OD'}); }
+    catch(e){ return {ok:false, motif:'écriture refusée par le journal'}; }
+    return {ok:true};
+  }
+
+  /* ---------- les lignes proposées ---------- */
+  function cptFournisseur(f){
+    var t=(db.tiers||[]).filter(function(x){ return x.id===(f&&f.tiersId); })[0];
+    if(t && /^401/.test(C9(t.compteAux||''))) return C9(t.compteAux);
+    return '401000000';
+  }
+  function lignesCapital(){
+    var E=etat(), cap=r(E.capital);
+    if(cap<=0.005) return [];
+    if(E.mode==='integral')
+      return [{compte:'512000000', lib:'Apport en numéraire — capital libéré', debit:cap, credit:0},
+              {compte:'101000000', lib:'Capital social souscrit', debit:0, credit:cap}];
+    return [{compte:'456200000', lib:'Capital appelé, non versé', debit:cap, credit:0},
+            {compte:'101000000', lib:'Capital social souscrit', debit:0, credit:cap}];
+  }
+  function lignesVersement(v){
+    var m=r(v&&v.montant);
+    if(m<=0.005) return [];
+    return [{compte:'512000000', lib:'Versement du capital appelé', debit:m, credit:0},
+            {compte:'456200000', lib:'Libération du capital appelé', debit:0, credit:m}];
+  }
+  function fraisCalc(f){
+    var ht=r(f.ht), tx=(+f.taux||0), tva=r(ht*tx/100), ded=(f.tvaDed!==false);
+    if(!ded) return {ht:r(ht+tva), tva:0, ttc:r(ht+tva)};   /* TVA non déductible : intégrée au coût */
+    return {ht:ht, tva:tva, ttc:r(ht+tva)};
+  }
+  function lignesFrais(){
+    var E=etat(), out=[];
+    E.frais.forEach(function(f){
+      var m=fraisCalc(f); if(m.ttc<=0.005) return;
+      out.push({compte:'201000000', lib:f.lib||'Frais de constitution', debit:m.ht, credit:0});
+      if(m.tva>0.005) out.push({compte:'445620000', lib:'TVA déductible sur frais de constitution', debit:m.tva, credit:0});
+      out.push({compte:cptFournisseur(f), lib:f.lib||'Frais de constitution', debit:0, credit:m.ttc});
+    });
+    return out;
+  }
+
+  /* ---------- actions ---------- */
+  window.cstSet=function(champ,v){
+    var E=etat();
+    if(champ==='capital') E.capital=parseFloat(String(v).replace(',','.'))||0;
+    else if(champ==='mode') E.mode=(v==='partiel'?'partiel':'integral');
+    else E[champ]=v;
+    SAVE(); RENDER();
+  };
+  window.cstGenererCapital=function(){
+    var E=etat(), lg=lignesCapital();
+    if(!lg.length){ TOAST('Renseignez le capital social souscrit.'); return; }
+    if(E.mode==='partiel' && r(E.capital)<=0.005){ TOAST('Capital souscrit nul — rien à comptabiliser.'); return; }
+    retirer('CAPITAL');
+    var res=poster('CAPITAL', E.dateSous||D0(), lg);
+    if(!res.ok){ SAVE(); TOAST('Génération refusée — '+res.motif); RENDER(); return; }
+    SAVE(); TOAST('Capital social comptabilisé — '+eu(E.capital)+(E.mode==='partiel'?' (appelé, non versé)':' (libéré)')+'.');
+    RENDER();
+  };
+  window.cstRetirerCapital=function(){ var n=retirer('CAPITAL'); SAVE(); TOAST(n?'Écriture de capital retirée.':'Aucune écriture à retirer.'); RENDER(); };
+
+  window.cstVersAdd=function(){
+    var E=etat(), M=mesure();
+    E.versements.push({date:E.dateSous||D0()||'', montant:r(M.nonVerse.solde)>0.005?r(M.nonVerse.solde):0});
+    SAVE(); RENDER();
+  };
+  window.cstVersDel=function(i){ var E=etat(); E.versements.splice(i,1); SAVE(); RENDER(); };
+  window.cstVersSet=function(i,champ,v){
+    var E=etat(); if(!E.versements[i]) return;
+    E.versements[i][champ]=(champ==='montant')?(parseFloat(String(v).replace(',','.'))||0):v;
+    SAVE();
+  };
+  window.cstGenererVersements=function(){
+    var E=etat();
+    if(E.mode!=='partiel'){ TOAST('Capital libéré intégralement — aucun versement à constater.'); return; }
+    var liste=E.versements.filter(function(v){ return r(v.montant)>0.005; });
+    if(!liste.length){ TOAST('Aucun versement saisi.'); return; }
+    var tot=r(liste.reduce(function(a,v){ return a+r(v.montant); },0));
+    if(r(tot-r(E.capital))>0.005){
+      TOAST('Génération refusée — les versements ('+eu(tot)+') dépassent le capital souscrit ('+eu(E.capital)+').'); return; }
+    var hors=liste.filter(function(v){ return !dansExo(v.date); });
+    if(hors.length){ TOAST('Génération refusée — '+hors.length+' versement(s) hors exercice.'); return; }
+    retirer('VERSEMENT');
+    var n=0, ko=null;
+    liste.forEach(function(v,i){
+      var res=poster('VERSEMENT', v.date, lignesVersement(v));
+      if(res.ok) n++; else ko=ko||res.motif;
+    });
+    SAVE();
+    TOAST(ko?('Génération partielle — '+ko):(n+' versement(s) comptabilisé(s) — '+eu(tot)+' libérés.'));
+    RENDER();
+  };
+  window.cstRetirerVersements=function(){ var n=retirer('VERSEMENT'); SAVE(); TOAST(n?(n+' écriture(s) de versement retirée(s).'):'Aucune écriture à retirer.'); RENDER(); };
+
+  window.cstFraisAdd=function(){ etat().frais.push({lib:'', ht:0, taux:20, tvaDed:true, tiersId:''}); SAVE(); RENDER(); };
+  window.cstFraisDel=function(i){ etat().frais.splice(i,1); SAVE(); RENDER(); };
+  window.cstFraisSet=function(i,champ,v){
+    var E=etat(); if(!E.frais[i]) return;
+    if(champ==='ht'||champ==='taux') E.frais[i][champ]=parseFloat(String(v).replace(',','.'))||0;
+    else if(champ==='tvaDed') E.frais[i].tvaDed=!!v;
+    else E.frais[i][champ]=v;
+    SAVE(); if(champ!=='lib') RENDER();
+  };
+  window.cstGenererFrais=function(){
+    var E=etat(), lg=lignesFrais();
+    if(!lg.length){ TOAST('Aucun frais saisi.'); return; }
+    var d=E.dateSous||D0();
+    retirer('FRAIS');
+    var res=poster('FRAIS', d, lg);
+    if(!res.ok){ SAVE(); TOAST('Génération refusée — '+res.motif); RENDER(); return; }
+    SAVE(); TOAST('Frais de constitution comptabilisés.'); RENDER();
+  };
+  window.cstRetirerFrais=function(){ var n=retirer('FRAIS'); SAVE(); TOAST(n?'Écriture de frais retirée.':'Aucune écriture à retirer.'); RENDER(); };
+
+  window.cstFermer=function(){ try{ if(typeof yadaFermerPage==='function') yadaFermerPage(); }catch(e){} };
+  window.cstAller=function(mod){
+    try{ if((window.YADA_OK||[]).indexOf(mod)<0){ TOAST('Module « '+mod+' » non enregistré.'); return; } }catch(e){}
+    try{ current=mod; }catch(e){}
+    RENDER();
+  };
+
+  /* ---------- rendu ---------- */
+  function apercu(lg){
+    if(!lg.length) return '<div class="cst-sub">Aucune ligne — l’écriture est vide.</div>';
+    var d=r(lg.reduce(function(a,l){ return a+(+l.debit||0); },0));
+    var c=r(lg.reduce(function(a,l){ return a+(+l.credit||0); },0));
+    return '<table class="cst-t cst-ap"><thead><tr><th>Compte</th><th>Libellé</th><th class="r">Débit</th><th class="r">Crédit</th></tr></thead><tbody>'
+      +lg.map(function(l){ return '<tr><td class="mono">'+C9(l.compte)+'</td><td>'+esc(l.lib||lib(l.compte))+'</td>'
+        +'<td class="r">'+(l.debit>0.005?eu(l.debit):'')+'</td><td class="r">'+(l.credit>0.005?eu(l.credit):'')+'</td></tr>'; }).join('')
+      +'<tr class="tot"><td></td><td>Total</td><td class="r">'+eu(d)+'</td><td class="r">'+eu(c)+'</td></tr></tbody></table>';
+  }
+  function tag(on,txt){ return '<span class="cst-tag'+(on?' on':'')+'">'+esc(txt)+'</span>'; }
+
+  function carteCapital(M){
+    var E=etat(), lg=lignesCapital(), fait=ecrituresDe('CAPITAL').length>0;
+    return '<div class="cst-card">'
+      +'<div class="cst-h"><span class="cst-nom">1 — Capital social</span>'+tag(fait,fait?'COMPTABILISÉ':'À FAIRE')+'</div>'
+      +'<div class="cst-sub">Le capital souscrit est porté au crédit du 101. Libéré à la souscription, il entre en banque ; appelé mais non versé, il reste une créance sur les associés au 4562 jusqu’au versement.</div>'
+      +'<div class="cst-form">'
+      +'<label class="cst-f"><span class="k">Capital social souscrit</span>'
+      +'<input class="cst-in cst-mt" type="number" step="0.01" value="'+(E.capital||'')+'" onchange="cstSet(\'capital\',this.value)"></label>'
+      +'<label class="cst-f"><span class="k">Libération</span>'
+      +'<select class="cst-in" onchange="cstSet(\'mode\',this.value)">'
+      +'<option value="integral"'+(E.mode==='integral'?' selected':'')+'>Intégrale à la souscription — débit 512 / crédit 101</option>'
+      +'<option value="partiel"'+(E.mode==='partiel'?' selected':'')+'>Appelé, non versé — débit 4562 / crédit 101</option>'
+      +'</select></label>'
+      +'<label class="cst-f"><span class="k">Date de souscription</span>'
+      +'<input class="cst-in" type="date" value="'+esc(E.dateSous||'')+'" onchange="cstSet(\'dateSous\',this.value)"></label>'
+      +'</div>'
+      +apercu(lg)
+      +'<div class="cst-acts">'
+      +(fait?'<button class="cst-b" onclick="cstRetirerCapital()">Retirer l’écriture</button>':'')
+      +'<span style="flex:1"></span>'
+      +'<button class="cst-b cst-pri"'+(lg.length?'':' disabled')+' onclick="cstGenererCapital()">'+(fait?'Régénérer':'Générer l’écriture')+'</button>'
+      +'</div></div>';
+  }
+
+  function carteVersements(M){
+    var E=etat(), faits=ecrituresDe('VERSEMENT').length;
+    if(E.mode!=='partiel')
+      return '<div class="cst-card"><div class="cst-h"><span class="cst-nom">2 — Versements du capital appelé</span>'+tag(false,'SANS OBJET')+'</div>'
+        +'<div class="cst-sub">Le capital est libéré intégralement à la souscription : il entre directement en banque, aucun versement ultérieur n’est à constater.</div></div>';
+    var reste=r(M.nonVerse.solde);
+    var rows=E.versements.map(function(v,i){
+      return '<tr><td><input class="cst-in" type="date" value="'+esc(v.date||'')+'" onchange="cstVersSet('+i+',\'date\',this.value)"></td>'
+        +'<td class="r"><input class="cst-in cst-mt" type="number" step="0.01" value="'+(v.montant||'')+'" onchange="cstVersSet('+i+',\'montant\',this.value)"></td>'
+        +'<td class="r"><button class="cst-x" title="Retirer le versement" onclick="cstVersDel('+i+')">✕</button></td></tr>';
+    }).join('');
+    var tot=r(E.versements.reduce(function(a,v){ return a+r(v.montant); },0));
+    var lg=[]; E.versements.forEach(function(v){ lg=lg.concat(lignesVersement(v)); });
+    return '<div class="cst-card">'
+      +'<div class="cst-h"><span class="cst-nom">2 — Versements du capital appelé</span>'+tag(faits>0,faits>0?(faits+' COMPTABILISÉ(S)'):'À FAIRE')+'</div>'
+      +'<div class="cst-sub">Chaque versement solde d’autant la créance sur les associés : débit 512, crédit 4562. Reste à verser au 4562, lu sur le dossier : '+eu(reste)+'.</div>'
+      +'<table class="cst-t"><thead><tr><th>Date du versement</th><th class="r">Montant</th><th></th></tr></thead><tbody>'
+      +(rows||'')+'</tbody></table>'
+      +'<div class="cst-sub">Total saisi : '+eu(tot)+' · capital souscrit : '+eu(E.capital)+'</div>'
+      +apercu(lg)
+      +'<div class="cst-acts">'
+      +'<button class="cst-b" onclick="cstVersAdd()">+ Ajouter un versement</button>'
+      +(faits?'<button class="cst-b" onclick="cstRetirerVersements()">Retirer les écritures</button>':'')
+      +'<span style="flex:1"></span>'
+      +'<button class="cst-b cst-pri"'+(lg.length?'':' disabled')+' onclick="cstGenererVersements()">'+(faits?'Régénérer':'Générer les versements')+'</button>'
+      +'</div></div>';
+  }
+
+  function carteFrais(){
+    var E=etat(), fait=ecrituresDe('FRAIS').length>0, lg=lignesFrais();
+    var opts='<option value="">Compte collectif 401000000</option>'
+      +(db.tiers||[]).filter(function(t){ return t.type==='fournisseur'; })
+        .map(function(t){ return '<option value="'+esc(t.id)+'">'+esc(t.nom)+'</option>'; }).join('');
+    var rows=E.frais.map(function(f,i){
+      var m=fraisCalc(f);
+      var sel=opts.replace('value="'+esc(f.tiersId||'')+'"','value="'+esc(f.tiersId||'')+'" selected');
+      return '<tr><td><input class="cst-in" type="text" placeholder="honoraires, greffe, annonce légale…" value="'+esc(f.lib||'')+'" oninput="cstFraisSet('+i+',\'lib\',this.value)"></td>'
+        +'<td><select class="cst-in" onchange="cstFraisSet('+i+',\'tiersId\',this.value)">'+sel+'</select></td>'
+        +'<td class="r"><input class="cst-in cst-mt" type="number" step="0.01" value="'+(f.ht||'')+'" onchange="cstFraisSet('+i+',\'ht\',this.value)"></td>'
+        +'<td class="r"><input class="cst-in cst-mt" type="number" step="0.1" value="'+(f.taux==null?20:f.taux)+'" onchange="cstFraisSet('+i+',\'taux\',this.value)"></td>'
+        +'<td class="r"><input type="checkbox" '+(f.tvaDed!==false?'checked':'')+' onchange="cstFraisSet('+i+',\'tvaDed\',this.checked)"></td>'
+        +'<td class="r">'+eu(m.ttc)+'</td>'
+        +'<td class="r"><button class="cst-x" title="Retirer la ligne" onclick="cstFraisDel('+i+')">✕</button></td></tr>';
+    }).join('');
+    return '<div class="cst-card">'
+      +'<div class="cst-h"><span class="cst-nom">3 — Frais de constitution</span>'+tag(fait,fait?'COMPTABILISÉ':'À FAIRE')+'</div>'
+      +'<div class="cst-sub">Honoraires, greffe, annonce légale : des frais d’établissement, portés au 201 et non en charge de l’exercice. La TVA suit l’immobilisation, au 44562. Décochez « TVA déductible » et la taxe rejoint le coût.</div>'
+      +'<table class="cst-t"><thead><tr><th>Nature du frais</th><th>Fournisseur</th><th class="r">HT</th><th class="r">Taux</th><th class="r">TVA déd.</th><th class="r">TTC</th><th></th></tr></thead><tbody>'
+      +(rows||'')+'</tbody></table>'
+      +apercu(lg)
+      +'<div class="cst-acts">'
+      +'<button class="cst-b" onclick="cstFraisAdd()">+ Ajouter un frais</button>'
+      +(fait?'<button class="cst-b" onclick="cstRetirerFrais()">Retirer l’écriture</button>':'')
+      +'<span style="flex:1"></span>'
+      +'<button class="cst-b cst-pri"'+(lg.length?'':' disabled')+' onclick="cstGenererFrais()">'+(fait?'Régénérer':'Générer l’écriture')+'</button>'
+      +'</div></div>';
+  }
+
+  /* ---------- contrôles : aucune validation sans contrôle ---------- */
+  function controles(M){
+    var E=etat(), L=[];
+    function ok(t,v,d){ L.push({t:t, v:v, d:d||''}); }
+    var capSaisi=r(E.capital), capCpta=r(M.capital.c);
+    ok('Capital social renseigné', capSaisi>0.005, capSaisi>0.005?eu(capSaisi):'aucun capital saisi');
+    ok('Capital comptabilisé au 101', capCpta>0.005, capCpta>0.005?('crédit 101 : '+eu(capCpta)):'le 101 n’est pas crédité');
+    ok('Saisie et comptabilité concordent', capSaisi>0.005&&Math.abs(r(capSaisi-capCpta))<0.01,
+       'saisi '+eu(capSaisi)+' · comptabilisé '+eu(capCpta));
+    var versSaisi=r(E.versements.reduce(function(a,v){ return a+r(v.montant); },0));
+    if(E.mode==='partiel'){
+      ok('Versements ≤ capital souscrit', r(versSaisi-capSaisi)<=0.005, eu(versSaisi)+' sur '+eu(capSaisi));
+      var attendu=r(capCpta-versSaisi), reel=r(M.nonVerse.solde);
+      ok('Reste à verser cohérent (4562)', Math.abs(r(attendu-reel))<0.01,
+         'attendu '+eu(attendu)+' · solde réel du 4562 '+eu(reel));
+      ok('Capital intégralement libéré', reel<=0.005, reel>0.005?('reste '+eu(reel)+' à appeler'):'plus rien à verser');
+    } else {
+      ok('Capital libéré en banque', r(M.banque.d)>=r(capCpta)-0.01||capCpta<=0.005,
+         'débits 512 : '+eu(M.banque.d)+' · capital '+eu(capCpta));
+    }
+    var fraisNet=r(M.frais.d-M.frais.c);
+    ok('Frais portés au 201 (et non en charge)', fraisNet>=-0.005, fraisNet>0.005?eu(fraisNet):'aucun frais d’établissement');
+    var lgF=lignesFrais();
+    var ttcF=r(lgF.filter(function(l){ return C9(l.compte).indexOf('401')===0; }).reduce(function(a,l){ return a+r(l.credit); },0));
+    var htF=r(lgF.filter(function(l){ return C9(l.compte).indexOf('201')===0; }).reduce(function(a,l){ return a+r(l.debit); },0));
+    var tvF=r(lgF.filter(function(l){ return C9(l.compte).indexOf('44562')===0; }).reduce(function(a,l){ return a+r(l.debit); },0));
+    ok('Frais : TTC = HT + TVA', Math.abs(r(ttcF-r(htF+tvF)))<0.01, eu(ttcF)+' = '+eu(htF)+' + '+eu(tvF));
+    var toutes=['CAPITAL','VERSEMENT','FRAIS'].reduce(function(a,k){ return a.concat(ecrituresDe(k)); },[]);
+    var des=toutes.filter(function(e){
+      var d=0,c=0; (e.lignes||[]).forEach(function(l){ d+=(+l.debit||0); c+=(+l.credit||0); });
+      return Math.abs(r(d-c))>0.005;
+    });
+    ok('Écritures du module équilibrées', des.length===0, toutes.length+' écriture(s) · '+des.length+' déséquilibrée(s)');
+    var hors=toutes.filter(function(e){ return !dansExo(e.date); });
+    ok('Écritures dans l’exercice', hors.length===0, hors.length?(hors.length+' hors exercice'):'toutes dans '+fr(D0())+' → '+fr(D1()));
+    var tenus=L.filter(function(x){ return x.v; }).length;
+    return {L:L, tenus:tenus, total:L.length};
+  }
+  function carteControles(M){
+    var C=controles(M);
+    return '<div class="cst-card">'
+      +'<div class="cst-h"><span class="cst-nom">Contrôles — aucune validation sans contrôle</span>'
+      +tag(C.tenus===C.total, C.tenus+' / '+C.total+' TENUS')+'</div>'
+      +'<table class="cst-t"><thead><tr><th>Contrôle</th><th>Constat</th><th class="r">État</th></tr></thead><tbody>'
+      +C.L.map(function(x){ return '<tr><td>'+esc(x.t)+'</td><td class="cst-d">'+esc(x.d)+'</td>'
+        +'<td class="r">'+(x.v?'tenu':'à revoir')+'</td></tr>'; }).join('')
+      +'</tbody></table></div>';
+  }
+
+  window.pageConstitution=function(){
+    var s=S(), M=mesure(), E=etat(), C=controles(M);
+    var nEcr=['CAPITAL','VERSEMENT','FRAIS'].reduce(function(a,k){ return a+ecrituresDe(k).length; },0);
+    var h='<div id="yada-cst">';
+    h+='<div class="cst-mast"><div class="cst-eyebrow">YADA · CONSTITUTION DE SOCIÉTÉ</div>'
+      +'<h1 class="cst-title">Constitution de société</h1>'
+      +'<div class="cst-soc">'+esc(s.raison||'')+' · exercice '+esc(fr(D0()))+' → '+esc(fr(D1()))+'</div>'
+      +'<button class="cst-close" title="Fermer" onclick="cstFermer()">✕</button></div>';
+    h+='<div class="cst-kpis">'
+      +'<div class="cst-k"><div class="l">Capital crédité au 101</div><div class="v">'+eu(M.capital.c)+'</div></div>'
+      +'<div class="cst-k"><div class="l">Reste à verser (4562)</div><div class="v">'+eu(M.nonVerse.solde)+'</div></div>'
+      +'<div class="cst-k"><div class="l">Frais d’établissement (201)</div><div class="v">'+eu(r(M.frais.d-M.frais.c))+'</div></div>'
+      +'<div class="cst-k"><div class="l">Écritures générées</div><div class="v">'+nEcr+'</div></div>'
+      +'</div>';
+    h+='<div class="cst-note">Les montants ci-dessus sont LUS sur le dossier, jamais déclarés. Les écritures portent un libellé stable : régénérer remplace, il n’y a jamais de doublon. Une écriture déséquilibrée, une libération supérieure au capital ou une date hors exercice sont refusées, avec le motif écrit en clair.</div>';
+    if(M.anouveaux)
+      h+='<div class="cst-note cst-warn">L’exercice porte des à-nouveaux : la société existait déjà. Ces écritures sont celles d’une CRÉATION — pour une augmentation de capital le schéma est le même, mais vérifiez qu’il ne fait pas double emploi avec le report.</div>';
+    h+=carteCapital(M)+carteVersements(M)+carteFrais()+carteControles(M);
+    h+='<div class="cst-card"><div class="cst-h"><span class="cst-nom">Le schéma appliqué</span></div>'
+      +'<table class="cst-t"><thead><tr><th>Situation</th><th>Débit</th><th>Crédit</th></tr></thead><tbody>'
+      +'<tr><td>Apport en numéraire, capital libéré</td><td class="mono">512 Banque</td><td class="mono">101 Capital social</td></tr>'
+      +'<tr><td>Capital appelé, non libéré</td><td class="mono">4562 Associés capital appelé non versé</td><td class="mono">101 Capital social</td></tr>'
+      +'<tr><td>Lors du versement</td><td class="mono">512 Banque</td><td class="mono">4562 Associés capital appelé non versé</td></tr>'
+      +'<tr><td>Frais de constitution</td><td class="mono">201 Frais d’établissement + 44562 TVA</td><td class="mono">401 Fournisseur</td></tr>'
+      +'</tbody></table>'
+      +'<div class="cst-acts"><span style="flex:1"></span>'
+      +'<button class="cst-b" onclick="cstAller(\'parcours\')">Ouvrir le parcours comptable</button>'
+      +'<button class="cst-b" onclick="cstAller(\'compta\')">Voir les écritures</button></div></div>';
+    h+='</div>';
+    return h;
+  };
+
+  /* ---------- enregistrement du module ---------- */
+  try{
+    window.YADA_OK=(window.YADA_OK||[]);
+    if(window.YADA_OK.indexOf('constitution')<0) window.YADA_OK.push('constitution');
+    window.YADA_LBL=(window.YADA_LBL||{});
+    window.YADA_LBL.constitution='Constitution de société';
+  }catch(e){}
+
+  /* ---------- style Registre N&B, scopé #yada-cst ---------- */
+  try{
+    var st=document.getElementById('cst-mod');
+    if(!st){ st=document.createElement('style'); st.id='cst-mod'; document.head.appendChild(st); }
+    st.textContent=
+      'html body:not(#_yz) #yada-cst{background:#000;color:#f5f5f6;min-height:100dvh;padding:0 0 60px;font-family:Georgia,"Times New Roman",serif}'
+     +'html body:not(#_yz) #yada-cst *{font-family:inherit}'
+     +'html body:not(#_yz) #yada-cst .cst-mast{position:relative;padding:26px 24px 16px;border-bottom:1px solid #242427}'
+     +'html body:not(#_yz) #yada-cst .cst-eyebrow{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;letter-spacing:.14em;color:#8b8b90}'
+     +'html body:not(#_yz) #yada-cst .cst-title{font-size:27px;margin:6px 0 4px;font-weight:400}'
+     +'html body:not(#_yz) #yada-cst .cst-soc{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:#8b8b90}'
+     +'html body:not(#_yz) #yada-cst .cst-close{position:absolute;top:22px;right:22px;width:30px;height:30px;background:#000;color:#f5f5f6;border:1px solid #f5f5f6;border-radius:5px;cursor:pointer;font-family:ui-monospace,monospace;font-size:14px}'
+     +'html body:not(#_yz) #yada-cst .cst-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:#242427;margin:0 0 2px}'
+     +'html body:not(#_yz) #yada-cst .cst-k{background:#0b0b0c;padding:14px 16px}'
+     +'html body:not(#_yz) #yada-cst .cst-k .l{font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.07em;color:#8b8b90;text-transform:uppercase}'
+     +'html body:not(#_yz) #yada-cst .cst-k .v{font-size:20px;margin-top:5px}'
+     +'html body:not(#_yz) #yada-cst .cst-note{padding:14px 24px;color:#a8a9ad;font-size:13px;border-bottom:1px solid #242427}'
+     +'html body:not(#_yz) #yada-cst .cst-warn{color:#f5f5f6;background:#121214}'
+     +'html body:not(#_yz) #yada-cst .cst-card{border-bottom:1px solid #242427;padding:18px 24px 22px}'
+     +'html body:not(#_yz) #yada-cst .cst-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap}'
+     +'html body:not(#_yz) #yada-cst .cst-nom{font-size:18px}'
+     +'html body:not(#_yz) #yada-cst .cst-tag{font-family:ui-monospace,monospace;font-size:9.5px;letter-spacing:.09em;padding:2px 7px;border:1px solid #35353a;color:#8b8b90;border-radius:3px}'
+     +'html body:not(#_yz) #yada-cst .cst-tag.on{background:#f5f5f6;color:#0a0a0b;border-color:#f5f5f6}'
+     +'html body:not(#_yz) #yada-cst .cst-sub{color:#8b8b90;font-size:12.5px;margin:6px 0 10px}'
+     +'html body:not(#_yz) #yada-cst .cst-form{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:10px 0 4px}'
+     +'html body:not(#_yz) #yada-cst .cst-f{display:block}'
+     +'html body:not(#_yz) #yada-cst .cst-f .k{display:block;font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#8b8b90;margin-bottom:4px}'
+     +'html body:not(#_yz) #yada-cst .cst-t{width:100%;border-collapse:collapse;margin:8px 0}'
+     +'html body:not(#_yz) #yada-cst .cst-t th{font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#8b8b90;background:#121214;padding:6px 8px;text-align:left;font-weight:400;border-bottom:1px solid #242427}'
+     +'html body:not(#_yz) #yada-cst .cst-t td{padding:4px 8px;border-bottom:1px solid #1c1c1f;font-size:13px}'
+     +'html body:not(#_yz) #yada-cst .cst-t th.r,html body:not(#_yz) #yada-cst .cst-t td.r{text-align:right}'
+     +'html body:not(#_yz) #yada-cst .cst-t .mono{font-family:ui-monospace,monospace;font-size:12px}'
+     +'html body:not(#_yz) #yada-cst .cst-t .cst-d{color:#8b8b90;font-size:12px}'
+     +'html body:not(#_yz) #yada-cst .cst-ap{margin-top:12px;opacity:.92}'
+     +'html body:not(#_yz) #yada-cst .cst-ap .tot td{border-top:1px solid #35353a;border-bottom:none}'
+     +'html body:not(#_yz) #yada-cst .cst-in{width:100%;background:#000;color:#f5f5f6;border:1px solid #242427;border-radius:3px;padding:4px 6px;font-family:ui-monospace,monospace;font-size:12px}'
+     +'html body:not(#_yz) #yada-cst .cst-mt{text-align:right}'
+     +'html body:not(#_yz) #yada-cst .cst-x{background:#000;color:#8b8b90;border:1px solid #242427;border-radius:3px;cursor:pointer;padding:2px 6px;font-family:ui-monospace,monospace}'
+     +'html body:not(#_yz) #yada-cst .cst-acts{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap}'
+     +'html body:not(#_yz) #yada-cst .cst-b{background:#000;color:#f5f5f6;border:1px solid #35353a;border-radius:4px;padding:5px 11px;cursor:pointer;font-family:ui-monospace,monospace;font-size:11.5px}'
+     +'html body:not(#_yz) #yada-cst .cst-b.cst-pri{background:#f5f5f6;color:#0a0a0b;border-color:#f5f5f6}'
+     +'html body:not(#_yz) #yada-cst .cst-b[disabled]{opacity:.4;cursor:not-allowed}'
+     +'@media(max-width:820px){html body:not(#_yz) #yada-cst .cst-kpis{grid-template-columns:repeat(2,1fr)}html body:not(#_yz) #yada-cst .cst-form{grid-template-columns:1fr}}';
+  }catch(e){}
 })();
 </script>
 </body>
