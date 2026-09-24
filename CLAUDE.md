@@ -36,7 +36,42 @@
 
 ---
 
-## 🟢 Dernière mise à jour — ÉTAPE 5 (dernière) de l'automatisation : TRAITEMENTS PÉRIODIQUES (OD de TVA · dotations · relances · clôture) — v637
+## 🟢 Dernière mise à jour — ÉTAPE 6 : CE QUI ATTEND SE VOIT (le compteur quitte son module) — v638
+**Quoi :** les cinq étapes ont donné **neuf automatismes**. Il leur manquait la moitié qui compte : **un automatisme qui attend qu'on vienne ouvrir son module n'automatise rien**. Le **compteur d'actions en attente** voyage désormais jusqu'à l'endroit où l'on travaille — la **Consultation** :
+- **barre du bas** (`.sg-status`) : un bouton **« N actions en attente »** qui **ouvre le module** au clic, et **« Automatismes à jour »** quand il n'y a rien (jamais de bouton vide — invariant v629/v630) ; son info-bulle détaille la répartition (« Lettrage : 1 · Imputation : 2 · OD de TVA : 1 ») ;
+- **menu « Modules »** : le même nombre, en **pastille** derrière l'entrée Automatismes — retirée dès que le compte retombe à zéro.
+
+**Une seule source de vérité :** `window.auEnAttente(force)` somme les `run(true)` des automatismes **actifs** — les mêmes simulations que le module, toutes **strictement en lecture seule** (chacune est gardée par son drapeau `sim`). Mesuré : l'indicateur et le KPI du module affichent **le même nombre** (1 010 sur un dossier de 2 000 écritures). Un automatisme **suspendu n'est pas compté** (4 → 3 en suspendant le lettrage).
+
+**Le calcul n'est JAMAIS sur le chemin du rendu.** Sur un dossier de **2 000 écritures**, une passe de simulation coûte **≈ 575 ms** — neuf automatismes qui relisent chacun le dossier. Posée telle quelle après chaque rendu, elle **figerait l'écran**. Deux parades : (1) le calcul est **planifié en temps mort** (`requestIdleCallback`, repli `setTimeout`) et le rendu ne peint que **depuis le cache**, donc gratuitement ; (2) le rafraîchissement **se repose à proportion de son coût** — `repos = coût × 12`, borné à **[1,2 s · 60 s]** : un dossier léger se rafraîchit en 1,2 s, un dossier de 2 000 écritures attend **≈ 7 s**, un dossier très lourd se limite tout seul à une passe par minute. Le compteur n'est marqué périmé **qu'après un enregistrement** (enveloppe de `save`, remise à zéro sur `chargerDossier`) et n'est peint **que si la Consultation est à l'écran**. Mesuré : **rendu 8-9 ms** même juste après un enregistrement.
+
+**Comment — nouvel addon `yada-addon-attente` (100% ADDITIF, aucune édition chirurgicale) :** `window.auEnAttente(force)` (contrat **synchrone** : `force` renvoie une valeur fraîche, sinon le cache — le module et tout appelant gardent la main) + `window.auOuvrirModule()` ; peinture idempotente de `#sg-auatt` (inséré avant `.sp` dans `.sg-status`, même patron que `sg-accinfo` en v296) et de la pastille `.au-mbadge` (l'entrée du menu est repérée par `data-lbl`, de sorte que la reconstruction du menu — qui ne compare que `data-n` — ne la dédouble jamais). **Aucune écriture n'est créée, modifiée ni supprimée** : vérifié par égalité JSON stricte du dossier avant / après trois appels. Rendu **Registre N&B** (jetons existants, aucune couleur nouvelle), **poids 400** (invariant v627). `sw.js` yada-v233, badge v638, `version.json` 638.
+
+**Validé :** `node --check` (**309 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS statiques (2014/2014) + balises `</head>`/`</body>`/`</html>` inchangées (3/5/3) + **filet d'équilibre** (`YADA_CHROME=… node tests/equilibre-ecritures.mjs` : vente 1200=1200, achat 600=600 ✅) + **deux sondes Playwright** :
+
+| Mesure | Résultat |
+| --- | --- |
+| Compteur sur dossier d'essai | **4** — lettrage 1 · imputation 2 · OD de TVA 1 |
+| **Lecture seule stricte** | JSON du dossier **identique** après 3 appels |
+| Indicateur de la barre du bas | « **4 actions en attente** », cliquable, poids **400**, non italique, non souligné |
+| Pastille du menu « Modules » | **4**, poids **400** |
+| Automatisme **suspendu** | **4 → 3** (non compté) |
+| Après « Lancer tout » | **0 en attente**, lettre **A** posée |
+| Libellé à zéro | « **Automatismes à jour** », pastille **retirée** |
+| Clic sur l'indicateur | ouvre le module (`#yada-au` rendu) |
+| **Dossier de 2 000 écritures** — coût d'une passe | **575 ms** |
+| **Rendu** (avant / après enregistrement) | **8 ms** / **9 ms** — jamais bloqué |
+| 50 appels au cache | **0 ms** |
+| Repos proportionnel | dossier lourd : **pas** de recalcul dans la seconde · rafraîchi **après ≈ 7 s** |
+| Cohérence indicateur ↔ KPI du module | **1 010** = **1 010** |
+| Écritures déséquilibrées · routage · débordement | **0** · **25/25** · **0** |
+| **0 pageerror**, **0 console.error** | ✓ |
+
+**Leçon de méthode (suite de la série) :** la première version posait le calcul en `setTimeout(…,0)` après le rendu — fonctionnellement juste, **575 ms de gel** sur un dossier réel. Une sonde qui ne mesure que le **résultat** valide une fonctionnalité qui rend le logiciel désagréable ; il faut aussi mesurer **ce qu'elle coûte au moment où elle s'exécute**. D'où le **temps mort** et le **repos proportionnel au coût** — un rafraîchissement qui se limite tout seul à mesure que le dossier grossit.
+
+---
+
+## 🟢 MAJ précédente — ÉTAPE 5 de l'automatisation : TRAITEMENTS PÉRIODIQUES (OD de TVA · dotations · relances · clôture) — v637
 **Quoi :** fin de *« Développement de tout le système étape par étape pour automatiser et rapidement »*. **Étape 5 : les quatre traitements qui reviennent à date fixe** — et que personne n'aime refaire à la main — s'inscrivent dans le module **Automatismes**, qui compte désormais **9 automatismes** :
 
 | Automatisme | Période | Ce qu'il fait | Ce qu'il refuse de faire |

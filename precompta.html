@@ -11084,7 +11084,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v637';
+    b.textContent='YADA · v638';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -36821,6 +36821,189 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
         return h;
       };
     }
+  }catch(e){}
+})();
+</script>
+<script id="yada-addon-attente">
+/* ============================================================
+   YADA — ÉTAPE 6 : CE QUI ATTEND SE VOIT (v638)
+   ------------------------------------------------------------
+   Les cinq étapes ont donné neuf automatismes. Il leur manquait la
+   moitié qui compte : un automatisme qui attend qu'on vienne ouvrir
+   son module n'automatise rien. Le compteur d'actions en attente
+   voyage donc jusqu'à l'endroit où l'on travaille — la Consultation.
+
+   • window.auEnAttente(force) — somme les run(true) des automatismes
+     ACTIFS (simulation, strictement en LECTURE SEULE) et renvoie
+     {total, det:[{cle,nom,unite,n}], ts, cout}.
+   • Barre du bas de la Consultation : « N actions en attente » — un
+     bouton qui porte son libellé et ouvre le module (jamais vide),
+     « Automatismes à jour » quand il n'y a rien.
+   • Menu « Modules » : le même nombre, en pastille derrière l'entrée.
+
+   Le calcul n'est JAMAIS sur le chemin du rendu : il est posé en
+   TEMPS MORT (requestIdleCallback) et se REPOSE À PROPORTION DE SON
+   COÛT — un dossier léger se rafraîchit en 1,2 s, un dossier de
+   2 000 écritures (≈ 600 ms de calcul) attend 7 s, et le repos est
+   plafonné à 60 s. Le compteur n'est rafraîchi qu'après un
+   enregistrement, et seulement quand la Consultation est à l'écran.
+
+   100% ADDITIF. Aucune écriture n'est créée, modifiée ni supprimée :
+   les simulations sont celles du module, toutes gardées par leur
+   drapeau `sim`. Rendu Registre N&B, aucune couleur nouvelle.
+   ============================================================ */
+(function(){
+  function LBL(){ try{ return (window.YADA_LBL&&window.YADA_LBL.automatismes)||'Automatismes'; }catch(e){ return 'Automatismes'; } }
+
+  /* ---------- lecture de l'état (mêmes règles que le module) ---------- */
+  function estActif(cle){
+    try{ var a=db.parametres&&db.parametres.automatismes;
+         return !(a&&a.actifs&&a.actifs[cle]===false); }catch(e){ return true; }
+  }
+  function pret(){
+    try{ return !!(typeof db!=='undefined' && db && Array.isArray(db.ecritures)
+                   && Array.isArray(window.YADA_AUTOS) && window.YADA_AUTOS.length); }catch(e){ return false; }
+  }
+
+  /* ---------- le compteur, mis en cache ---------- */
+  var CACHE=null, DIRTY=true, LAST=0, COUT=0, PLANIFIE=false;
+
+  /* le repos suit le coût : plus le calcul est lourd, moins il revient */
+  function repos(){ return Math.min(60000, Math.max(1200, COUT*12)); }
+
+  function calcul(){
+    var t0=(window.performance&&performance.now)?performance.now():Date.now();
+    var out={total:0, det:[], ts:Date.now(), cout:0};
+    var A=window.YADA_AUTOS||[];
+    for(var i=0;i<A.length;i++){
+      var a=A[i]; if(!a||typeof a.run!=='function') continue;
+      if(!estActif(a.cle)) continue;
+      var n=0;
+      try{ n=((a.run(true)||{n:0}).n)|0; }catch(e){ n=0; }
+      if(n>0){ out.total+=n; out.det.push({cle:a.cle, nom:a.nom||a.cle, unite:a.unite||'action', n:n}); }
+    }
+    var t1=(window.performance&&performance.now)?performance.now():Date.now();
+    out.cout=Math.max(0, Math.round(t1-t0));
+    return out;
+  }
+
+  function recalcul(){
+    if(!pret()) return CACHE;
+    try{ CACHE=calcul(); COUT=CACHE.cout; }catch(e){}
+    LAST=Date.now(); DIRTY=false;
+    return CACHE;
+  }
+
+  /* contrat synchrone : force → valeur fraîche ; sinon le cache (calculé une fois s'il est vide) */
+  window.auEnAttente=function(force){
+    if(!pret()) return {total:0, det:[], ts:Date.now(), cout:0};
+    if(force || !CACHE) return recalcul() || {total:0,det:[],ts:Date.now(),cout:0};
+    return CACHE;
+  };
+
+  /* un enregistrement rend le compteur périmé */
+  try{
+    if(typeof window.save==='function'){
+      var _sv=window.save;
+      window.save=function(){ var r=_sv.apply(this,arguments); DIRTY=true; return r; };
+    }
+  }catch(e){}
+  /* changer de dossier repart de zéro */
+  try{
+    if(typeof window.chargerDossier==='function'){
+      var _cd=window.chargerDossier;
+      window.chargerDossier=function(){ var r=_cd.apply(this,arguments); CACHE=null; DIRTY=true; COUT=0; return r; };
+    }
+  }catch(e){}
+
+  window.auOuvrirModule=function(){
+    try{ window.__homeView=false; }catch(e){}
+    try{ current='automatismes'; }catch(e){}
+    try{ if(typeof render==='function') render(); }catch(e){}
+  };
+
+  /* ---------- 1 · barre du bas de la Consultation ---------- */
+  function detTitre(r){
+    if(!r.det.length) return 'Aucune action en attente — tous les automatismes actifs sont à jour.';
+    return r.det.map(function(d){ return d.nom+' : '+d.n; }).join(' · ');
+  }
+  function peindreStatus(r){
+    var st=document.querySelector('.sg-app .sg-status'); if(!st) return;
+    var b=st.querySelector('#sg-auatt');
+    if(!b){
+      b=document.createElement('button'); b.type='button'; b.id='sg-auatt';
+      b.setAttribute('onclick','auOuvrirModule()');
+      var sp=st.querySelector('.sp'); st.insertBefore(b, sp||null);
+    }
+    var txt = r.total ? (r.total+' action'+(r.total>1?'s':'')+' en attente') : 'Automatismes à jour';
+    var cls = 'sg-auatt'+(r.total?' due':'');
+    if(b.getAttribute('data-t')!==txt){ b.textContent=txt; b.setAttribute('data-t',txt); }
+    if(b.className!==cls) b.className=cls;
+    b.title=LBL()+' — '+detTitre(r);
+  }
+
+  /* ---------- 2 · pastille dans le menu « Modules » ---------- */
+  function peindreMenu(r){
+    var dd=document.querySelector('.sg-app #yada-mods'); if(!dd) return;
+    var lbl=LBL(), btns=dd.querySelectorAll('button');
+    for(var i=0;i<btns.length;i++){
+      var b=btns[i];
+      var base=(b.getAttribute('data-lbl')||b.textContent||'').replace(/\s*\d+\s*$/,'').trim();
+      if(base!==lbl) continue;
+      if(!b.getAttribute('data-lbl')) b.setAttribute('data-lbl',lbl);
+      var p=b.querySelector('.au-mbadge');
+      if(!r.total){ if(p&&p.parentNode) p.parentNode.removeChild(p); b.removeAttribute('title'); return; }
+      if(!p){ p=document.createElement('span'); p.className='au-mbadge'; b.appendChild(p); }
+      var s=String(r.total); if(p.textContent!==s) p.textContent=s;
+      b.title=lbl+' — '+detTitre(r);
+      return;
+    }
+  }
+  function peindre(){ if(!CACHE) return; try{ peindreStatus(CACHE); peindreMenu(CACHE); }catch(e){} }
+
+  /* ---------- le calcul est posé en temps mort, jamais sur le rendu ---------- */
+  function planifier(){
+    if(PLANIFIE) return; PLANIFIE=true;
+    var go=function(){ PLANIFIE=false; recalcul(); peindre(); };
+    try{
+      if(typeof window.requestIdleCallback==='function') window.requestIdleCallback(go,{timeout:4000});
+      else setTimeout(go,180);
+    }catch(e){ setTimeout(go,180); }
+  }
+
+  function maj(){
+    try{
+      if(typeof current==='undefined'||current!=='compta') return;   /* seule surface concernée */
+      if(!document.querySelector('.sg-app')) return;
+      if(!pret()) return;
+      peindre();                                                      /* l'affichage part du cache : gratuit */
+      if(!CACHE || (DIRTY && (Date.now()-LAST)>=repos())) planifier();
+    }catch(e){}
+  }
+  try{
+    if(typeof window.render==='function'){
+      var _r=window.render;
+      window.render=function(){ var x=_r.apply(this,arguments); try{ setTimeout(maj,0); }catch(e){ maj(); } return x; };
+    }
+  }catch(e){}
+  try{ setInterval(maj, 2000); }catch(e){}
+
+  /* ---------- style (jetons Registre, aucune couleur nouvelle) ---------- */
+  try{
+    var st=document.createElement('style'); st.id='au-attente-mod'; st.textContent=
+      '.sg-status .sg-auatt{font:inherit;font-weight:400;font-style:normal;text-decoration:none;'
+      +'background:transparent;border:1px solid #35353a;border-radius:4px;color:inherit;'
+      +'padding:2px 9px;cursor:pointer;line-height:1.4;white-space:nowrap}'
+     +'.sg-status .sg-auatt:hover{background:#f5f5f6;color:#0a0a0b}'
+     +'.sg-status .sg-auatt.due{background:#f5f5f6;color:#0a0a0b;border-color:#f5f5f6}'
+     +'.sg-status .sg-auatt.due:hover{background:#fff}'
+     +'body[data-theme="noir"] .sg-status .sg-auatt{border-color:#35353a;color:#cfd0d3}'
+     +'body[data-theme="noir"] .sg-status .sg-auatt:hover{background:#f5f5f6;color:#0a0a0b}'
+     +'body[data-theme="noir"] .sg-status .sg-auatt.due{background:#f5f5f6;color:#0a0a0b;border-color:#f5f5f6}'
+     +'.sg-dd .au-mbadge{display:inline-block;min-width:17px;text-align:center;margin-left:7px;'
+      +'padding:0 5px;border-radius:9px;background:#f5f5f6;color:#0a0a0b;'
+      +'font-size:10.5px;font-weight:400;font-variant-numeric:tabular-nums;line-height:16px}';
+    (document.head||document.documentElement).appendChild(st);
   }catch(e){}
 })();
 </script>
