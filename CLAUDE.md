@@ -36,7 +36,44 @@
 
 ---
 
-## 🟢 Dernière mise à jour — BILAN & COMPTE DE RÉSULTAT NORMALISÉS (+ SIG, + comparatif N-1) — v643
+## 🟢 Dernière mise à jour — INVENTAIRE & CUT-OFF : le résultat devient un RÉSULTAT D'EXERCICE — v644
+**Quoi :** sans travaux d'inventaire, un résultat n'est qu'un **résultat de trésorerie déguisé** : une charge engagée mais non facturée n'y figure pas, un produit acquis non facturé non plus, une assurance payée d'avance y pèse en entier, et tout ce qui a été acheté est passé en charge — même ce qui dort encore en magasin. Le fichier ne contenait **aucune** de ces écritures (0 occurrence de FNP, CCA, PCA, variation de stock ou provision fonctionnelle ; le `418` n'existait que comme libellé de plan). Nouveau module **« Inventaire & cut-off »** (rubrique **Traitements**) : **8 travaux**, chacun avec sa saisie, l'**aperçu de son écriture en direct** et son bouton de génération.
+
+| Travail | Écriture | Extourne |
+| --- | --- | --- |
+| **Variation de stock** | annulation du stock initial puis constatation du stock final, `3x ↔ 603x` (achats stockés) ou `713x` (production stockée) | non |
+| **Factures non parvenues (FNP)** | `6x` + `44586` → **`408`** | **oui** |
+| **Factures à établir (FAE)** | **`418`** → `7x` + `44587` | **oui** |
+| **Charges constatées d'avance (CCA)** | **`486`** → `6x` | **oui** |
+| **Produits constatés d'avance (PCA)** | `7x` → **`487`** | **oui** |
+| **Charges à payer (sociales & fiscales)** | `6x` → `428` / `438` / `448` | **oui** |
+| **Intérêts courus** | `661` → `1688` | **oui** |
+| **Dépréciation des créances clients** | `68174` → `491` | non |
+
+**L'extourne n'est pas une option.** Les six travaux de **rattachement** génèrent, en plus de l'écriture datée de la clôture, leur **extourne au premier jour de l'exercice suivant** — strictement inversée, vérifiée par sonde. Un cut-off qui ne s'extourne pas **double la charge l'année d'après** : c'est l'erreur classique, elle est ici impossible. La variation de stock et la dépréciation, elles, ne s'extournent pas (le stock final devient le stock initial, la dépréciation se reprend sur décision).
+
+**Deux travaux se proposent tout seuls, à partir du dossier :** « **Reprendre les comptes de stock** » relève tous les comptes de classe 3 mouvementés et reporte leur solde en **stock initial** (il ne reste qu'à saisir le final) ; « **Reprendre les créances échues** » relève les règlements clients **échus et non soldés** et propose la dépréciation sur le **HT**. Le logiciel ne décide de rien : il présente ce qu'il sait, l'humain tranche le montant.
+
+**Comment — nouvel addon `yada-addon-inventaire` (100% ADDITIF) + 2 éditions chirurgicales :** clé `inventaire:(typeof pageInventaire==='function'?pageInventaire:repli)` au **dispatch de `render()`** (même patron gardé que `controles`/`recurrentes`), et `'inventaire'` ajouté à la rubrique **Traitements** de la barre v641. **Points techniques :** (1) les **17 comptes de cut-off manquants** (408, 44586, 418, 486, 487, 1688, 68174, 491, 603x, 713x, 428, 438, 448…) sont **ajoutés au plan** s'ils n'y sont pas — le module ne peut pas écrire sur un compte qui n'existe pas ; (2) chaque travail écrit **une seule écriture** au libellé stable `INVENTAIRE <CLÉ> <exercice>` → **régénérer remplace**, jamais de doublon (vérifié) ; (3) la génération est **refusée si l'écriture ne s'équilibre pas** — aucune écriture déséquilibrée ne peut naître du module ; (4) l'**effet sur le résultat** est affiché en KPI, calculé sur les seules écritures d'inventaire (extournes exclues). Rendu **Registre N&B** scopé `#yada-inv`. `sw.js` yada-v239, badge v644, `version.json` 644.
+
+**Validé :** `node --check` (**314 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014) + balises (3/5/3) + **filet d'équilibre** ✅ + sonde Playwright sur un dossier d'essai (achat 10 000 passé en charge, stock initial 3 000) :
+
+| Mesure | Résultat |
+| --- | --- |
+| Module rendu · travaux · boutons vides | ✓ · **8** · **0** |
+| **Stock** — reprise automatique | `370000000` repris à **3 000,00** |
+| **Stock** — écriture (final saisi à 4 200) | `603700000 3 000 D · 370 3 000 C` puis `370 4 200 D · 603700000 4 200 C` — **équilibrée** |
+| **FNP** (1 000 HT + 200 TVA) | `606 1 000 D · 44586 200 D · **408 1 200 C**`, datée du **31/12/2026** |
+| **FNP — extourne** | générée au **01/01/2027**, **strictement inversée** |
+| **CCA** (600) | `486 600 D · 616 600 C` |
+| **Idempotence** — régénérer FNP | **2 écritures** (l'écriture + son extourne), pas 4 |
+| **Effet sur le résultat** | charges **9 200** = 10 000 − 1 200 (variation de stock) + 1 000 (FNP) − 600 (CCA) — le cut-off **fait bouger le résultat**, exactement du montant attendu |
+| Écritures déséquilibrées · pageerror · console.error | **0** · **0** · **0** |
+| Rubrique **Traitements** de la barre | « **Inventaire & cut-off** » présent |
+
+---
+
+## 🟢 MAJ précédente — BILAN & COMPTE DE RÉSULTAT NORMALISÉS (+ SIG, + comparatif N-1) — v643
 **Quoi :** les états produits jusqu'ici n'étaient pas des états — c'étaient des **balances de clôture regroupées par sens de solde**. Conséquence concrète : les **amortissements (28x)** et les **dépréciations (29x/39x/49x)**, créditeurs, se retrouvaient **AU PASSIF** au lieu d'être déduits de l'actif → **l'actif était gonflé** et le « TOTAL ACTIF » affiché n'était pas l'actif net. Il n'y avait ni rubriques, ni colonnes Brut / Amortissements / Net, ni exercice précédent, ni soldes intermédiaires de gestion.
 
 **Trois états ajoutés** (les anciens ne sont pas touchés) :

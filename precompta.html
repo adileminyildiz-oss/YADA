@@ -4206,6 +4206,7 @@ function render(){
   salarie:(typeof pageSalarie==='function'?pageSalarie:function(){return'<div class="mod-wrap"><div class="card"><h2>Salarié</h2></div></div>';}),
   rapport:(typeof pageRapport==='function'?pageRapport:function(){return'<div class="mod-wrap"><div class="card"><h2>Rapport</h2></div></div>';}),
   controles:(typeof pageControles==='function'?pageControles:function(){return'<div class="mod-wrap"><div class="card"><h2>Contrôles</h2></div></div>';}),
+  inventaire:(typeof pageInventaire==='function'?pageInventaire:function(){return'<div class="mod-wrap"><div class="card"><h2>Inventaire &amp; cut-off</h2></div></div>';}),
   importbanque:(typeof pageImportBanque==='function'?pageImportBanque:function(){return'<div class="mod-wrap"><div class="card"><h2>Import bancaire</h2></div></div>';}),
   recurrentes:(typeof pageRecurrentes==='function'?pageRecurrentes:function(){return'<div class="mod-wrap"><div class="card"><h2>Écritures récurrentes</h2></div></div>';}),
   automatismes:(typeof pageAutomatismes==='function'?pageAutomatismes:function(){return'<div class="mod-wrap"><div class="card"><h2>Automatismes</h2></div></div>';}),
@@ -11084,7 +11085,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v643';
+    b.textContent='YADA · v644';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -37415,7 +37416,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     {id:'yb-saisie',  lbl:'Saisie',       prend:[],
      mods:['journal','achats','recurrentes','importbanque','chargespaie']},
     {id:'yb-trait',   lbl:'Traitements',  prend:[['sg-util','Utilitaires']],
-     mods:['automatismes','rappro','banque','immos']},
+     mods:['automatismes','inventaire','rappro','banque','immos']},
     {id:'yb-decl',    lbl:'Déclarations', prend:[], mods:['tva']},
     {id:'yb-etats',   lbl:'États',        prend:[], mods:['editions']},
     {id:'yb-revis',   lbl:'Révision',     prend:[], mods:['controles']},
@@ -37882,6 +37883,358 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
         return h;
       };
     }
+  }catch(e){}
+})();
+</script>
+<script id="yada-addon-inventaire">
+/* v644 — INVENTAIRE & CUT-OFF : le résultat devient un RÉSULTAT D'EXERCICE.
+   Sans travaux d'inventaire, un résultat n'est qu'un résultat de trésorerie déguisé : une charge
+   engagée mais non facturée n'y figure pas, un produit acquis non facturé non plus, un loyer payé
+   d'avance y pèse en entier. Ce module pose les 8 travaux qui rattachent charges et produits à
+   l'exercice qui les a vus naître :
+     1. Variation de stock                    3x  ↔ 603x / 713x
+     2. Factures non parvenues (FNP)          6x + 44586  →  408
+     3. Factures à établir (FAE)              418          →  7x + 44587
+     4. Charges constatées d'avance (CCA)     486          →  6x
+     5. Produits constatés d'avance (PCA)     7x           →  487
+     6. Charges à payer (sociales & fiscales) 6x           →  428 / 438 / 448
+     7. Intérêts courus                       661          →  1688
+     8. Dépréciation des créances clients     68174        →  491
+   Chaque travail génère UNE écriture datée de la clôture, et — pour les six qui le doivent —
+   son EXTOURNE au premier jour de l'exercice suivant : un cut-off qui ne s'extourne pas
+   double la charge l'année d'après.
+   100% ADDITIF. */
+(function(){
+  function S(){ try{ return db.societe||{}; }catch(e){ return {}; } }
+  function SAVE(){ try{ if(typeof save==='function') save(); }catch(e){} }
+  function r(v){ return Math.round((+v||0)*100)/100; }
+  function num(v){ try{ return eur(v); }catch(e){ return r(v)+' €'; } }
+  function C9(x){ try{ return c9(x); }catch(e){ return String(x||''); } }
+  function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  /* ---------- comptes du cut-off, ajoutés au plan s'ils manquent ---------- */
+  var PLAN={
+    '408000000':'Fournisseurs — factures non parvenues',
+    '445860000':'TVA sur factures non parvenues',
+    '418000000':'Clients — produits non encore facturés',
+    '445870000':'TVA sur factures à établir',
+    '486000000':'Charges constatées d’avance',
+    '487000000':'Produits constatés d’avance',
+    '168800000':'Intérêts courus sur emprunts',
+    '661100000':'Intérêts des emprunts et dettes',
+    '681740000':'Dotations aux dépréciations des créances',
+    '491000000':'Dépréciation des comptes clients',
+    '603100000':'Variation des stocks de matières premières',
+    '603200000':'Variation des stocks d’autres approvisionnements',
+    '603700000':'Variation des stocks de marchandises',
+    '713500000':'Variation des stocks de produits',
+    '428000000':'Personnel — charges à payer',
+    '438000000':'Organismes sociaux — charges à payer',
+    '448000000':'État — charges à payer'
+  };
+  try{
+    Object.keys(PLAN).forEach(function(k){
+      if(typeof COMPTES==='object' && !COMPTES[k]) COMPTES[k]=PLAN[k];
+      if(Array.isArray(db.plan) && !db.plan.filter(function(c){ return C9(c.code)===k; }).length)
+        db.plan.push({code:k, lib:PLAN[k]});
+    });
+  }catch(e){}
+  function lib(k){ try{ return COMPTES[C9(k)]||PLAN[C9(k)]||C9(k); }catch(e){ return k; } }
+
+  /* ---------- état persistant ---------- */
+  function exo(){ var s=S(); return String(s.exoFin||'').slice(0,4)||String(new Date().getFullYear()); }
+  function veilleSuivant(){ var f=S().exoFin; if(!f) return ''; try{ var d=new Date(f+'T00:00:00'); d.setDate(d.getDate()+1); return d.toISOString().slice(0,10); }catch(e){ return f; } }
+  function etat(){
+    db.parametres=db.parametres||{};
+    var I=db.parametres.inventaire; if(!I||typeof I!=='object'){ I={}; db.parametres.inventaire=I; }
+    var e=exo(); if(!I[e]||typeof I[e]!=='object') I[e]={};
+    return I[e];
+  }
+  function lignes(cle){ var E=etat(); if(!Array.isArray(E[cle])) E[cle]=[]; return E[cle]; }
+
+  /* ---------- les 8 travaux ---------- */
+  function cptStockVariation(k){
+    k=C9(k);
+    if(k.indexOf('31')===0) return '603100000';
+    if(k.indexOf('32')===0) return '603200000';
+    if(k.indexOf('37')===0) return '603700000';
+    return '713500000';                      /* produits et en-cours : compte de PRODUIT */
+  }
+  var TRAVAUX=[
+    {cle:'stock', nom:'Variation de stock', extourne:false,
+     desc:'Le stock final remplace le stock initial : sans lui, tout ce qui a été acheté est passé en charge, même ce qui dort encore en magasin.',
+     cols:[['cpt','Compte de stock','compte'],['ini','Stock initial','mt'],['fin','Stock final','mt']],
+     ecrit:function(L){ var out=[];
+       L.forEach(function(x){
+         var ks=C9(x.cpt), kv=cptStockVariation(ks), ini=r(x.ini), fin=r(x.fin);
+         /* même mécanique pour 603x (achats stockés) et 713x (production stockée) :
+            on annule le stock initial, on constate le stock final. */
+         if(ini>0.005){
+           out.push({compte:kv, lib:'Annulation du stock initial', debit:ini, credit:0});
+           out.push({compte:ks, lib:'Annulation du stock initial', debit:0, credit:ini}); }
+         if(fin>0.005){ out.push({compte:ks, lib:'Stock final', debit:fin, credit:0});
+           out.push({compte:kv, lib:'Stock final', debit:0, credit:fin}); }
+       });
+       return out.filter(function(l){ return (l.debit||0)+(l.credit||0)>0.005; }); }},
+
+    {cle:'fnp', nom:'Factures non parvenues (FNP)', extourne:true,
+     desc:'Une charge engagée avant la clôture dont la facture n’est pas arrivée appartient à cet exercice.',
+     cols:[['cpt','Compte de charge','compte'],['lib','Libellé','txt'],['ht','Montant HT','mt'],['tva','TVA','mt']],
+     ecrit:function(L){ var out=[];
+       L.forEach(function(x){ var ht=r(x.ht), tva=r(x.tva); if(ht+tva<=0.005) return;
+         out.push({compte:C9(x.cpt), lib:x.lib||'Facture non parvenue', debit:ht, credit:0});
+         if(tva>0.005) out.push({compte:'445860000', lib:'TVA sur facture non parvenue', debit:tva, credit:0});
+         out.push({compte:'408000000', lib:x.lib||'Facture non parvenue', debit:0, credit:r(ht+tva)}); });
+       return out; }},
+
+    {cle:'fae', nom:'Factures à établir (FAE)', extourne:true,
+     desc:'Un produit acquis avant la clôture dont la facture n’est pas encore émise appartient à cet exercice.',
+     cols:[['cpt','Compte de produit','compte'],['lib','Libellé','txt'],['ht','Montant HT','mt'],['tva','TVA','mt']],
+     ecrit:function(L){ var out=[];
+       L.forEach(function(x){ var ht=r(x.ht), tva=r(x.tva); if(ht+tva<=0.005) return;
+         out.push({compte:'418000000', lib:x.lib||'Facture à établir', debit:r(ht+tva), credit:0});
+         out.push({compte:C9(x.cpt), lib:x.lib||'Facture à établir', debit:0, credit:ht});
+         if(tva>0.005) out.push({compte:'445870000', lib:'TVA sur facture à établir', debit:0, credit:tva}); });
+       return out; }},
+
+    {cle:'cca', nom:'Charges constatées d’avance (CCA)', extourne:true,
+     desc:'La part d’une charge payée qui couvre l’exercice suivant en sort : assurance, loyer, abonnement.',
+     cols:[['cpt','Compte de charge','compte'],['lib','Libellé','txt'],['mt','Montant','mt']],
+     ecrit:function(L){ var out=[], tot=0;
+       L.forEach(function(x){ var m=r(x.mt); if(m<=0.005) return; tot=r(tot+m);
+         out.push({compte:C9(x.cpt), lib:x.lib||'Charge constatée d’avance', debit:0, credit:m}); });
+       if(tot>0.005) out.unshift({compte:'486000000', lib:'Charges constatées d’avance', debit:tot, credit:0});
+       return out; }},
+
+    {cle:'pca', nom:'Produits constatés d’avance (PCA)', extourne:true,
+     desc:'La part d’un produit facturé qui couvre l’exercice suivant en sort.',
+     cols:[['cpt','Compte de produit','compte'],['lib','Libellé','txt'],['mt','Montant','mt']],
+     ecrit:function(L){ var out=[], tot=0;
+       L.forEach(function(x){ var m=r(x.mt); if(m<=0.005) return; tot=r(tot+m);
+         out.push({compte:C9(x.cpt), lib:x.lib||'Produit constaté d’avance', debit:m, credit:0}); });
+       if(tot>0.005) out.push({compte:'487000000', lib:'Produits constatés d’avance', debit:0, credit:tot});
+       return out; }},
+
+    {cle:'cap', nom:'Charges à payer (sociales & fiscales)', extourne:true,
+     desc:'Congés payés, primes, cotisations et taxes dues au titre de l’exercice mais réglées après.',
+     cols:[['cpt','Compte de charge','compte'],['dest','Compte de dette','compte'],['lib','Libellé','txt'],['mt','Montant','mt']],
+     ecrit:function(L){ var out=[];
+       L.forEach(function(x){ var m=r(x.mt); if(m<=0.005) return;
+         out.push({compte:C9(x.cpt), lib:x.lib||'Charge à payer', debit:m, credit:0});
+         out.push({compte:C9(x.dest||'428000000'), lib:x.lib||'Charge à payer', debit:0, credit:m}); });
+       return out; }},
+
+    {cle:'ic', nom:'Intérêts courus', extourne:true,
+     desc:'Les intérêts d’emprunt courus de la dernière échéance à la clôture appartiennent à cet exercice.',
+     cols:[['lib','Libellé','txt'],['mt','Montant','mt']],
+     ecrit:function(L){ var out=[];
+       L.forEach(function(x){ var m=r(x.mt); if(m<=0.005) return;
+         out.push({compte:'661100000', lib:x.lib||'Intérêts courus', debit:m, credit:0});
+         out.push({compte:'168800000', lib:x.lib||'Intérêts courus', debit:0, credit:m}); });
+       return out; }},
+
+    {cle:'deprec', nom:'Dépréciation des créances clients', extourne:false,
+     desc:'Une créance douteuse reste au bilan pour sa valeur nominale tant qu’elle n’est pas dépréciée.',
+     cols:[['lib','Client / créance','txt'],['mt','Dépréciation','mt']],
+     ecrit:function(L){ var out=[];
+       L.forEach(function(x){ var m=r(x.mt); if(m<=0.005) return;
+         out.push({compte:'681740000', lib:x.lib||'Dépréciation de créance', debit:m, credit:0});
+         out.push({compte:'491000000', lib:x.lib||'Dépréciation de créance', debit:0, credit:m}); });
+       return out; }}
+  ];
+  function travail(cle){ return TRAVAUX.filter(function(t){ return t.cle===cle; })[0]; }
+
+  /* ---------- génération / retrait ---------- */
+  function libEcr(cle,suffixe){ return 'INVENTAIRE '+String(cle).toUpperCase()+' '+exo()+(suffixe||''); }
+  function ecrituresDe(cle){
+    var a=libEcr(cle), b=libEcr(cle,' — EXTOURNE');
+    return (db.ecritures||[]).filter(function(e){
+      var l=String(e.libelle||''); return l.indexOf(a)>=0 || l.indexOf(b)>=0; });
+  }
+  window.invRetirer=function(cle){
+    var ids=ecrituresDe(cle).map(function(e){ return e.id; });
+    if(!ids.length) return;
+    db.ecritures=(db.ecritures||[]).filter(function(e){ return ids.indexOf(e.id)<0; });
+    db.odiv=(db.odiv||[]).filter(function(o){ return ids.indexOf(o.ecritureId)<0; });
+    SAVE(); if(typeof render==='function') render();
+  };
+  window.invGenerer=function(cle){
+    var T=travail(cle); if(!T) return;
+    var L=lignes(cle), lg=T.ecrit(L);
+    if(!lg.length){ if(typeof toast==='function') toast('Rien à générer — complétez les lignes.'); return; }
+    var d=lg.reduce(function(a,l){ return a+(+l.debit||0); },0), c=lg.reduce(function(a,l){ return a+(+l.credit||0); },0);
+    if(Math.abs(r(d-c))>0.005){ if(typeof toast==='function') toast('Écriture déséquilibrée — génération refusée.'); return; }
+    window.invRetirer(cle);
+    posterOD({date:S().exoFin, libelle:libEcr(cle), lignes:lg, journal:'OD'});
+    if(T.extourne){
+      var inv=lg.map(function(l){ return {compte:l.compte, lib:l.lib, debit:r(l.credit), credit:r(l.debit)}; });
+      posterOD({date:veilleSuivant(), libelle:libEcr(cle,' — EXTOURNE'), lignes:inv, journal:'OD'});
+    }
+    SAVE();
+    if(typeof toast==='function') toast(T.nom+' : écriture générée'+(T.extourne?' + extourne au '+veilleSuivant():'')+'.');
+    if(typeof render==='function') render();
+  };
+  window.invLigneAdd=function(cle){ lignes(cle).push({}); SAVE(); if(typeof render==='function') render(); };
+  window.invLigneDel=function(cle,i){ lignes(cle).splice(i,1); SAVE(); if(typeof render==='function') render(); };
+  window.invSet=function(cle,i,champ,v){
+    var L=lignes(cle); if(!L[i]) return;
+    L[i][champ]=(champ==='lib'||champ==='cpt'||champ==='dest')?v:(parseFloat(String(v).replace(',','.'))||0);
+    SAVE();
+  };
+
+  /* ---------- propositions lues dans le dossier ---------- */
+  window.invProposerStock=function(){
+    var L=lignes('stock'), vus={};
+    L.forEach(function(x){ vus[C9(x.cpt)]=1; });
+    var sold={};
+    (db.ecritures||[]).forEach(function(e){ if(e.date>S().exoFin) return;
+      (e.lignes||[]).forEach(function(l){ var k=C9(l.compte); if(k.charAt(0)!=='3') return;
+        sold[k]=r((sold[k]||0)+(+l.debit||0)-(+l.credit||0)); }); });
+    var n=0;
+    Object.keys(sold).sort().forEach(function(k){ if(vus[k]||Math.abs(sold[k])<0.005) return;
+      L.push({cpt:k, ini:sold[k], fin:0}); n++; });
+    SAVE(); if(typeof toast==='function') toast(n?(n+' compte(s) de stock repris — saisissez le stock final.'):'Aucun compte de stock mouvementé.');
+    if(typeof render==='function') render();
+  };
+  window.invProposerDeprec=function(){
+    var L=lignes('deprec'), vus={}; L.forEach(function(x){ vus[String(x.lib||'')]=1; });
+    var n=0;
+    try{
+      (db.reglements||[]).forEach(function(rg){
+        if(rg.sens!=='a_encaisser'||rg.statut==='regle') return;
+        var restant=r(rg.restant); if(restant<=0.005) return;
+        if(rg.echeance && rg.echeance>S().exoFin) return;      /* pas encore échue */
+        var f=(db.factures||[]).filter(function(x){ return x.id===rg.factureId; })[0];
+        var t=f?(db.tiers||[]).filter(function(x){ return x.id===f.tiersId; })[0]:null;
+        var nom=(t?t.nom:'Client')+' — '+(f?f.numero:'')+' (échue le '+(rg.echeance||'')+')';
+        if(vus[nom]) return;
+        L.push({lib:nom, mt:r(restant/1.2)});                   /* dépréciation sur le HT */
+        n++;
+      });
+    }catch(e){}
+    SAVE(); if(typeof toast==='function') toast(n?(n+' créance échue reprise — ajustez la dépréciation.'):'Aucune créance échue non réglée.');
+    if(typeof render==='function') render();
+  };
+
+  /* ---------- impact sur le résultat ---------- */
+  function impact(){
+    var t=0;
+    TRAVAUX.forEach(function(T){
+      ecrituresDe(T.cle).forEach(function(e){
+        if(String(e.libelle||'').indexOf('EXTOURNE')>=0) return;
+        (e.lignes||[]).forEach(function(l){ var k=C9(l.compte).charAt(0);
+          if(k==='6') t=r(t-(+l.debit||0)+(+l.credit||0));
+          if(k==='7') t=r(t+(+l.credit||0)-(+l.debit||0)); });
+      });
+    });
+    return t;
+  }
+
+  /* ---------- page ---------- */
+  function champ(cle,i,c,val){
+    var t=c[2];
+    if(t==='mt') return '<input class="inv-in inv-mt" type="number" step="0.01" value="'+(val==null?'':val)+'" oninput="invSet(\''+cle+'\','+i+',\''+c[0]+'\',this.value)">';
+    return '<input class="inv-in" type="text" value="'+esc(val)+'" oninput="invSet(\''+cle+'\','+i+',\''+c[0]+'\',this.value)"'
+      +(t==='compte'?' placeholder="ex. 606000000"':'')+'>';
+  }
+  function carteTravail(T){
+    var L=lignes(T.cle), faites=ecrituresDe(T.cle), ok=faites.length>0;
+    var lg=T.ecrit(L);
+    var td=r(lg.reduce(function(a,l){ return a+(+l.debit||0); },0));
+    var tc=r(lg.reduce(function(a,l){ return a+(+l.credit||0); },0));
+    var eq=Math.abs(r(td-tc))<0.005;
+    var head=T.cols.map(function(c){ return '<th'+(c[2]==='mt'?' class="r"':'')+'>'+esc(c[1])+'</th>'; }).join('')+'<th></th>';
+    var rows=L.map(function(x,i){
+      return '<tr>'+T.cols.map(function(c){ return '<td'+(c[2]==='mt'?' class="r"':'')+'>'+champ(T.cle,i,c,x[c[0]])+'</td>'; }).join('')
+        +'<td class="r"><button class="inv-x" title="Retirer la ligne" onclick="invLigneDel(\''+T.cle+'\','+i+')">✕</button></td></tr>';
+    }).join('');
+    var apercu=lg.length
+      ? ('<table class="inv-t inv-ap"><thead><tr><th>Compte</th><th>Libellé</th><th class="r">Débit</th><th class="r">Crédit</th></tr></thead><tbody>'
+         +lg.map(function(l){ return '<tr><td class="mono">'+C9(l.compte)+'</td><td>'+esc(l.lib)+'</td>'
+           +'<td class="r">'+(l.debit>0.005?num(l.debit):'')+'</td><td class="r">'+(l.credit>0.005?num(l.credit):'')+'</td></tr>'; }).join('')
+         +'<tr class="tot"><td></td><td>Total</td><td class="r">'+num(td)+'</td><td class="r">'+num(tc)+'</td></tr></tbody></table>')
+      : '<div class="inv-sub">Aucune ligne saisie — l’écriture est vide.</div>';
+    return '<div class="inv-card" id="inv-'+T.cle+'">'
+      +'<div class="inv-h"><span class="inv-nom">'+esc(T.nom)+'</span>'
+      +'<span class="inv-tag'+(ok?' on':'')+'">'+(ok?'GÉNÉRÉE':'À FAIRE')+'</span>'
+      +(T.extourne?'<span class="inv-tag">EXTOURNÉE AU '+veilleSuivant()+'</span>':'')+'</div>'
+      +'<div class="inv-sub">'+esc(T.desc)+'</div>'
+      +'<table class="inv-t"><thead><tr>'+head+'</tr></thead><tbody>'+(rows||'')+'</tbody></table>'
+      +'<div class="inv-acts">'
+      +'<button class="inv-b" onclick="invLigneAdd(\''+T.cle+'\')">+ Ajouter une ligne</button>'
+      +(T.cle==='stock'?'<button class="inv-b" onclick="invProposerStock()">Reprendre les comptes de stock</button>':'')
+      +(T.cle==='deprec'?'<button class="inv-b" onclick="invProposerDeprec()">Reprendre les créances échues</button>':'')
+      +'<span style="flex:1"></span>'
+      +(ok?'<button class="inv-b" onclick="invRetirer(\''+T.cle+'\')">Retirer l’écriture</button>':'')
+      +'<button class="inv-b inv-pri"'+(eq&&lg.length?'':' disabled')+' onclick="invGenerer(\''+T.cle+'\')">'+(ok?'Régénérer':'Générer l’écriture')+'</button>'
+      +'</div>'
+      +apercu
+      +'</div>';
+  }
+
+  window.pageInventaire=function(){
+    var s=S(), imp=impact();
+    var faits=TRAVAUX.filter(function(T){ return ecrituresDe(T.cle).length; }).length;
+    return '<div id="yada-inv">'
+      +'<div class="inv-mast"><div class="inv-eyebrow">YADA · INVENTAIRE &amp; CUT-OFF</div>'
+      +'<h1 class="inv-title">Inventaire &amp; cut-off</h1>'
+      +'<div class="inv-soc">'+esc(s.raison||'')+' · exercice '+esc(s.exoDebut||'')+' → '+esc(s.exoFin||'')+'</div>'
+      +'<button class="inv-close" title="Fermer" onclick="yadaFermerPage&&yadaFermerPage()">✕</button></div>'
+      +'<div class="inv-kpis">'
+      +'<div class="inv-k"><div class="l">Travaux générés</div><div class="v">'+faits+' / '+TRAVAUX.length+'</div></div>'
+      +'<div class="inv-k"><div class="l">Effet sur le résultat</div><div class="v">'+num(imp)+'</div></div>'
+      +'<div class="inv-k"><div class="l">Clôture</div><div class="v">'+esc(s.exoFin||'—')+'</div></div>'
+      +'<div class="inv-k"><div class="l">Extourne au</div><div class="v">'+esc(veilleSuivant()||'—')+'</div></div>'
+      +'</div>'
+      +'<div class="inv-note">Chaque travail génère une écriture datée de la clôture. Les six travaux de rattachement (FNP, FAE, CCA, PCA, charges à payer, intérêts courus) génèrent en plus leur <b>extourne</b> au premier jour de l’exercice suivant : sans elle, la charge serait comptée deux fois.</div>'
+      +TRAVAUX.map(carteTravail).join('')
+      +'</div>';
+  };
+
+  /* ---------- enregistrement du module ---------- */
+  window.YADA_OK=(window.YADA_OK||[]);
+  if(window.YADA_OK.indexOf('inventaire')<0) window.YADA_OK.push('inventaire');
+  window.YADA_LBL=(window.YADA_LBL||{});
+  window.YADA_LBL.inventaire='Inventaire & cut-off';
+
+  /* ---------- style Registre N&B, scopé #yada-inv ---------- */
+  try{
+    var st=document.getElementById('inv-mod');
+    if(!st){ st=document.createElement('style'); st.id='inv-mod'; document.head.appendChild(st); }
+    st.textContent=
+      'html body:not(#_yz) #yada-inv{background:#000;color:#f5f5f6;min-height:100dvh;padding:0 0 60px;font-family:Georgia,"Times New Roman",serif}'
+     +'html body:not(#_yz) #yada-inv *{font-family:inherit}'
+     +'html body:not(#_yz) #yada-inv .inv-mast{position:relative;padding:26px 24px 16px;border-bottom:1px solid #242427}'
+     +'html body:not(#_yz) #yada-inv .inv-eyebrow{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;letter-spacing:.14em;color:#8b8b90}'
+     +'html body:not(#_yz) #yada-inv .inv-title{font-size:27px;margin:6px 0 4px;font-weight:400}'
+     +'html body:not(#_yz) #yada-inv .inv-soc{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:#8b8b90}'
+     +'html body:not(#_yz) #yada-inv .inv-close{position:absolute;top:22px;right:22px;width:30px;height:30px;background:#000;color:#f5f5f6;border:1px solid #f5f5f6;border-radius:5px;cursor:pointer;font-family:ui-monospace,monospace;font-size:14px}'
+     +'html body:not(#_yz) #yada-inv .inv-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:#242427;margin:0 0 2px}'
+     +'html body:not(#_yz) #yada-inv .inv-k{background:#0b0b0c;padding:14px 16px}'
+     +'html body:not(#_yz) #yada-inv .inv-k .l{font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.07em;color:#8b8b90;text-transform:uppercase}'
+     +'html body:not(#_yz) #yada-inv .inv-k .v{font-size:20px;margin-top:5px}'
+     +'html body:not(#_yz) #yada-inv .inv-note{padding:14px 24px;color:#a8a9ad;font-size:13px;border-bottom:1px solid #242427}'
+     +'html body:not(#_yz) #yada-inv .inv-card{border-bottom:1px solid #242427;padding:18px 24px 22px}'
+     +'html body:not(#_yz) #yada-inv .inv-h{display:flex;align-items:center;gap:10px}'
+     +'html body:not(#_yz) #yada-inv .inv-nom{font-size:18px}'
+     +'html body:not(#_yz) #yada-inv .inv-tag{font-family:ui-monospace,monospace;font-size:9.5px;letter-spacing:.09em;padding:2px 7px;border:1px solid #35353a;color:#8b8b90;border-radius:3px}'
+     +'html body:not(#_yz) #yada-inv .inv-tag.on{background:#f5f5f6;color:#0a0a0b;border-color:#f5f5f6}'
+     +'html body:not(#_yz) #yada-inv .inv-sub{color:#8b8b90;font-size:12.5px;margin:6px 0 10px}'
+     +'html body:not(#_yz) #yada-inv .inv-t{width:100%;border-collapse:collapse;margin:8px 0}'
+     +'html body:not(#_yz) #yada-inv .inv-t th{font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#8b8b90;background:#121214;padding:6px 8px;text-align:left;font-weight:400;border-bottom:1px solid #242427}'
+     +'html body:not(#_yz) #yada-inv .inv-t td{padding:4px 8px;border-bottom:1px solid #1c1c1f;font-size:13px}'
+     +'html body:not(#_yz) #yada-inv .inv-t th.r,html body:not(#_yz) #yada-inv .inv-t td.r{text-align:right}'
+     +'html body:not(#_yz) #yada-inv .inv-t .mono{font-family:ui-monospace,monospace;font-size:12px}'
+     +'html body:not(#_yz) #yada-inv .inv-ap{margin-top:12px;opacity:.92}'
+     +'html body:not(#_yz) #yada-inv .inv-ap .tot td{border-top:1px solid #35353a;border-bottom:none}'
+     +'html body:not(#_yz) #yada-inv .inv-in{width:100%;background:#000;color:#f5f5f6;border:1px solid #242427;border-radius:3px;padding:4px 6px;font-family:ui-monospace,monospace;font-size:12px}'
+     +'html body:not(#_yz) #yada-inv .inv-mt{text-align:right}'
+     +'html body:not(#_yz) #yada-inv .inv-x{background:#000;color:#8b8b90;border:1px solid #242427;border-radius:3px;cursor:pointer;padding:2px 6px;font-family:ui-monospace,monospace}'
+     +'html body:not(#_yz) #yada-inv .inv-acts{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap}'
+     +'html body:not(#_yz) #yada-inv .inv-b{background:#000;color:#f5f5f6;border:1px solid #35353a;border-radius:4px;padding:5px 11px;cursor:pointer;font-family:ui-monospace,monospace;font-size:11.5px}'
+     +'html body:not(#_yz) #yada-inv .inv-b.inv-pri{background:#f5f5f6;color:#0a0a0b;border-color:#f5f5f6}'
+     +'html body:not(#_yz) #yada-inv .inv-b[disabled]{opacity:.4;cursor:not-allowed}'
+     +'@media(max-width:820px){html body:not(#_yz) #yada-inv .inv-kpis{grid-template-columns:repeat(2,1fr)}}';
   }catch(e){}
 })();
 </script>
