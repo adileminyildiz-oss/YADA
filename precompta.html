@@ -11104,7 +11104,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v657';
+    b.textContent='YADA · v658';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -38330,10 +38330,24 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
   function fiche(cle){
     var E=etat();
     if(!E[cle]||typeof E[cle]!=='object') E[cle]={justif:null, com:'', visa:'', visaDate:''};
-    return E[cle];
+    var F=E[cle];
+    if(!F.niv||typeof F.niv!=='object') F.niv={};
+    /* MIGRATION v646 → v658 : un visa déjà posé EST une révision. Le travail déjà fait ne se
+       perd pas, il prend simplement son étage. Le montant signé, lui, n'a pas été mémorisé à
+       l'époque (solde:null) : le visa est repris, mais il ne peut pas être dit « à jour ». */
+    if(F.visa && !F.niv.revise) F.niv.revise={par:F.visa, date:F.visaDate||'', solde:null};
+    return F;
   }
   function viseurDefaut(){
     try{ return (db.cabinet&&db.cabinet.collaborateur)||''; }catch(e){ return ''; }
+  }
+  function TOAST(m){ try{ if(typeof toast==='function') toast(m); }catch(e){} }
+  function eqNom(a,b){ return String(a||'').trim().toLowerCase()===String(b||'').trim().toLowerCase(); }
+  function dossierEtat(){
+    var E=etat();
+    if(!E.__dossier||typeof E.__dossier!=='object') E.__dossier={};
+    if(!E.__noms||typeof E.__noms!=='object') E.__noms={};
+    return E.__dossier;
   }
 
   /* ============================ CONTRÔLES DE BOUCLAGE ============================ */
@@ -38547,16 +38561,100 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
   function boucleDe(C,T){
     try{ return C.boucle(T,FIN())||null; }catch(e){ return null; }
   }
+  /* ======================= LA CHAÎNE DE RESPONSABILITÉ (v658) =======================
+     Le cahier des charges demande trois niveaux : RÉVISÉ · SUPERVISÉ · VALIDÉ.
+     Les deux premiers se jouent CYCLE PAR CYCLE (le collaborateur révise, le chef de
+     mission supervise) ; le troisième se joue sur le DOSSIER ENTIER — c'est la signature
+     de l'expert-comptable, et elle engage sa responsabilité, pas six fois la même.
+     Quatre règles font que c'est une chaîne, et pas trois cases à cocher :
+       1. l'ORDRE est un verrou : on ne supervise pas ce qui n'est pas révisé ;
+       2. on ne se SUPERVISE pas soi-même — sinon le contrôle ne contrôle rien ;
+       3. un contrôle de bouclage EN DÉFAUT ferme la signature : le dossier tranche ;
+       4. une signature porte sur un MONTANT, pas sur un cycle — si le solde bouge après
+          coup, le visa est PÉRIMÉ : on a supervisé un chiffre qui n'existe plus. */
+  var NIVEAUX=[
+    {k:'revise',    lbl:'Révisé',    tag:'RÉVISÉ',    role:'réviseur',    v:'Réviser le cycle'},
+    {k:'supervise', lbl:'Supervisé', tag:'SUPERVISÉ', role:'superviseur', v:'Superviser le cycle'}
+  ];
+  function idxNiv(k){ for(var i=0;i<NIVEAUX.length;i++) if(NIVEAUX[i].k===k) return i; return -1; }
+  function cycleDe(cle){ for(var i=0;i<CYCLES.length;i++) if(CYCLES[i].cle===cle) return CYCLES[i]; return null; }
+  function sign(F,k){ var x=F.niv&&F.niv[k]; return (x&&x.par)?x:null; }
+  function perime(F,k,solde){
+    var x=sign(F,k); if(!x) return false;
+    if(x.solde==null) return false;            /* visa repris de la v646 : montant signé inconnu */
+    return Math.abs(r(solde-x.solde))>0.01;
+  }
+  /* l'étage réellement atteint : la chaîne s'arrête au premier maillon absent OU périmé */
+  function niveauEffectif(C,T){
+    var F=fiche(C.cle), s=soldeCycle(C,T), n=0;
+    for(var i=0;i<NIVEAUX.length;i++){
+      if(!sign(F,NIVEAUX[i].k) || perime(F,NIVEAUX[i].k,s)) break;
+      n=i+1;
+    }
+    return n;
+  }
+  function perimes(C,T){
+    var F=fiche(C.cle), s=soldeCycle(C,T), L=[];
+    NIVEAUX.forEach(function(N){ if(perime(F,N.k,s)) L.push(N); });
+    return L;
+  }
+  function nomDefaut(cle,k){
+    var F=fiche(cle), E=etat();
+    if(F['nom_'+k]) return F['nom_'+k];
+    if(E.__noms&&E.__noms[k]) return E.__noms[k];
+    return (k==='revise')?viseurDefaut():'';
+  }
+  /* la porte de signature : elle refuse, et elle écrit POURQUOI */
+  function peutSigner(C,T,k,nom){
+    var F=fiche(C.cle), i=idxNiv(k), b=boucleDe(C,T), s=soldeCycle(C,T);
+    if(b && b.ok===false) return {ok:false, motif:'contrôle de bouclage en défaut — on ne signe pas un cycle qui ne boucle pas'};
+    var j=(F.justif==null||F.justif==='')?null:r(F.justif);
+    if(j==null) return {ok:false, motif:'aucun justificatif extérieur : le solde n’est rapproché de rien'};
+    if(Math.abs(r(s-j))>0.01) return {ok:false, motif:'écart de '+num(r(s-j))+' entre le solde comptable et le justificatif'};
+    if(i>0 && niveauEffectif(C,T)<i) return {ok:false, motif:'étage précédent non franchi : le cycle doit être '+NIVEAUX[i-1].tag.toLowerCase()+' d’abord'};
+    if(sign(F,k) && !perime(F,k,s)) return {ok:false, motif:'cycle déjà '+NIVEAUX[i].tag.toLowerCase()};
+    nom=String(nom||'').trim();
+    if(!nom) return {ok:false, motif:'nom du '+NIVEAUX[i].role+' non saisi'};
+    var rv=sign(F,'revise');
+    if(i>0 && rv && eqNom(rv.par,nom)) return {ok:false, motif:'on ne se supervise pas soi-même — '+rv.par+' a révisé ce cycle'};
+    return {ok:true, nom:nom, solde:s};
+  }
+
+  /* ---------- validation du DOSSIER : elle porte sur l'ensemble, et sur des montants ---------- */
+  function empreinte(T){
+    return CYCLES.map(function(C){ return C.cle+':'+r(soldeCycle(C,T)); }).join('|');
+  }
+  function etatValidation(T){
+    var D=dossierEtat();
+    if(!D.par) return {etat:'non', sup:supervises(T)};
+    if(D.emp && D.emp!==empreinte(T))
+      return {etat:'perime', par:D.par, date:D.date, sup:supervises(T)};
+    return {etat:'ok', par:D.par, date:D.date, sup:supervises(T)};
+  }
+  function supervises(T){
+    return CYCLES.filter(function(C){ return niveauEffectif(C,T)>=2; }).length;
+  }
+  function peutValider(T,nom){
+    var n=supervises(T);
+    if(n<CYCLES.length) return {ok:false, motif:'seulement '+n+' cycle(s) supervisé(s) sur '+CYCLES.length+' — on ne valide pas un dossier à moitié supervisé'};
+    nom=String(nom||'').trim();
+    if(!nom) return {ok:false, motif:'nom du validateur non saisi'};
+    var conflit=null;
+    CYCLES.forEach(function(C){ var rv=sign(fiche(C.cle),'revise'); if(rv&&eqNom(rv.par,nom)) conflit=C; });
+    if(conflit) return {ok:false, motif:'on ne valide pas son propre travail — '+nom+' a révisé le cycle « '+conflit.nom+' »'};
+    return {ok:true, nom:nom, emp:empreinte(T)};
+  }
+
   function statut(C,T){
     var F=fiche(C.cle), b=boucleDe(C,T), s=soldeCycle(C,T);
     if(b && b.ok===false) return 'ko';
     var j=(F.justif==null||F.justif==='')?null:r(F.justif);
     if(j==null) return 'todo';
     if(Math.abs(r(s-j))>0.01) return 'ko';
-    if(!F.visa) return 'todo';
-    return 'ok';
+    var n=niveauEffectif(C,T);
+    return n>=2 ? 'sup' : (n>=1 ? 'ok' : 'todo');
   }
-  var STAT={ok:['JUSTIFIÉ','on'], todo:['À JUSTIFIER',''], ko:['ANOMALIE','ko']};
+  var STAT={ok:['RÉVISÉ','on'], sup:['SUPERVISÉ','on'], todo:['À JUSTIFIER',''], ko:['ANOMALIE','ko']};
 
   /* ---------- actions ---------- */
   window.revSet=function(cle,champ,v){
@@ -38573,14 +38671,55 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     if(typeof toast==='function') toast('Justificatif repris : '+num(b.ref)+'.');
     RENDER();
   };
+  /* v646 : un seul visa. v658 : la chaîne — le bouton d'origine reste, il signe le 1er étage. */
   window.revViser=function(cle){
     var F=fiche(cle);
-    if(F.visa){ F.visa=''; F.visaDate=''; SAVE(); RENDER(); return; }
-    var n=String(F.viseur||viseurDefaut()||'').trim();
-    if(!n){ if(typeof toast==='function') toast('Saisissez le nom du réviseur avant de viser.'); return; }
-    F.visa=n; F.visaDate=auj(); SAVE();
-    if(typeof toast==='function') toast('Cycle visé par '+n+'.');
-    RENDER();
+    if(sign(F,'revise')) return window.revRetirer(cle,'revise');
+    return window.revSigner(cle,'revise');
+  };
+  window.revSetNom=function(cle,k,v){
+    var F=fiche(cle), E=etat();
+    F['nom_'+k]=v; if(k!=='revise'){ E.__noms=E.__noms||{}; E.__noms[k]=v; }
+    SAVE();
+  };
+  window.revSigner=function(cle,k){
+    var C=cycleDe(cle); if(!C||idxNiv(k)<0) return;
+    var T=soldesA(FIN()), F=fiche(cle);
+    var g=peutSigner(C,T,k,nomDefaut(cle,k));
+    if(!g.ok){ TOAST('Signature refusée — '+g.motif); return; }
+    F.niv[k]={par:g.nom, date:auj(), solde:g.solde};
+    if(k==='revise'){ F.visa=g.nom; F.visaDate=auj(); }       /* compat v646 */
+    else { var E=etat(); E.__noms=E.__noms||{}; E.__noms[k]=g.nom; }
+    SAVE(); TOAST('Cycle '+NIVEAUX[idxNiv(k)].tag.toLowerCase()+' par '+g.nom+'.'); RENDER();
+  };
+  /* Retirer un étage retire aussi CEUX DU DESSUS : on ne reste pas supervisé après avoir
+     dé-révisé. Et la validation du dossier tombe avec — elle reposait sur cet étage. */
+  window.revRetirer=function(cle,k){
+    var F=fiche(cle), i=idxNiv(k); if(i<0) return;
+    var n=0;
+    for(var q=i;q<NIVEAUX.length;q++){ if(F.niv[NIVEAUX[q].k]){ delete F.niv[NIVEAUX[q].k]; n++; } }
+    if(i===0){ F.visa=''; F.visaDate=''; }
+    var D=dossierEtat(); if(D.par){ D.par=''; D.date=''; D.emp=''; n++; }
+    SAVE(); TOAST(n?'Signature(s) retirée(s) — les étages supérieurs tombent avec.':'Rien à retirer.'); RENDER();
+  };
+  window.revValiderDossier=function(){
+    var T=soldesA(FIN()), D=dossierEtat(), E=etat();
+    if(D.par){ D.par=''; D.date=''; D.emp=''; SAVE(); TOAST('Validation du dossier retirée.'); RENDER(); return; }
+    var g=peutValider(T, (E.__noms&&E.__noms.valide)||'');
+    if(!g.ok){ TOAST('Validation refusée — '+g.motif); return; }
+    D.par=g.nom; D.date=auj(); D.emp=g.emp;
+    SAVE(); TOAST('Dossier validé par '+g.nom+'.'); RENDER();
+  };
+  window.revSetValideur=function(v){ var E=etat(); E.__noms=E.__noms||{}; E.__noms.valide=v; SAVE(); };
+  /* lu par le Parcours (étape 19) : la révision ne s'achève qu'à la validation du dossier */
+  window.revEtatChaine=function(){
+    try{
+      var T=soldesA(FIN()), V=etatValidation(T);
+      return {revises:CYCLES.filter(function(C){ return niveauEffectif(C,T)>=1; }).length,
+              supervises:V.sup, cycles:CYCLES.length,
+              valide:(V.etat==='ok'), perime:(V.etat==='perime'),
+              par:V.par||'', date:V.date||''};
+    }catch(e){ return null; }
   };
 
   /* ---------- impression du dossier ---------- */
@@ -38594,8 +38733,15 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
         +'<td style="text-align:right">'+(j==null?'—':num(r(sc-j)))+'</td>'
         +'<td>'+STAT[st][0]+'</td>'
         +'<td>'+(b?(b.ok===null?'non applicable':(b.ok?'bouclé':'EN DÉFAUT')):'—')+'</td>'
-        +'<td>'+esc(F.visa||'')+(F.visaDate?(' · '+jour(F.visaDate)):'')+'</td></tr>';
+        +'<td>'+sigTxt(F,'revise',sc)+'</td><td>'+sigTxt(F,'supervise',sc)+'</td></tr>';
     }).join('');
+    var V=etatValidation(T);
+    var vDoc='<div style="margin:12px 0 6px;padding:8px;border:1px solid #000">'
+      +'<b>Validation du dossier :</b> '
+      +(V.etat==='ok' ? ('validé par '+esc(V.par)+' le '+jour(V.date))
+        : (V.etat==='perime' ? ('validé par '+esc(V.par)+' le '+jour(V.date)+' — VALIDATION PÉRIMÉE : la comptabilité a bougé depuis')
+          : ('NON VALIDÉ — '+V.sup+' / '+CYCLES.length+' cycle(s) supervisé(s)')))
+      +'</div>';
     var blocs=CYCLES.map(function(C){
       var F=fiche(C.cle), b=boucleDe(C,T);
       var det=(b&&b.det&&b.det.length)
@@ -38619,11 +38765,16 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       +'<div style="font-size:12px;margin-bottom:10px">'+esc(s.raison||'')+' · SIREN '+esc(s.siren||'—')
       +' · exercice du '+jour(DEB())+' au '+jour(FIN())+' · édité le '+jour(auj())+'</div>'
       +'<table style="width:100%;border-collapse:collapse;font-size:12px" border="1" cellpadding="4">'
-      +'<thead><tr><th>Cycle</th><th>Solde comptable</th><th>Justificatif</th><th>Écart</th><th>Statut</th><th>Bouclage</th><th>Visa</th></tr></thead>'
+      +'<thead><tr><th>Cycle</th><th>Solde comptable</th><th>Justificatif</th><th>Écart</th><th>Statut</th><th>Bouclage</th><th>Révisé par</th><th>Supervisé par</th></tr></thead>'
       +'<tbody>'+rows+'</tbody></table>'
+      +vDoc
       +'<h2 style="margin:16px 0 4px;font-size:15px">Détail des contrôles de bouclage</h2>'
       +blocs
       +'</div>';
+  }
+  function sigTxt(F,k,solde){
+    var x=sign(F,k); if(!x) return '—';
+    return esc(x.par)+(x.date?(' · '+jour(x.date)):'')+(perime(F,k,solde)?' · VISA PÉRIMÉ':'');
   }
   window.revImprimer=function(){
     try{ var z=document.getElementById('print-area'); if(!z) return;
@@ -38672,14 +38823,37 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       +'<textarea class="rev-com" rows="2" placeholder="Commentaire du réviseur — nature de la pièce, réserve, point à suivre…" oninput="revSet(\''+C.cle+'\',\'com\',this.value)">'+esc(F.com||'')+'</textarea>'
       +'<div class="rev-acts">'
       +((b&&b.ref!=null)?('<button class="rev-b" onclick="revReprendre(\''+C.cle+'\')">Reprendre le justificatif calculé</button>'):'')
-      +'<span style="flex:1"></span>'
-      +(F.visa
-        ? ('<span class="rev-visa">Visé par '+esc(F.visa)+' le '+esc(jour(F.visaDate))+'</span>'
-           +'<button class="rev-b" onclick="revViser(\''+C.cle+'\')">Retirer le visa</button>')
-        : ('<input class="rev-in rev-visain" type="text" value="'+esc(F.viseur||viseurDefaut())+'" placeholder="nom du réviseur" oninput="revSet(\''+C.cle+'\',\'viseur\',this.value)">'
-           +'<button class="rev-b rev-pri" onclick="revViser(\''+C.cle+'\')">Viser le cycle</button>'))
       +'</div>'
+      +barreChaine(C,T)
       +'</div>';
+  }
+
+  /* ---------- la chaîne, cycle par cycle : Révisé puis Supervisé ---------- */
+  function barreChaine(C,T){
+    var F=fiche(C.cle), s=soldeCycle(C,T);
+    return '<div class="rev-chaine">'+NIVEAUX.map(function(N,i){
+      var x=sign(F,N.k), per=perime(F,N.k,s);
+      var h='<div class="rev-etage'+(x&&!per?' on':'')+(per?' per':'')+'">'
+        +'<div class="rev-el">'+(i+1)+'. '+esc(N.lbl)+'</div>';
+      if(x && !per){
+        h+='<div class="rev-ev">'+esc(x.par)+' · '+esc(jour(x.date))
+          +(x.solde==null?' · <span class="rev-d2">visa repris de la version précédente — le montant signé n’est pas connu</span>'
+                         :' · sur '+num(x.solde))+'</div>'
+          +'<button class="rev-b" onclick="revRetirer(\''+C.cle+'\',\''+N.k+'\')">Retirer</button>';
+      } else if(per){
+        h+='<div class="rev-ev rev-ko">⚠ '+esc(x.par)+' avait signé sur '+num(x.solde)
+          +', le solde est devenu '+num(s)+' — <b>visa périmé</b> : une signature porte sur un montant.</div>'
+          +'<button class="rev-b rev-pri" onclick="revSigner(\''+C.cle+'\',\''+N.k+'\')">Re-signer sur le nouveau solde</button>'
+          +'<button class="rev-b" onclick="revRetirer(\''+C.cle+'\',\''+N.k+'\')">Retirer</button>';
+      } else {
+        var g=peutSigner(C,T,N.k,nomDefaut(C.cle,N.k)||'—');
+        var bloque=(!g.ok && g.motif.indexOf('non saisi')<0);
+        h+='<input class="rev-in rev-visain" type="text" value="'+esc(nomDefaut(C.cle,N.k))+'" placeholder="nom du '+esc(N.role)+'" oninput="revSetNom(\''+C.cle+'\',\''+N.k+'\',this.value)">'
+          +'<button class="rev-b'+(bloque?'':' rev-pri')+'" onclick="revSigner(\''+C.cle+'\',\''+N.k+'\')">'+esc(N.v)+'</button>'
+          +(bloque?('<div class="rev-ev rev-d2">fermé — '+esc(g.motif)+'</div>'):'');
+      }
+      return h+'</div>';
+    }).join('')+'</div>';
   }
 
   window.pageRevision=function(){
@@ -38690,22 +38864,56 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     var bou=CYCLES.map(function(C){ return boucleDe(C,T); });
     var bok=bou.filter(function(b){ return b && b.ok===true; }).length;
     var bna=bou.filter(function(b){ return !b || b.ok===null; }).length;
+    var rev=CYCLES.filter(function(C){ return niveauEffectif(C,T)>=1; }).length;
+    var sup=supervises(T), V=etatValidation(T), E=etat();
+    var nPer=CYCLES.reduce(function(a,C){ return a+(perimes(C,T).length?1:0); },0);
     return '<div id="yada-rev">'
       +'<div class="rev-mast"><div class="rev-eyebrow">YADA · DOSSIER DE RÉVISION</div>'
       +'<h1 class="rev-title">Dossier de révision par cycles</h1>'
       +'<div class="rev-soc">'+esc(s.raison||'')+' · exercice '+esc(DEB())+' → '+esc(FIN())+'</div>'
       +'<button class="rev-close" title="Fermer" onclick="revFermer()">✕</button></div>'
       +'<div class="rev-kpis">'
-      +'<div class="rev-kk"><div class="l">Cycles justifiés</div><div class="v">'+ok+' / '+CYCLES.length+'</div></div>'
+      +'<div class="rev-kk"><div class="l">Cycles révisés</div><div class="v">'+rev+' / '+CYCLES.length+'</div></div>'
+      +'<div class="rev-kk"><div class="l">Cycles supervisés</div><div class="v">'+sup+' / '+CYCLES.length+'</div></div>'
       +'<div class="rev-kk"><div class="l">Anomalies</div><div class="v'+(ko?' ko':'')+'">'+ko+'</div></div>'
-      +'<div class="rev-kk"><div class="l">Contrôles bouclés</div><div class="v">'+bok+' / '+(CYCLES.length-bna)+'</div></div>'
-      +'<div class="rev-kk"><div class="l">Clôture</div><div class="v">'+esc(jour(FIN())||'—')+'</div></div>'
+      +'<div class="rev-kk"><div class="l">Dossier</div><div class="v'+(V.etat==='ok'?'':' ko')+'">'
+      +(V.etat==='ok'?'VALIDÉ':(V.etat==='perime'?'À REVALIDER':'non validé'))+'</div></div>'
       +'</div>'
-      +'<div class="rev-note2">Un cycle n’est justifié que lorsque son solde est rapproché d’une pièce extérieure <b>et</b> visé. Un contrôle de bouclage en défaut pose une anomalie, quel que soit le visa : c’est le dossier qui tranche, pas la signature.'
+      +'<div class="rev-note2">Trois niveaux, et un ordre : le collaborateur <b>révise</b>, le chef de mission <b>supervise</b>, le signataire <b>valide le dossier</b>. On ne supervise pas ce qui n’est pas révisé, et <b>on ne se supervise pas soi-même</b>. Un contrôle de bouclage en défaut ferme la signature — c’est le dossier qui tranche, pas la signature. Enfin, une signature porte sur un <b>montant</b> : si le solde bouge après coup, le visa est périmé.'
+      +(nPer?(' <span class="rev-ko">'+nPer+' cycle(s) portent un visa périmé.</span>'):'')
       +' <button class="rev-b" onclick="revImprimer()">Imprimer le dossier de révision</button></div>'
+      +carteValidation(T,V,sup,E)
       +CYCLES.map(function(C){ return carte(C,T); }).join('')
       +'</div>';
   };
+
+  /* ---------- 3ᵉ niveau : la validation du DOSSIER, pas du cycle ---------- */
+  function carteValidation(T,V,sup,E){
+    var nom=(E.__noms&&E.__noms.valide)||'';
+    var h='<div class="rev-card rev-val"><div class="rev-h"><span class="rev-nom">Validation du dossier</span>'
+      +'<span class="rev-tag'+(V.etat==='ok'?' on':(V.etat==='perime'?' ko':''))+'">'
+      +(V.etat==='ok'?'VALIDÉ':(V.etat==='perime'?'À REVALIDER':'NON VALIDÉ'))+'</span></div>'
+      +'<div class="rev-sub">La validation est l’affaire du signataire, et elle porte sur l’ensemble : elle exige les '
+      +CYCLES.length+' cycles supervisés. Le validateur peut être le chef de mission — dans un petit cabinet c’est souvent la même personne — mais <b>jamais</b> le réviseur du cycle qu’il valide.</div>';
+    if(V.etat==='ok'){
+      h+='<div class="rev-ev">Validé par '+esc(V.par)+' le '+esc(jour(V.date))+' — sur les soldes arrêtés ce jour-là.</div>'
+        +'<div class="rev-acts"><button class="rev-b" onclick="revValiderDossier()">Retirer la validation</button></div>';
+    } else if(V.etat==='perime'){
+      h+='<div class="rev-ev rev-ko">⚠ Validé par '+esc(V.par)+' le '+esc(jour(V.date))
+        +', mais <b>la comptabilité a bougé depuis</b> : la validation ne porte plus sur les soldes actuels. Elle est à reprendre.</div>'
+        +'<div class="rev-acts"><button class="rev-b" onclick="revValiderDossier()">Retirer la validation</button></div>';
+    } else {
+      var g=peutValider(T,nom||'—');
+      var bloque=(!g.ok && g.motif.indexOf('non saisi')<0);
+      h+='<div class="rev-acts">'
+        +'<input class="rev-in rev-visain" type="text" value="'+esc(nom)+'" placeholder="nom du validateur" oninput="revSetValideur(this.value)">'
+        +'<button class="rev-b'+(bloque?'':' rev-pri')+'" onclick="revValiderDossier()">Valider le dossier</button>'
+        +'</div>'
+        +(bloque?('<div class="rev-ev rev-d2">fermé — '+esc(g.motif)+'</div>')
+                :('<div class="rev-ev rev-d2">'+sup+' / '+CYCLES.length+' cycle(s) supervisé(s).</div>'));
+    }
+    return h+'</div>';
+  }
 
   /* La sortie s'appelle bien « …Fermer() » : le filet de sortie v614 reconnait le bouton
      et n'en greffe pas un second (invariant v626 : exactement 1 sortie par module). */
@@ -38763,6 +38971,16 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
      +'html body:not(#_yz) #yada-rev .rev-cpts summary{font-family:ui-monospace,monospace;font-size:11px;color:#8b8b90;cursor:pointer}'
      +'html body:not(#_yz) #yada-rev .rev-acts{display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap}'
      +'html body:not(#_yz) #yada-rev .rev-visa{font-family:ui-monospace,monospace;font-size:11px;color:#a8a9ad}'
+     +'html body:not(#_yz) #yada-rev .rev-chaine{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:#242427;margin-top:10px}'
+     +'html body:not(#_yz) #yada-rev .rev-etage{background:#0b0b0c;padding:10px 12px;display:flex;flex-wrap:wrap;align-items:center;gap:8px}'
+     +'html body:not(#_yz) #yada-rev .rev-etage.on{background:#121214}'
+     +'html body:not(#_yz) #yada-rev .rev-etage.per{background:#121214}'
+     +'html body:not(#_yz) #yada-rev .rev-el{font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:#8b8b90;width:100%}'
+     +'html body:not(#_yz) #yada-rev .rev-ev{font-size:12.5px;color:#a8a9ad;flex:1 1 100%}'
+     +'html body:not(#_yz) #yada-rev .rev-ev.rev-ko{color:#f5f5f6}'
+     +'html body:not(#_yz) #yada-rev .rev-d2{color:#8b8b90;font-size:11.5px}'
+     +'html body:not(#_yz) #yada-rev .rev-val .rev-acts{margin-top:8px}'
+     +'@media(max-width:820px){html body:not(#_yz) #yada-rev .rev-chaine{grid-template-columns:1fr}}'
      +'html body:not(#_yz) #yada-rev .rev-b{background:#000;color:#f5f5f6;border:1px solid #35353a;border-radius:4px;padding:5px 11px;cursor:pointer;font-family:ui-monospace,monospace;font-size:11.5px}'
      +'html body:not(#_yz) #yada-rev .rev-b.rev-pri{background:#f5f5f6;color:#0a0a0b;border-color:#f5f5f6}'
      +'@media(max-width:820px){html body:not(#_yz) #yada-rev .rev-kpis{grid-template-columns:repeat(2,1fr)}html body:not(#_yz) #yada-rev .rev-grid{grid-template-columns:1fr}}';
@@ -41203,14 +41421,21 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     /* 19 — Révision comptable */
     (function(){
       var rev=(param('revision',{})[exo()])||{};
-      var cy=Object.keys(rev).length, vis=0;
-      Object.keys(rev).forEach(function(k){ if(rev[k]&&rev[k].visa) vis++; });
+      var cy=Object.keys(rev).filter(function(k){ return k.indexOf('__')!==0; }).length;
+      /* v658 — la chaîne de responsabilité : révisé → supervisé → VALIDÉ. L'étape ne se
+         termine qu'à la validation du dossier, pas au premier visa. */
+      var CH=null; try{ if(typeof window.revEtatChaine==='function') CH=window.revEtatChaine(); }catch(e){}
+      var nb=CH?CH.cycles:6, rv=CH?CH.revises:0, sp=CH?CH.supervises:0;
       E.push({n:19, t:'Révision comptable', mod:'revision', req:[11,13,14,17],
-        st: vis===0 ? 'afaire' : (vis>=6 ? 'fait' : 'encours'),
-        q: vis===0 ? 'aucun cycle visé' : (vis+'/6 cycle(s) visé(s)'),
-        d:[['Cycles visés', vis+' / 6'],
-           ['Cycles renseignés', String(cy)],
-           ['Principe', 'chaque solde du bilan rapproché d\'une pièce extérieure']]});
+        st: (CH&&CH.valide) ? 'fait' : ((rv||sp||cy) ? 'encours' : 'afaire'),
+        q: (CH&&CH.valide) ? ('dossier validé par '+CH.par+' le '+frDate(CH.date))
+          : ((CH&&CH.perime) ? 'dossier validé, mais la comptabilité a bougé depuis : validation périmée'
+            : (rv===0 ? 'aucun cycle révisé'
+              : (rv+'/'+nb+' révisé(s) · '+sp+'/'+nb+' supervisé(s) — dossier non validé'))),
+        d:[['Cycles révisés', rv+' / '+nb],
+           ['Cycles supervisés', sp+' / '+nb],
+           ['Dossier', (CH&&CH.valide)?('validé par '+CH.par):((CH&&CH.perime)?'validation périmée':'non validé')],
+           ['Principe', 'le collaborateur révise, le chef de mission supervise, le signataire valide']]});
     })();
 
     /* 20 — Déclarations fiscales */

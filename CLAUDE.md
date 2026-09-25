@@ -36,7 +36,54 @@
 
 ---
 
-## 🟢 Dernière mise à jour — LA 2065 : LA DÉCLARATION QUI PORTE L'IMPÔT À L'ADMINISTRATION — v657
+## 🟢 Dernière mise à jour — RÉVISÉ · SUPERVISÉ · VALIDÉ : LA CHAÎNE DE RESPONSABILITÉ — v658
+**Quoi :** **CDC-5 du cahier des charges.** Le dossier de révision (v646) savait dire si un solde était **justifié** — mais il ne connaissait qu'**un seul visa**. Le cahier des charges demande une **chaîne de responsabilité** : *le collaborateur révise, le chef de mission supervise, puis validation.* Elle est posée.
+
+| Niveau | Qui | Portée |
+| --- | --- | --- |
+| **1 · RÉVISÉ** | le collaborateur | **le cycle** — il a rapproché le solde d'une pièce extérieure et signe son travail |
+| **2 · SUPERVISÉ** | le chef de mission | **le cycle** — il contrôle le travail du collaborateur |
+| **3 · VALIDÉ** | le signataire | **le DOSSIER ENTIER** — sa signature engage sa responsabilité, elle ne se répète pas six fois |
+
+**Quatre règles font que c'est une chaîne, et pas trois cases à cocher.** Chacune **refuse**, et **écrit son motif** :
+1. **L'ordre est un verrou.** « Signature refusée — étage précédent non franchi : le cycle doit être révisé d'abord. »
+2. **On ne se supervise pas soi-même.** « Signature refusée — on ne se supervise pas soi-même : Sarah Durand a révisé ce cycle. » Sans cette règle, le contrôle ne contrôle rien. La comparaison est **insensible à la casse** — « sarah durand » est refusé aussi. Même règle pour la validation, qui **nomme le cycle en cause** : « on ne valide pas son propre travail — Sarah Durand a révisé le cycle « Capitaux & emprunts ». »
+3. **Un contrôle de bouclage en défaut ferme la signature.** La v646 posait le principe (*le contrôle prime sur la signature*) ; il devient **opérant** : « fermé — contrôle de bouclage en défaut : on ne signe pas un cycle qui ne boucle pas », écrit **dans la carte** et opposé au clic.
+4. **Une signature porte sur un MONTANT, pas sur un cycle.** C'est le point qu'on oublie toujours. Chaque visa **mémorise le solde signé** ; si la comptabilité bouge après coup, le visa devient **PÉRIMÉ** — on a supervisé un chiffre qui n'existe plus — et le cycle **redescend d'un étage**. Mesuré : une écriture postée après la validation (512 + 101) fait tomber **exactement les deux cycles concernés** (trésorerie et capitaux) — les quatre autres gardent leurs visas — et la **validation du dossier passe à « À REVALIDER »**.
+
+**Deux conséquences qui ne se voient qu'à l'usage :** (a) **retirer un étage retire ceux du dessus** — on ne reste pas *supervisé* après avoir été dé-révisé —, **et la validation du dossier tombe avec**, puisqu'elle reposait dessus ; (b) la **validation exige les six cycles supervisés** : « on ne valide pas un dossier à moitié supervisé ».
+
+**Le validateur peut être le chef de mission** — dans un petit cabinet, c'est souvent la même personne. Ce choix est **assumé et écrit à l'écran**, plutôt que silencieusement autorisé. Ce qu'il ne peut jamais être, c'est le **réviseur** du cycle qu'il valide.
+
+**Le travail déjà fait n'est pas perdu.** Un visa posé sous la v646 **est** une révision : il est **migré** à l'étage 1 avec son nom et sa date. En revanche le **montant signé n'avait pas été mémorisé à l'époque** — le module le dit (« visa repris de la version précédente — le montant signé n'est pas connu ») au lieu de faire croire que le visa est à jour, et ne le déclare jamais périmé faute de pouvoir le vérifier.
+
+**Comment — 8 éditions chirurgicales de `yada-addon-revision` (aucun nouvel addon) :** `fiche()` accueille `niv{revise,supervise}` et **migre** `visa`→`revise` ; `NIVEAUX` + `sign` / `perime` / `niveauEffectif` (la chaîne s'arrête au premier maillon **absent OU périmé**) ; **`peutSigner`** et **`peutValider`**, les deux portes qui refusent avec un motif ; `empreinte(T)` (les six soldes) qui rend la validation du dossier **périssable** ; actions `revSigner` / `revRetirer` (cascade) / `revValiderDossier` / `revSetNom` / `revSetValideur`, `revViser` conservé (il signe le 1ᵉʳ étage — compat v646) ; `statut()` rend désormais `RÉVISÉ` / `SUPERVISÉ` ; barre **`barreChaine`** à deux étages sous chaque cycle + **carte « Validation du dossier »** en tête ; **tirage** à deux colonnes (Révisé par · Supervisé par) + bloc de validation ; et l'**étape 19 du Parcours** ne s'achève qu'à la **validation** (`window.revEtatChaine()` l'expose). `sw.js` yada-v253, badge v658, `version.json` 658.
+
+**Validé :** `node --check` (**326 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014) + balises (3/5/3) + **filet d'équilibre** ✅ + une sonde Playwright qui **joue la chaîne du refus jusqu'à la validation** :
+
+| Mesure | Résultat |
+| --- | --- |
+| **Ordre** — superviser avant de réviser | **refusé** · « étage précédent non franchi » · rien n'est signé |
+| Révision par le collaborateur | « Cycle révisé par Sarah Durand » · **solde signé mémorisé** |
+| **Séparation des tâches** — « sarah durand » supervise | **refusé** · « on ne se supervise pas soi-même » (casse ignorée) |
+| Supervision par le chef de mission | « Cycle supervisé par Marc Leroy » |
+| **Validation à 1 / 6 supervisés** | **refusée** · « on ne valide pas un dossier à moitié supervisé » |
+| **Validateur = réviseur** | **refusée** · le cycle en cause est **nommé** |
+| Validation à 6 / 6 par le signataire | « Dossier validé par Paul Expert » |
+| **Étape 19 du Parcours** | **terminé** · « dossier validé par Paul Expert le 25/09/2026 » |
+| **La comptabilité bouge après la validation** | **4 / 6** cycles gardent leurs visas · les **2 concernés** tombent · dossier **À REVALIDER** · étape 19 repasse **en cours** |
+| **Bouclage en défaut** (trésorerie sans relevé) | signature **refusée** · motif **écrit dans la carte** |
+| **Retirer la révision** | supervision **et** validation du dossier **tombent avec** |
+| **Migration v646** | visa « Ancien Réviseur · 15/01/2026 » → **étage RÉVISÉ** · montant signé inconnu, **dit à l'écran** |
+| Tirage | colonnes **Révisé par · Supervisé par** + bloc « Validation du dossier » |
+| Sorties « Fermer » · boutons vides · gras · italique · débordement | **1** · **0** · **0** · **0** · **0** |
+| Routage · pageerror · console.error | **35 / 35** · **0** · **0** |
+
+**La suite du cahier des charges :** les formats **QIF / MT940 / CFONB** (CDC-2) et le **FEC provisoire / définitif** (CDC-8) — techniques et cernés ; puis la **gestion cabinet** (temps, coût, marge, encours), la **plaquette** et les **DES / DEB**.
+
+---
+
+## 🟢 MAJ précédente — LA 2065 : LA DÉCLARATION QUI PORTE L'IMPÔT À L'ADMINISTRATION — v657
 **Quoi :** **CDC-3 du cahier des charges.** Le dossier savait dire ce qu'il a **gagné** (v643), ce qu'il **doit** (résultat fiscal, v647) et **comptabiliser** cette dette (v654). Il ne savait pas la **déclarer**. Nouveau module **« Déclaration 2065 (IS) »** (rubrique **Déclarations**) : la pièce qui porte le résultat fiscal à l'administration, et qui dit **combien il reste à payer** une fois les acomptes déduits.
 
 | Onglet | Contenu |

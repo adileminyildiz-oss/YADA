@@ -257,10 +257,13 @@
   simplifié, revenus fonciers).
 - ⏳ **[CDC-4 · Déclarations] DES et DEB** (échanges intracommunautaires de services et de biens)
   — absentes.
-- ⏳ **[CDC-5 · Révision] Les trois niveaux « Révisé · Supervisé · Validé »** — la révision v646
-  connaît *justifié / à justifier / anomalie* et **un seul visa**. Le cahier des charges demande
-  une **chaîne de responsabilité à deux étages** (collaborateur révise, chef de mission supervise,
-  puis validation).
+- ✅ **[CDC-5 · Révision] — LA CHAÎNE EST LIVRÉE (v658).** Trois niveaux : **RÉVISÉ** et
+  **SUPERVISÉ** cycle par cycle, **VALIDÉ** sur le dossier entier (c'est la signature du
+  signataire, elle ne se répète pas six fois). Quatre règles en font une chaîne et pas trois
+  cases : l'**ordre est un verrou** ; on **ne se supervise pas soi-même** ; un **bouclage en
+  défaut ferme la signature** ; et une **signature porte sur un MONTANT** — si le solde bouge
+  après coup, le visa est **périmé**. Le visa unique de la v646 est **migré** en révision.
+  L'étape 19 du Parcours ne s'achève qu'à la **validation du dossier**.
 - ⏳ **[CDC-6 · Gestion cabinet] Temps passé, coût, marge et rentabilité par dossier, encours,
   honoraires, SEPA, relances** — quasi inexistant (l'Analytique v648 mesure la rentabilité des
   **chantiers du client**, pas celle des **dossiers du cabinet**).
@@ -275,7 +278,7 @@
    comptable (*une caisse ne peut pas être créditrice*).
 2. ~~**CDC-3** — la **2065**~~ → **livrée en v657** (dernier maillon de la chaîne fiscale
    construite en v647 + v654 : résultat fiscal → IS → écriture → **déclaration**).
-3. **CDC-5** — la supervision à deux étages : c'est la phrase qui clôt le cahier des charges
-   (« prêt à être **supervisé** puis transmis »).
+3. ~~**CDC-5** — la supervision à deux étages~~ → **livrée en v658** (« prêt à être
+   **supervisé** puis transmis » : la phrase qui clôt le cahier des charges).
 4. **CDC-2**, **CDC-8** — les formats et le FEC provisoire (techniques, cernés).
 5. **CDC-6**, **CDC-7**, **CDC-4** — gestion cabinet, plaquette, DES/DEB (chantiers larges).
