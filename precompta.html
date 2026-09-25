@@ -4214,6 +4214,7 @@ function render(){
   flux:(typeof pageFlux==='function'?pageFlux:function(){return'<div class="mod-wrap"><div class="card"><h2>Tableau de flux de trésorerie</h2></div></div>';}),
   parcours:(typeof pageParcours==='function'?pageParcours:function(){return'<div class="mod-wrap"><div class="card"><h2>Parcours comptable guidé</h2></div></div>';}),
   constitution:(typeof pageConstitution==='function'?pageConstitution:function(){return'<div class="mod-wrap"><div class="card"><h2>Constitution de société</h2></div></div>';}),
+  echeancier:(typeof pageEcheancier==='function'?pageEcheancier:function(){return'<div class="mod-wrap"><div class="card"><h2>Règlements &amp; échéances</h2></div></div>';}),
   importbanque:(typeof pageImportBanque==='function'?pageImportBanque:function(){return'<div class="mod-wrap"><div class="card"><h2>Import bancaire</h2></div></div>';}),
   recurrentes:(typeof pageRecurrentes==='function'?pageRecurrentes:function(){return'<div class="mod-wrap"><div class="card"><h2>Écritures récurrentes</h2></div></div>';}),
   automatismes:(typeof pageAutomatismes==='function'?pageAutomatismes:function(){return'<div class="mod-wrap"><div class="card"><h2>Automatismes</h2></div></div>';}),
@@ -11099,7 +11100,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v652';
+    b.textContent='YADA · v653';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -37430,7 +37431,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     {id:'yb-saisie',  lbl:'Saisie',       prend:[],
      mods:['journal','achats','recurrentes','importbanque','chargespaie']},
     {id:'yb-trait',   lbl:'Traitements',  prend:[['sg-util','Utilitaires']],
-     mods:['parcours','constitution','automatismes','inventaire','rappro','banque','immos']},
+     mods:['parcours','constitution','echeancier','automatismes','inventaire','rappro','banque','immos']},
     {id:'yb-decl',    lbl:'Déclarations', prend:[], mods:['tva','liasse']},
     {id:'yb-etats',   lbl:'États',        prend:[], mods:['editions','annexe','flux']},
     {id:'yb-revis',   lbl:'Révision',     prend:[], mods:['revision','controles']},
@@ -40842,7 +40843,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
         var k=C9(l.compte); if(!k||k.indexOf(px)!==0) return;
         if(l.lettre) return;
         var m=r((+l.debit||0)-(+l.credit||0)); if(!m) return;
-        out.push({date:e.date, cpt:k, lib:e.libelle||'', m:m});
+        out.push({date:e.date, eid:e.id, cpt:k, lib:e.libelle||'', m:m});
       });
     });
     return out;
@@ -41063,21 +41064,35 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
         _f:f, _c:c});
     })();
 
-    /* 12 — Contrôle échéances */
+    /* 12 — Contrôle échéances : l'ancienneté se compte depuis l'ÉCHÉANCE, pas depuis la pièce */
     (function(){
+      function echeanceDe(x){
+        try{
+          var f=(db.factures||[]).filter(function(y){ return y.ecritureId===x.eid && y.echeance; })[0];
+          if(f) return f.echeance;
+          var d=(db.docs||[]).filter(function(y){ return y.ecritureId===x.eid && y.echeance; })[0];
+          if(d) return d.echeance;
+          if(typeof faEcheanceFromCond==='function' && typeof faCondDefaut==='function')
+            return faEcheanceFromCond(x.date, faCondDefaut());
+        }catch(e){}
+        return x.date;
+      }
       var L=nonLettrees('401').concat(nonLettrees('411'));
-      var auj=AUJ(), b={a:0,b:0,c:0,d:0}, m={a:0,b:0,c:0,d:0};
+      var auj=AUJ(), b={n:0,a:0,b:0,c:0,d:0}, m={n:0,a:0,b:0,c:0,d:0};
       L.forEach(function(x){
-        var j=Math.floor((new Date(auj)-new Date(x.date))/86400000);
-        var k = j<=30?'a' : j<=60?'b' : j<=90?'c' : 'd';
+        var j=Math.floor((new Date(auj)-new Date(echeanceDe(x)))/86400000);
+        var k = j<=0?'n' : j<=30?'a' : j<=60?'b' : j<=90?'c' : 'd';
         b[k]++; m[k]=r(m[k]+Math.abs(x.m));
       });
-      E.push({n:12, t:'Contrôle échéances', mod:'reglements', req:[11],
-        st: L.length===0 ? 'fait' : (b.d>0?'afaire':'encours'),
+      var echu=b.a+b.b+b.c+b.d;
+      E.push({n:12, t:'Contrôle échéances', mod:'echeancier', req:[11],
+        st: L.length===0 ? 'fait' : (b.d>0?'afaire':(echu>0?'encours':'fait')),
         q: L.length===0 ? 'aucune créance ni dette en attente'
                         : (b.d>0 ? (b.d+' pièce(s) à plus de 90 jours — '+eu(m.d)+' à relancer')
-                                 : (L.length+' pièce(s) en cours, aucune au-delà de 90 jours')),
-        d:[['0 à 30 jours', b.a+' · '+eu(m.a)],
+                                 : (echu>0 ? (echu+' pièce(s) échue(s), aucune au-delà de 90 jours')
+                                           : (L.length+' pièce(s) en cours, aucune échue'))),
+        d:[['Non échu', b.n+' · '+eu(m.n)],
+           ['0 à 30 jours', b.a+' · '+eu(m.a)],
            ['31 à 60 jours', b.b+' · '+eu(m.b)],
            ['61 à 90 jours', b.c+' · '+eu(m.c)],
            ['Plus de 90 jours', b.d+' · '+eu(m.d)]]});
@@ -41933,6 +41948,656 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
      +'html body:not(#_yz) #yada-cst .cst-b.cst-pri{background:#f5f5f6;color:#0a0a0b;border-color:#f5f5f6}'
      +'html body:not(#_yz) #yada-cst .cst-b[disabled]{opacity:.4;cursor:not-allowed}'
      +'@media(max-width:820px){html body:not(#_yz) #yada-cst .cst-kpis{grid-template-columns:repeat(2,1fr)}html body:not(#_yz) #yada-cst .cst-form{grid-template-columns:1fr}}';
+  }catch(e){}
+})();
+</script>
+<script id="yada-addon-echeancier">
+/* ===== YADA — RÈGLEMENTS & ÉCHÉANCES (v653) — 100% ADDITIF =====
+   Étapes 11 et 12 du parcours : une facture comptabilisée n'est pas une facture réglée.
+   Le module lit les comptes de tiers, isole ce qui N'EST PAS LETTRÉ — donc ce qui reste
+   réellement dû — et le ventile par ancienneté :
+
+     0-30 j   ·   31-60 j   ·   61-90 j   ·   plus de 90 jours
+
+   puis il règle, avec le MODE DE PAIEMENT qui décide du compte de trésorerie :
+
+     Espèces                                   caisse  530
+     Carte bancaire · Virement · Prélèvement
+     · Chèque                                  banque  512
+
+     Encaissement client    débit 512 ou 530 / crédit 411
+     Paiement fournisseur   débit 401         / crédit 512 ou 530
+
+   Le règlement qui solde la pièce la LETTRE ; le règlement partiel ne la lettre pas et
+   le dit. Aucun règlement n'est écrit sans contrôle : montant nul, montant supérieur au
+   restant dû, date hors exercice — chacun est un refus motivé, écrit en clair. */
+(function(){
+  if(window.__yadaEcheancier) return; window.__yadaEcheancier=true;
+
+  function r(n){ return Math.round((+n||0)*100)/100; }
+  function eu(n){ try{ return eur(n); }catch(e){ return r(n).toFixed(2)+' €'; } }
+  function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function C9(x){ try{ return c9(String(x||'')); }catch(e){ return String(x||''); } }
+  function S(){ try{ return db.societe||{}; }catch(e){ return {}; } }
+  function SAVE(){ try{ if(typeof save==='function') save(); }catch(e){} }
+  function RENDER(){ try{ if(typeof render==='function') render(); }catch(e){} }
+  function TOAST(m){ try{ if(typeof toast==='function') toast(m); }catch(e){} }
+  function D0(){ return String(S().exoDebut||''); }
+  function D1(){ return String(S().exoFin||''); }
+  function exo(){ return (D1()||D0()||String(new Date().getFullYear())).slice(0,4); }
+  function dansExo(d){ var a=D0(), b=D1(); d=String(d||''); return !!d && (!a||d>=a) && (!b||d<=b); }
+  function fr(d){ try{ return frDate(d); }catch(e){ return String(d||''); } }
+  function AUJ(){ try{ return todayStr(); }catch(e){ return new Date().toISOString().slice(0,10); } }
+  function jours(a,b){ return Math.floor((new Date(b)-new Date(a))/86400000); }
+
+  /* ---------- comptes de trésorerie, ajoutés au plan s'ils manquent ---------- */
+  var PLAN={ '512000000':'Banque', '530000000':'Caisse', '401000000':'Fournisseurs', '411000000':'Clients' };
+  try{
+    Object.keys(PLAN).forEach(function(k){
+      if(typeof COMPTES==='object' && !COMPTES[k]) COMPTES[k]=PLAN[k];
+      if(Array.isArray(db.plan) && !db.plan.filter(function(c){ return C9(c.code)===k; }).length)
+        db.plan.push({code:k, lib:PLAN[k]});
+    });
+  }catch(e){}
+  function lib(k){ k=C9(k); try{ return COMPTES[k]||PLAN[k]||k; }catch(e){ return PLAN[k]||k; } }
+
+  /* ---------- modes de paiement : le mode décide du compte ---------- */
+  var MODES=[
+    {c:'VIR',  n:'Virement',        cpt:'512000000'},
+    {c:'PRLV', n:'Prélèvement',     cpt:'512000000'},
+    {c:'CB',   n:'Carte bancaire',  cpt:'512000000'},
+    {c:'CHQ',  n:'Chèque',          cpt:'512000000'},
+    {c:'ESP',  n:'Espèces',         cpt:'530000000'}
+  ];
+  function modeDe(code){ var m=MODES.filter(function(x){ return x.c===code; })[0]; return m||MODES[0]; }
+
+  /* ---------- état du module (conditions par tiers) ---------- */
+  function ST(){
+    try{
+      db.parametres=db.parametres||{};
+      db.parametres.echeancier=db.parametres.echeancier||{};
+      var E=db.parametres.echeancier;
+      E.cond=E.cond||{};
+      return E;
+    }catch(e){ return {cond:{}}; }
+  }
+  function condDefaut(){ try{ return (typeof faCondDefaut==='function')?faCondDefaut():'30 jours'; }catch(e){ return '30 jours'; } }
+  function condDe(tid){ var E=ST(); return (tid && E.cond[tid]) ? E.cond[tid] : condDefaut(); }
+  function echeanceDe(dateISO, tid){
+    try{ if(typeof faEcheanceFromCond==='function') return faEcheanceFromCond(dateISO, condDe(tid)); }catch(e){}
+    return dateISO;
+  }
+
+  /* ---------- ce que le dossier porte RÉELLEMENT ---------- */
+  function estResultat(e){ return /OD\s*R[ÉE]SULTAT/i.test(String(e.libelle||'')); }
+
+  /* règlements déjà imputés sur une ligne de facture : e.reglementDe = '<eid>|<index>' */
+  function dejaRegle(){
+    var m={};
+    (db.ecritures||[]).forEach(function(e){
+      var k=e && e.reglementDe; if(!k) return;
+      m[k]=r((m[k]||0)+(+e.reglementMontant||0));
+    });
+    return m;
+  }
+
+  /* toutes les lignes NON LETTRÉES d'un type de tiers, avec leur échéance et leur restant */
+  function lignesTiers(type){
+    var coll=(type==='fournisseur')?'401':'411', collC9=C9(coll);
+    var auxMap={};
+    (db.tiers||[]).forEach(function(t){
+      if(t.type!==type) return;
+      if(t.compteAux) auxMap[C9(t.compteAux)]={ id:t.id, nom:t.nom };
+    });
+    var paye=dejaRegle(), out=[];
+    (db.ecritures||[]).forEach(function(e){
+      if(!e||!e.lignes||estResultat(e)) return;
+      /* la ligne de tiers d'un règlement DÉJÀ IMPUTÉ à sa pièce est retranchée du restant de
+         cette pièce : la recompter ici en acompte la déduirait une seconde fois. */
+      if(e.reglementDe) return;
+      var libE=String(e.libelle||'');
+      (e.lignes||[]).forEach(function(l,i){
+        if(l.lettre) return;                                  /* lettré = soldé */
+        var lc=C9(l.compte);
+        var info=null;
+        if(auxMap[lc]) info={ key:auxMap[lc].id, nom:auxMap[lc].nom, tid:auxMap[lc].id };
+        else if(lc===collC9 || String(l.compte)===coll){
+          var f=e.factureId?(db.factures||[]).filter(function(x){return x.id===e.factureId;})[0]:null;
+          var b=(db.banque||[]).filter(function(x){return x.ecritureId===e.id;})[0];
+          var tid=f?f.tiersId:(b?b.tiersId:null);
+          var t=tid?(db.tiers||[]).filter(function(x){return x.id===tid;})[0]:null;
+          info = t ? { key:t.id, nom:t.nom, tid:t.id } : { key:'__nid', nom:'(tiers non identifié)', tid:null };
+        }
+        if(!info) return;
+        /* signe : côté facture positif — client = débit, fournisseur = crédit */
+        var sgn = (type==='fournisseur') ? r((+l.credit||0)-(+l.debit||0)) : r((+l.debit||0)-(+l.credit||0));
+        if(Math.abs(sgn)<0.005) return;
+        /* échéance : celle de la facture si elle existe, sinon dérivée des conditions */
+        var ech='';
+        try{
+          var fx=e.factureId?(db.factures||[]).filter(function(x){return x.id===e.factureId;})[0]:null;
+          if(fx && fx.echeance) ech=fx.echeance;
+          if(!ech){
+            var dc=(db.docs||[]).filter(function(x){ return x.ecritureId===e.id && x.echeance; })[0];
+            if(dc) ech=dc.echeance;
+          }
+        }catch(_e){}
+        var derivee=false;
+        if(!ech){ ech=echeanceDe(e.date, info.tid); derivee=true; }
+        var cle=e.id+'|'+i;
+        var pay=r(paye[cle]||0);
+        out.push({
+          eid:e.id, li:i, cle:cle, cpt:l.compte, cptC9:lc,
+          key:info.key, nom:info.nom, tid:info.tid,
+          date:e.date, journal:e.journal||'', piece:(libE.split(' · ')[0]||''), lib:libE,
+          montant:sgn, facture:(sgn>0), paye:pay, restant:r(sgn-pay),
+          ech:ech, echDerivee:derivee
+        });
+      });
+    });
+    return out;
+  }
+
+  /* groupes par tiers + ventilation par ancienneté */
+  function groupes(type){
+    var L=lignesTiers(type), ref=AUJ(), G={};
+    L.forEach(function(x){
+      var g=G[x.key]; if(!g) g=G[x.key]={ key:x.key, nom:x.nom, tid:x.tid, lignes:[], b:[0,0,0,0], nonEchu:0, acomptes:0, total:0, nb:0 };
+      g.lignes.push(x); g.total=r(g.total+x.restant);
+      if(x.facture){
+        if(x.restant<0.005) return;                          /* pièce déjà soldée par des acomptes imputés */
+        g.nb++;
+        var j=jours(x.ech, ref);
+        if(j<=0) g.nonEchu=r(g.nonEchu+x.restant);
+        else if(j<=30) g.b[0]=r(g.b[0]+x.restant);
+        else if(j<=60) g.b[1]=r(g.b[1]+x.restant);
+        else if(j<=90) g.b[2]=r(g.b[2]+x.restant);
+        else g.b[3]=r(g.b[3]+x.restant);
+      } else {
+        g.acomptes=r(g.acomptes+Math.abs(x.restant));
+      }
+    });
+    return G;
+  }
+  function clesTriees(G){
+    return Object.keys(G).sort(function(a,b){
+      if(a==='__nid') return 1; if(b==='__nid') return -1;
+      return G[b].total-G[a].total;
+    });
+  }
+  function cumul(G){
+    var t={nonEchu:0,b:[0,0,0,0],acomptes:0,total:0,nb:0};
+    Object.keys(G).forEach(function(k){ var g=G[k];
+      t.nonEchu=r(t.nonEchu+g.nonEchu); t.acomptes=r(t.acomptes+g.acomptes);
+      t.total=r(t.total+g.total); t.nb+=g.nb;
+      for(var i=0;i<4;i++) t.b[i]=r(t.b[i]+g.b[i]);
+    });
+    return t;
+  }
+  /* solde non lettré du collectif + auxiliaires, pour le contrôle de bouclage */
+  function soldeNonLettre(type){
+    var prefixe=(type==='fournisseur')?'401':'411', s=0;
+    (db.ecritures||[]).forEach(function(e){
+      if(!e||!e.lignes||estResultat(e)) return;
+      (e.lignes||[]).forEach(function(l){
+        if(l.lettre) return;
+        var k=C9(l.compte); if(!k||k.indexOf(prefixe)!==0) return;
+        s = (type==='fournisseur') ? r(s+(+l.credit||0)-(+l.debit||0)) : r(s+(+l.debit||0)-(+l.credit||0));
+      });
+    });
+    return r(s);
+  }
+
+  /* ---------- la seule porte d'écriture : équilibre ET exercice avant de poster ---------- */
+  function poster(libelle, date, lignes){
+    var d=r(lignes.reduce(function(a,l){ return a+(+l.debit||0); },0));
+    var c=r(lignes.reduce(function(a,l){ return a+(+l.credit||0); },0));
+    if(Math.abs(r(d-c))>0.005) return {ok:false, motif:'écriture déséquilibrée ('+eu(d)+' ≠ '+eu(c)+')'};
+    if(!dansExo(date)) return {ok:false, motif:'date '+fr(date)+' hors exercice ('+fr(D0())+' → '+fr(D1())+')'};
+    var ecr=null;
+    try{ ecr=posterOD({date:date, libelle:libelle, lignes:lignes, journal:'BQ'}); }
+    catch(e){ return {ok:false, motif:'écriture refusée par le journal'}; }
+    if(!ecr) return {ok:false, motif:'écriture refusée par le journal'};
+    return {ok:true, ecr:ecr};
+  }
+
+  /* ---------- actions ---------- */
+  window.__echTab   = window.__echTab   || 'client';
+  window.__echSel   = window.__echSel   || null;
+  window.__echForm  = window.__echForm  || null;
+
+  window.echTab=function(t){ window.__echTab=(t==='fournisseur')?'fournisseur':'client'; window.__echSel=null; window.__echForm=null; RENDER(); };
+  window.echSelect=function(cle){
+    var type=window.__echTab, x=lignesTiers(type).filter(function(y){ return y.cle===cle; })[0];
+    if(!x){ TOAST('Pièce introuvable.'); return; }
+    window.__echSel=cle;
+    window.__echForm={ mode:'VIR', date:(dansExo(AUJ())?AUJ():(D1()||AUJ())), montant:x.restant };
+    RENDER();
+  };
+  window.echAnnuler=function(){ window.__echSel=null; window.__echForm=null; RENDER(); };
+  window.echForm=function(champ, val){
+    var F=window.__echForm; if(!F) return;
+    if(champ==='montant') F.montant=r(val); else F[champ]=String(val||'');
+    RENDER();
+  };
+  window.echCondDefaut=function(v){
+    try{
+      db.societe=db.societe||{}; db.societe.conditionPaiement=String(v||'');
+      var c=(window.FA_CONDITIONS||[]).filter(function(x){ return x.lib===v; })[0];
+      db.societe.delaiPaiement = c ? c.j : 30;
+    }catch(e){}
+    SAVE(); RENDER();
+  };
+  window.echCondTiers=function(tid, v){
+    if(!tid) return; var E=ST();
+    if(!v) delete E.cond[tid]; else E.cond[tid]=String(v);
+    SAVE(); RENDER();
+  };
+
+  /* règlement d'une pièce : le mode décide du compte de trésorerie */
+  window.echRegler=function(){
+    var type=window.__echTab, cle=window.__echSel, F=window.__echForm;
+    if(!cle||!F){ TOAST('Aucune pièce sélectionnée.'); return; }
+    var x=lignesTiers(type).filter(function(y){ return y.cle===cle; })[0];
+    if(!x){ TOAST('Pièce introuvable — elle a peut-être été lettrée entre-temps.'); window.__echSel=null; RENDER(); return; }
+    var m=r(F.montant);
+    if(m<=0.005){ TOAST('Refusé : montant nul — rien à régler.'); return; }
+    if(m>r(x.restant+0.005)){ TOAST('Refusé : le règlement ('+eu(m)+') dépasse le restant dû de la pièce ('+eu(x.restant)+').'); return; }
+    var md=modeDe(F.mode), tres=md.cpt;
+    var lg = (type==='fournisseur')
+      ? [{compte:x.cpt,  lib:'Paiement '+x.nom+' — '+md.n,      debit:m, credit:0},
+         {compte:tres,   lib:lib(tres)+' — '+md.n,              debit:0, credit:m}]
+      : [{compte:tres,   lib:lib(tres)+' — '+md.n,              debit:m, credit:0},
+         {compte:x.cpt,  lib:'Encaissement '+x.nom+' — '+md.n,  debit:0, credit:m}];
+    var libelle=(type==='fournisseur'?'RÈGLEMENT FOURNISSEUR ':'RÈGLEMENT CLIENT ')+md.c+' '+x.nom+(x.piece?(' '+x.piece):'');
+    var res=poster(libelle, F.date, lg);
+    if(!res.ok){ TOAST('Refusé : '+res.motif+'.'); return; }
+    /* imputation : l'écriture sait quelle pièce elle règle */
+    res.ecr.reglementDe=cle; res.ecr.reglementMontant=m; res.ecr.reglementMode=md.c;
+    /* la pièce soldée est lettrée avec tous ses règlements */
+    var reste=r(x.restant-m), lettre=false;
+    if(reste<0.005){
+      var refs=[{e:x.eid,i:x.li}];
+      (db.ecritures||[]).forEach(function(e){
+        if(e.reglementDe!==cle) return;
+        (e.lignes||[]).forEach(function(l,i){ if(C9(l.compte)===x.cptC9) refs.push({e:e.id,i:i}); });
+      });
+      try{ lettre = (typeof lzLettrer==='function') ? !!lzLettrer(refs) : false; }catch(e){ lettre=false; }
+    }
+    SAVE();
+    TOAST(lettre ? ('Réglé '+eu(m)+' — pièce soldée et lettrée.')
+                 : ('Réglé '+eu(m)+' — règlement partiel, reste '+eu(reste)+' : le lettrage attend le solde.'));
+    window.__echSel=null; window.__echForm=null; RENDER();
+  };
+
+  /* relance d'un client échu — aucune écriture comptable */
+  window.echRelancer=function(tid){
+    if(!tid){ TOAST('Relance impossible : tiers non identifié.'); return; }
+    var t=(db.tiers||[]).filter(function(x){ return x.id===tid; })[0];
+    if(!t){ TOAST('Tiers introuvable.'); return; }
+    if(!t.email){ TOAST('Refusé : ce client n\'a pas d\'adresse e-mail — on ne relance pas dans le vide.'); return; }
+    var pr=null; try{ pr=(db.relances||{})[tid]; }catch(e){}
+    if(pr && pr.date){
+      var j=jours(pr.date, AUJ());
+      if(j<15){ TOAST('Refusé : '+t.nom+' a été relancé il y a '+j+' jour(s) — on attend quinze jours entre deux relances.'); return; }
+    }
+    try{
+      db.relances=db.relances||{};
+      db.relances[tid]={ date:AUJ(), rang:((pr&&+pr.rang)||0)+1 };
+    }catch(e){}
+    SAVE(); TOAST('Relance enregistrée pour '+t.nom+'.'); RENDER();
+  };
+
+  window.echFermer=function(){ try{ if(typeof yadaFermerPage==='function') yadaFermerPage(); }catch(e){} };
+  window.echAller=function(mod){
+    try{ if((window.YADA_OK||[]).indexOf(mod)<0){ TOAST('Module « '+mod+' » non enregistré.'); return; } }catch(e){}
+    try{ current=mod; }catch(e){}
+    RENDER();
+  };
+
+  /* ---------- contrôles, mesurés sur le dossier ---------- */
+  function controles(){
+    var K=[], ref=AUJ();
+    var Gc=groupes('client'), Gf=groupes('fournisseur');
+    var tc=cumul(Gc), tf=cumul(Gf);
+    var sc=soldeNonLettre('client'), sf=soldeNonLettre('fournisseur');
+
+    function ctl(titre, ok, det){ K.push({t:titre, ok:ok, d:det}); }
+
+    ctl('Balance âgée clients ↔ solde non lettré du 411',
+        Math.abs(r(tc.total-sc))<0.01,
+        'balance âgée '+eu(tc.total)+' · solde non lettré '+eu(sc));
+    ctl('Balance âgée fournisseurs ↔ solde non lettré du 401',
+        Math.abs(r(tf.total-sf))<0.01,
+        'balance âgée '+eu(tf.total)+' · solde non lettré '+eu(sf));
+
+    var nid = (Gc['__nid']?1:0)+(Gf['__nid']?1:0);
+    ctl('Chaque pièce est rattachée à un tiers', nid===0,
+        nid===0 ? 'toutes les lignes non lettrées portent un compte auxiliaire ou une facture'
+                : nid+' groupe(s) « tiers non identifié » — compte collectif sans facture rattachée');
+
+    ctl('Aucune créance client au-delà de 90 jours', tc.b[3]<0.005,
+        tc.b[3]<0.005 ? 'rien au-delà de 90 jours' : eu(tc.b[3])+' à plus de 90 jours — à relancer');
+
+    /* un règlement imputé ne peut pas dépasser sa pièce */
+    var depass=0;
+    ['client','fournisseur'].forEach(function(ty){
+      lignesTiers(ty).forEach(function(x){ if(x.facture && x.restant<-0.005) depass++; });
+    });
+    ctl('Aucun règlement ne dépasse sa pièce', depass===0,
+        depass===0 ? 'chaque imputation reste dans la limite du montant de la pièce' : depass+' pièce(s) sur-réglée(s)');
+
+    /* les écritures du module sont équilibrées et dans l'exercice */
+    var mauv=0, hors=0;
+    (db.ecritures||[]).forEach(function(e){
+      if(!e.reglementDe) return;
+      var d=0,c=0; (e.lignes||[]).forEach(function(l){ d=r(d+(+l.debit||0)); c=r(c+(+l.credit||0)); });
+      if(Math.abs(r(d-c))>0.005) mauv++;
+      if(!dansExo(e.date)) hors++;
+    });
+    ctl('Règlements équilibrés', mauv===0, mauv===0?'toutes les écritures de règlement sont soldées':mauv+' écriture(s) déséquilibrée(s)');
+    ctl('Règlements dans l\'exercice', hors===0, hors===0?'aucun règlement hors de l\'exercice '+exo():hors+' écriture(s) hors exercice');
+
+    /* conditions de paiement renseignées */
+    var cd=condDefaut();
+    ctl('Conditions de paiement du dossier', !!cd, cd?('par défaut : '+cd):'aucune condition définie');
+
+    /* échéances réellement connues vs dérivées */
+    var tot=0, der=0;
+    ['client','fournisseur'].forEach(function(ty){
+      lignesTiers(ty).forEach(function(x){ if(!x.facture||x.restant<0.005) return; tot++; if(x.echDerivee) der++; });
+    });
+    ctl('Échéances lues sur la pièce', tot===0 || der===0,
+        tot===0 ? 'aucune pièce en attente'
+                : (der===0 ? 'les '+tot+' pièces portent leur propre échéance'
+                           : der+' échéance(s) sur '+tot+' déduites des conditions de paiement (convention)'));
+
+    ctl('Arrêtée à une date', true, 'balance âgée arrêtée au '+fr(ref));
+    return K;
+  }
+
+  /* ---------- rendu ---------- */
+  function tag(on,txt){ return '<span class="ech-tag'+(on?' on':'')+'">'+esc(txt)+'</span>'; }
+
+  function carteConditions(){
+    var cd=condDefaut();
+    var opts='';
+    try{ opts=(typeof faCondOptions==='function')?faCondOptions(cd):'<option>'+esc(cd)+'</option>'; }catch(e){ opts='<option>'+esc(cd)+'</option>'; }
+    var rows=MODES.map(function(m){
+      return '<tr><td class="mono">'+esc(m.c)+'</td><td>'+esc(m.n)+'</td><td class="mono">'+esc(m.cpt)+'</td><td>'+esc(lib(m.cpt))+'</td></tr>';
+    }).join('');
+    return '<div class="ech-card">'
+      +'<div class="ech-h"><span class="ech-nom">Conditions et modes de paiement</span></div>'
+      +'<div class="ech-sub">La condition de paiement donne l\'échéance d\'une pièce qui n\'en porte pas ; le mode de paiement décide du compte de trésorerie mouvementé. Les règlements sont portés au journal de trésorerie du dossier (BQ), y compris les espèces, qui mouvementent la caisse et non la banque.</div>'
+      +'<div class="ech-form">'
+      +'<label class="ech-f"><span class="k">Condition de paiement par défaut</span>'
+      +'<select class="ech-in" onchange="echCondDefaut(this.value)">'+opts+'</select></label>'
+      +'</div>'
+      +'<table class="ech-t"><thead><tr><th>Mode</th><th>Libellé</th><th>Compte</th><th>Nature</th></tr></thead><tbody>'+rows+'</tbody></table>'
+      +'</div>';
+  }
+
+  function tableAgee(type, G){
+    var cles=clesTriees(G), t=cumul(G);
+    if(!cles.length) return '<div class="ech-sub">Aucune pièce non réglée '+(type==='client'?'côté clients':'côté fournisseurs')+'.</div>';
+    var rows=cles.map(function(k){
+      var g=G[k];
+      return '<tr><td>'+esc(g.nom)+'</td>'
+        +'<td class="r">'+(g.nonEchu>0.005?eu(g.nonEchu):'—')+'</td>'
+        +'<td class="r">'+(g.b[0]>0.005?eu(g.b[0]):'—')+'</td>'
+        +'<td class="r">'+(g.b[1]>0.005?eu(g.b[1]):'—')+'</td>'
+        +'<td class="r">'+(g.b[2]>0.005?eu(g.b[2]):'—')+'</td>'
+        +'<td class="r">'+(g.b[3]>0.005?eu(g.b[3]):'—')+'</td>'
+        +'<td class="r">'+(g.acomptes>0.005?('− '+eu(g.acomptes)):'—')+'</td>'
+        +'<td class="r">'+eu(g.total)+'</td></tr>';
+    }).join('');
+    return '<table class="ech-t ech-age"><thead><tr><th>'+(type==='client'?'Client':'Fournisseur')+'</th>'
+      +'<th class="r">Non échu</th><th class="r">0-30 j</th><th class="r">31-60 j</th><th class="r">61-90 j</th><th class="r">Plus de 90 j</th>'
+      +'<th class="r">Acomptes</th><th class="r">Total dû</th></tr></thead><tbody>'+rows
+      +'<tr class="tot"><td>Total</td>'
+      +'<td class="r">'+eu(t.nonEchu)+'</td><td class="r">'+eu(t.b[0])+'</td><td class="r">'+eu(t.b[1])+'</td>'
+      +'<td class="r">'+eu(t.b[2])+'</td><td class="r">'+eu(t.b[3])+'</td>'
+      +'<td class="r">'+(t.acomptes>0.005?('− '+eu(t.acomptes)):'—')+'</td><td class="r">'+eu(t.total)+'</td></tr>'
+      +'</tbody></table>';
+  }
+
+  function carteAgee(Gc,Gf){
+    return '<div class="ech-card">'
+      +'<div class="ech-h"><span class="ech-nom">Balance âgée</span>'+tag(true,'AU '+fr(AUJ()))+'</div>'
+      +'<div class="ech-sub">Ce qui reste dû, ventilé par jours écoulés depuis l\'échéance — et non depuis la facture : une pièce à 30 jours émise il y a 35 jours n\'a que 5 jours de retard. Le total d\'un tiers est exactement le solde non lettré de son compte.</div>'
+      +'<div class="ech-bloc"><div class="ech-bt">Clients — créances</div>'+tableAgee('client',Gc)+'</div>'
+      +'<div class="ech-bloc"><div class="ech-bt">Fournisseurs — dettes</div>'+tableAgee('fournisseur',Gf)+'</div>'
+      +'</div>';
+  }
+
+  function formRegler(x){
+    var F=window.__echForm||{mode:'VIR',date:AUJ(),montant:x.restant};
+    var md=modeDe(F.mode);
+    var m=r(F.montant), partiel=(m>0.005 && m<r(x.restant-0.005));
+    var type=window.__echTab;
+    var lg = (type==='fournisseur')
+      ? [{c:x.cpt, l:'Paiement '+x.nom, d:m, cr:0},{c:md.cpt, l:lib(md.cpt), d:0, cr:m}]
+      : [{c:md.cpt, l:lib(md.cpt), d:m, cr:0},{c:x.cpt, l:'Encaissement '+x.nom, d:0, cr:m}];
+    var ap='<table class="ech-t ech-ap"><thead><tr><th>Compte</th><th>Libellé</th><th class="r">Débit</th><th class="r">Crédit</th></tr></thead><tbody>'
+      +lg.map(function(l){ return '<tr><td class="mono">'+C9(l.c)+'</td><td>'+esc(l.l)+'</td>'
+        +'<td class="r">'+(l.d>0.005?eu(l.d):'')+'</td><td class="r">'+(l.cr>0.005?eu(l.cr):'')+'</td></tr>'; }).join('')
+      +'<tr class="tot"><td></td><td>Total</td><td class="r">'+eu(m)+'</td><td class="r">'+eu(m)+'</td></tr></tbody></table>';
+    return '<div class="ech-reg">'
+      +'<div class="ech-regh">Régler — '+esc(x.nom)+(x.piece?(' · pièce '+esc(x.piece)):'')+' · restant dû '+eu(x.restant)+'</div>'
+      +'<div class="ech-form">'
+      +'<label class="ech-f"><span class="k">Mode de paiement</span><select class="ech-in" onchange="echForm(\'mode\',this.value)">'
+      +MODES.map(function(o){ return '<option value="'+o.c+'"'+(o.c===F.mode?' selected':'')+'>'+esc(o.n)+' — '+o.cpt.slice(0,3)+'</option>'; }).join('')
+      +'</select></label>'
+      +'<label class="ech-f"><span class="k">Date du règlement</span><input class="ech-in" type="date" value="'+esc(F.date||'')+'" onchange="echForm(\'date\',this.value)"></label>'
+      +'<label class="ech-f"><span class="k">Montant réglé</span><input class="ech-in ech-mt" type="number" step="0.01" value="'+(m||'')+'" onchange="echForm(\'montant\',this.value)"></label>'
+      +'</div>'
+      +ap
+      +'<div class="ech-sub">'+(partiel
+          ? 'Règlement partiel : la pièce restera ouverte pour '+eu(r(x.restant-m))+' et ne sera pas lettrée tant qu\'elle n\'est pas soldée.'
+          : 'Ce règlement solde la pièce : elle sera lettrée avec ses règlements.')+'</div>'
+      +'<div class="ech-acts"><button class="ech-b" onclick="echAnnuler()">Annuler</button>'
+      +'<span style="flex:1"></span>'
+      +'<button class="ech-b ech-pri" onclick="echRegler()">Générer le règlement</button></div>'
+      +'</div>';
+  }
+
+  function carteImpayes(type, G){
+    var cles=clesTriees(G), ref=AUJ(), sel=window.__echSel;
+    var corps='';
+    if(!cles.length) corps='<div class="ech-sub">Aucune pièce non réglée.</div>';
+    else corps=cles.map(function(k){
+      var g=G[k];
+      var pieces=g.lignes.filter(function(x){ return x.facture && x.restant>0.005; })
+                         .sort(function(a,b){ return a.ech<b.ech?-1:(a.ech>b.ech?1:0); });
+      var acomptes=g.lignes.filter(function(x){ return !x.facture && Math.abs(x.restant)>0.005; });
+      if(!pieces.length && !acomptes.length) return '';
+      var rows=pieces.map(function(x){
+        var j=jours(x.ech, ref);
+        var retard = j>0 ? (j+' j') : 'non échu';
+        var sl=(sel===x.cle);
+        return '<tr'+(sl?' class="on"':'')+'><td class="mono">'+esc(fr(x.date))+'</td>'
+          +'<td class="mono">'+esc(fr(x.ech))+(x.echDerivee?'<span class="ech-conv"> déduite</span>':'')+'</td>'
+          +'<td class="mono">'+esc(retard)+'</td>'
+          +'<td class="mono">'+esc(x.piece||'—')+'</td>'
+          +'<td>'+esc(x.lib)+'</td>'
+          +'<td class="r">'+eu(x.montant)+'</td>'
+          +'<td class="r">'+(x.paye>0.005?eu(x.paye):'—')+'</td>'
+          +'<td class="r">'+eu(x.restant)+'</td>'
+          +'<td class="r"><button class="ech-x" onclick="echSelect(\''+esc(x.cle)+'\')">Régler</button></td></tr>';
+      }).join('');
+      var acr=acomptes.map(function(x){
+        return '<tr class="ech-ac"><td class="mono">'+esc(fr(x.date))+'</td><td colspan="4">'+esc(x.lib)+' — acompte ou règlement non affecté</td>'
+          +'<td class="r">− '+eu(Math.abs(x.montant))+'</td><td class="r">—</td><td class="r">− '+eu(Math.abs(x.restant))+'</td><td></td></tr>';
+      }).join('');
+      var condSel='';
+      try{
+        if(g.tid && typeof faCondOptions==='function')
+          condSel='<select class="ech-in ech-cond" onchange="echCondTiers(\''+esc(g.tid)+'\',this.value)">'+faCondOptions(condDe(g.tid))+'</select>';
+      }catch(e){}
+      var selLigne = sel ? pieces.filter(function(x){ return x.cle===sel; })[0] : null;
+      return '<div class="ech-grp">'
+        +'<div class="ech-gh"><span class="ech-gn">'+esc(g.nom)+'</span>'
+        +'<span class="ech-gm">'+g.nb+' pièce(s) · '+eu(g.total)+'</span>'
+        +(condSel?('<span class="ech-gc">Conditions '+condSel+'</span>'):'')+'</div>'
+        +'<table class="ech-t"><thead><tr><th>Date</th><th>Échéance</th><th>Retard</th><th>Pièce</th><th>Libellé</th>'
+        +'<th class="r">Montant</th><th class="r">Réglé</th><th class="r">Restant</th><th class="r">Action</th></tr></thead>'
+        +'<tbody>'+rows+acr+'</tbody></table>'
+        +(selLigne?formRegler(selLigne):'')
+        +'</div>';
+    }).join('');
+    var estC=(type==='client');
+    return '<div class="ech-card">'
+      +'<div class="ech-h"><span class="ech-nom">Factures non réglées</span>'
+      +'<button class="ech-b'+(estC?' ech-pri':'')+'" onclick="echTab(\'client\')">Clients</button>'
+      +'<button class="ech-b'+(estC?'':' ech-pri')+'" onclick="echTab(\'fournisseur\')">Fournisseurs</button></div>'
+      +'<div class="ech-sub">'+(estC
+        ? 'Les créances que le dossier n\'a pas encaissées : lignes du compte client qui ne sont pas lettrées. Régler une pièce écrit l\'encaissement et la lettre.'
+        : 'Les dettes que le dossier n\'a pas payées : lignes du compte fournisseur qui ne sont pas lettrées. Régler une pièce écrit le paiement et la lettre.')+'</div>'
+      +corps+'</div>';
+  }
+
+  function carteRelance(Gc){
+    var ref=AUJ(), lignes=[];
+    clesTriees(Gc).forEach(function(k){
+      var g=Gc[k]; if(g.total<0.005) return;
+      var echu=r(g.b[0]+g.b[1]+g.b[2]+g.b[3]); if(echu<0.005) return;
+      var pires=g.lignes.filter(function(x){ return x.facture && x.restant>0.005; })
+                        .map(function(x){ return jours(x.ech, ref); });
+      var maxj=pires.length?Math.max.apply(null,pires):0;
+      var t=g.tid?(db.tiers||[]).filter(function(x){ return x.id===g.tid; })[0]:null;
+      var rel=null; try{ rel=(db.relances||{})[g.tid]; }catch(e){}
+      lignes.push({nom:g.nom, tid:g.tid, echu:echu, total:g.total, maxj:maxj, email:(t&&t.email)||'', rel:rel});
+    });
+    lignes.sort(function(a,b){ return b.maxj-a.maxj; });
+    if(!lignes.length)
+      return '<div class="ech-card"><div class="ech-h"><span class="ech-nom">Liste de relance</span>'+tag(true,'RIEN À RELANCER')+'</div>'
+        +'<div class="ech-sub">Aucune créance client échue : rien à relancer.</div></div>';
+    var rows=lignes.map(function(x){
+      var motif = !x.tid ? 'tiers non identifié'
+                : !x.email ? 'pas d\'adresse e-mail'
+                : (x.rel && jours(x.rel.date, ref)<15) ? ('relancé il y a '+jours(x.rel.date, ref)+' j')
+                : '';
+      return '<tr><td>'+esc(x.nom)+'</td>'
+        +'<td class="r">'+eu(x.echu)+'</td><td class="r">'+eu(x.total)+'</td>'
+        +'<td class="mono">'+x.maxj+' j</td>'
+        +'<td class="mono">'+esc(x.email||'—')+'</td>'
+        +'<td class="mono">'+(x.rel?(fr(x.rel.date)+' · rang '+x.rel.rang):'—')+'</td>'
+        +'<td class="r">'+(motif?('<span class="ech-conv">'+esc(motif)+'</span>')
+            :('<button class="ech-x" onclick="echRelancer(\''+esc(x.tid)+'\')">Relancer</button>'))+'</td></tr>';
+    }).join('');
+    return '<div class="ech-card">'
+      +'<div class="ech-h"><span class="ech-nom">Liste de relance</span>'+tag(false,lignes.length+' CLIENT(S) ÉCHU(S)')+'</div>'
+      +'<div class="ech-sub">Les clients dont une créance a dépassé son échéance, du plus ancien au plus récent. On ne relance pas dans le vide : sans adresse e-mail, ou moins de quinze jours après la précédente, la relance est refusée et le motif est écrit.</div>'
+      +'<table class="ech-t"><thead><tr><th>Client</th><th class="r">Échu</th><th class="r">Total dû</th><th>Ancienneté</th><th>E-mail</th><th>Dernière relance</th><th class="r">Action</th></tr></thead>'
+      +'<tbody>'+rows+'</tbody></table></div>';
+  }
+
+  function carteControles(){
+    var K=controles(), tenus=K.filter(function(x){ return x.ok; }).length;
+    return '<div class="ech-card">'
+      +'<div class="ech-h"><span class="ech-nom">Contrôles — aucune validation sans contrôle</span>'
+      +tag(tenus===K.length, tenus+' / '+K.length+' TENUS')+'</div>'
+      +'<table class="ech-t"><thead><tr><th>Contrôle</th><th>État</th><th>Détail</th></tr></thead><tbody>'
+      +K.map(function(x){ return '<tr><td>'+esc(x.t)+'</td><td class="mono">'+(x.ok?'tenu':'à revoir')+'</td><td class="ech-d">'+esc(x.d)+'</td></tr>'; }).join('')
+      +'</tbody></table></div>';
+  }
+
+  /* ---------- page ---------- */
+  window.pageEcheancier=function(){
+    var Gc=groupes('client'), Gf=groupes('fournisseur');
+    var tc=cumul(Gc), tf=cumul(Gf);
+    var echu=r(tc.b[0]+tc.b[1]+tc.b[2]+tc.b[3]+tf.b[0]+tf.b[1]+tf.b[2]+tf.b[3]);
+    var vieux=r(tc.b[3]+tf.b[3]);
+    var s=S();
+    var h='<div id="yada-ech">'
+      +'<div class="ech-mast">'
+      +'<div class="ech-eyebrow">YADA · RÈGLEMENTS &amp; ÉCHÉANCES</div>'
+      +'<div class="ech-title">Factures non réglées</div>'
+      +'<div class="ech-soc">'+esc(s.raison||'Dossier')+' · exercice '+esc(exo())+' · arrêtée au '+esc(fr(AUJ()))+'</div>'
+      +'<button class="ech-close" title="Fermer" onclick="echFermer()">✕</button>'
+      +'</div>'
+      +'<div class="ech-kpis">'
+      +'<div class="ech-k"><div class="l">Créances clients</div><div class="v">'+eu(tc.total)+'</div></div>'
+      +'<div class="ech-k"><div class="l">Dettes fournisseurs</div><div class="v">'+eu(tf.total)+'</div></div>'
+      +'<div class="ech-k"><div class="l">Échu</div><div class="v">'+eu(echu)+'</div></div>'
+      +'<div class="ech-k"><div class="l">Plus de 90 jours</div><div class="v">'+eu(vieux)+'</div></div>'
+      +'</div>'
+      +'<div class="ech-note">Ce module ne croit pas ce qu\'on lui saisit : il lit les comptes de tiers et ne retient que ce qui n\'est pas lettré — donc ce qui reste réellement dû. Une pièce lettrée a disparu de cette page, parce qu\'elle est soldée.</div>'
+      +carteConditions()
+      +carteAgee(Gc,Gf)
+      +carteImpayes(window.__echTab, (window.__echTab==='fournisseur')?Gf:Gc)
+      +carteRelance(Gc)
+      +carteControles()
+      +'<div class="ech-card"><div class="ech-acts">'
+      +'<button class="ech-b" onclick="echAller(\'parcours\')">Revenir au parcours</button>'
+      +'<button class="ech-b" onclick="echAller(\'compta\')">Voir les écritures</button></div></div>';
+    h+='</div>';
+    return h;
+  };
+
+  /* ---------- enregistrement du module ---------- */
+  try{
+    window.YADA_OK=(window.YADA_OK||[]);
+    if(window.YADA_OK.indexOf('echeancier')<0) window.YADA_OK.push('echeancier');
+    window.YADA_LBL=(window.YADA_LBL||{});
+    window.YADA_LBL.echeancier='Règlements & échéances';
+  }catch(e){}
+
+  /* ---------- style Registre N&B, scopé #yada-ech ---------- */
+  try{
+    var st=document.getElementById('ech-mod');
+    if(!st){ st=document.createElement('style'); st.id='ech-mod'; document.head.appendChild(st); }
+    st.textContent=
+      'html body:not(#_yz) #yada-ech{background:#000;color:#f5f5f6;min-height:100dvh;padding:0 0 60px;font-family:Georgia,"Times New Roman",serif}'
+     +'html body:not(#_yz) #yada-ech *{font-family:inherit}'
+     +'html body:not(#_yz) #yada-ech .ech-mast{position:relative;padding:26px 24px 16px;border-bottom:1px solid #242427}'
+     +'html body:not(#_yz) #yada-ech .ech-eyebrow{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;letter-spacing:.14em;color:#8b8b90}'
+     +'html body:not(#_yz) #yada-ech .ech-title{font-size:27px;margin:6px 0 4px;font-weight:400}'
+     +'html body:not(#_yz) #yada-ech .ech-soc{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:#8b8b90}'
+     +'html body:not(#_yz) #yada-ech .ech-close{position:absolute;top:22px;right:22px;width:30px;height:30px;background:#000;color:#f5f5f6;border:1px solid #f5f5f6;border-radius:5px;cursor:pointer;font-family:ui-monospace,monospace;font-size:14px}'
+     +'html body:not(#_yz) #yada-ech .ech-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:#242427;margin:0 0 2px}'
+     +'html body:not(#_yz) #yada-ech .ech-k{background:#0b0b0c;padding:14px 16px}'
+     +'html body:not(#_yz) #yada-ech .ech-k .l{font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.07em;color:#8b8b90;text-transform:uppercase}'
+     +'html body:not(#_yz) #yada-ech .ech-k .v{font-size:20px;margin-top:5px}'
+     +'html body:not(#_yz) #yada-ech .ech-note{padding:14px 24px;color:#a8a9ad;font-size:13px;border-bottom:1px solid #242427}'
+     +'html body:not(#_yz) #yada-ech .ech-card{border-bottom:1px solid #242427;padding:18px 24px 22px}'
+     +'html body:not(#_yz) #yada-ech .ech-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap}'
+     +'html body:not(#_yz) #yada-ech .ech-nom{font-size:18px}'
+     +'html body:not(#_yz) #yada-ech .ech-tag{font-family:ui-monospace,monospace;font-size:9.5px;letter-spacing:.09em;padding:2px 7px;border:1px solid #35353a;color:#8b8b90;border-radius:3px}'
+     +'html body:not(#_yz) #yada-ech .ech-tag.on{background:#f5f5f6;color:#0a0a0b;border-color:#f5f5f6}'
+     +'html body:not(#_yz) #yada-ech .ech-sub{color:#8b8b90;font-size:12.5px;margin:6px 0 10px}'
+     +'html body:not(#_yz) #yada-ech .ech-conv{color:#8b8b90;font-size:11px;font-family:ui-monospace,monospace}'
+     +'html body:not(#_yz) #yada-ech .ech-form{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:10px 0 4px}'
+     +'html body:not(#_yz) #yada-ech .ech-f{display:block}'
+     +'html body:not(#_yz) #yada-ech .ech-f .k{display:block;font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#8b8b90;margin-bottom:4px}'
+     +'html body:not(#_yz) #yada-ech .ech-bloc{margin:12px 0}'
+     +'html body:not(#_yz) #yada-ech .ech-bt{font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#8b8b90;margin:10px 0 2px}'
+     +'html body:not(#_yz) #yada-ech .ech-grp{margin:14px 0 0;border-top:1px solid #1c1c1f;padding-top:10px}'
+     +'html body:not(#_yz) #yada-ech .ech-gh{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}'
+     +'html body:not(#_yz) #yada-ech .ech-gn{font-size:15px}'
+     +'html body:not(#_yz) #yada-ech .ech-gm{font-family:ui-monospace,monospace;font-size:11px;color:#8b8b90}'
+     +'html body:not(#_yz) #yada-ech .ech-gc{font-family:ui-monospace,monospace;font-size:10px;color:#8b8b90;display:inline-flex;align-items:center;gap:6px}'
+     +'html body:not(#_yz) #yada-ech .ech-cond{width:auto;min-width:150px}'
+     +'html body:not(#_yz) #yada-ech .ech-t{width:100%;border-collapse:collapse;margin:8px 0}'
+     +'html body:not(#_yz) #yada-ech .ech-t th{font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#8b8b90;background:#121214;padding:6px 8px;text-align:left;font-weight:400;border-bottom:1px solid #242427}'
+     +'html body:not(#_yz) #yada-ech .ech-t td{padding:4px 8px;border-bottom:1px solid #1c1c1f;font-size:13px}'
+     +'html body:not(#_yz) #yada-ech .ech-t th.r,html body:not(#_yz) #yada-ech .ech-t td.r{text-align:right}'
+     +'html body:not(#_yz) #yada-ech .ech-t .mono{font-family:ui-monospace,monospace;font-size:12px}'
+     +'html body:not(#_yz) #yada-ech .ech-t .ech-d{color:#8b8b90;font-size:12px}'
+     +'html body:not(#_yz) #yada-ech .ech-t tr.on td{background:#121214}'
+     +'html body:not(#_yz) #yada-ech .ech-t tr.ech-ac td{color:#8b8b90}'
+     +'html body:not(#_yz) #yada-ech .ech-t .tot td{border-top:1px solid #35353a;border-bottom:none}'
+     +'html body:not(#_yz) #yada-ech .ech-ap{margin-top:12px;opacity:.92}'
+     +'html body:not(#_yz) #yada-ech .ech-reg{border:1px solid #35353a;border-radius:5px;padding:12px 14px;margin:10px 0 4px;background:#0b0b0c}'
+     +'html body:not(#_yz) #yada-ech .ech-regh{font-size:14px;margin-bottom:4px}'
+     +'html body:not(#_yz) #yada-ech .ech-in{width:100%;background:#000;color:#f5f5f6;border:1px solid #242427;border-radius:3px;padding:4px 6px;font-family:ui-monospace,monospace;font-size:12px}'
+     +'html body:not(#_yz) #yada-ech .ech-mt{text-align:right}'
+     +'html body:not(#_yz) #yada-ech .ech-x{background:#000;color:#f5f5f6;border:1px solid #35353a;border-radius:3px;cursor:pointer;padding:2px 8px;font-family:ui-monospace,monospace;font-size:11px}'
+     +'html body:not(#_yz) #yada-ech .ech-acts{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap}'
+     +'html body:not(#_yz) #yada-ech .ech-b{background:#000;color:#f5f5f6;border:1px solid #35353a;border-radius:4px;padding:5px 11px;cursor:pointer;font-family:ui-monospace,monospace;font-size:11.5px}'
+     +'html body:not(#_yz) #yada-ech .ech-b.ech-pri{background:#f5f5f6;color:#0a0a0b;border-color:#f5f5f6}'
+     +'html body:not(#_yz) #yada-ech .ech-b[disabled]{opacity:.4;cursor:not-allowed}'
+     +'@media(max-width:820px){html body:not(#_yz) #yada-ech .ech-kpis{grid-template-columns:repeat(2,1fr)}html body:not(#_yz) #yada-ech .ech-form{grid-template-columns:1fr}}';
   }catch(e){}
 })();
 </script>

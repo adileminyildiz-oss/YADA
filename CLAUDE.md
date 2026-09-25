@@ -36,7 +36,65 @@
 
 ---
 
-## 🟢 Dernière mise à jour — CONSTITUTION DE SOCIÉTÉ : la naissance de la société s'écrit — v652
+## 🟢 Dernière mise à jour — RÈGLEMENTS & ÉCHÉANCES : une facture comptabilisée n'est pas une facture réglée — v653
+**Quoi :** **étapes 11 et 12 du parcours** (v651). Le dossier savait enregistrer une facture ; il ne savait pas dire **ce qui reste dû, depuis combien de temps, et à qui**. Nouveau module **« Règlements & échéances »** (rubrique **Traitements**) : il lit les comptes de tiers, ne retient que **ce qui n'est pas lettré** — donc ce qui reste réellement dû — le ventile par ancienneté, puis **règle**, avec le **mode de paiement** qui décide du compte de trésorerie.
+
+| Mode de paiement | Compte mouvementé |
+| --- | --- |
+| **Espèces** | **530** Caisse |
+| **Carte bancaire · Virement · Prélèvement · Chèque** | **512** Banque |
+
+| Sens | Écriture |
+| --- | --- |
+| **Encaissement client** | **512** ou **530** Débit / **411** Crédit |
+| **Paiement fournisseur** | **401** Débit / **512** ou **530** Crédit |
+
+**La balance âgée compte les jours depuis l'ÉCHÉANCE, pas depuis la facture.** Une pièce à 30 jours émise il y a 35 jours n'a **que 5 jours de retard** — la compter à 35 surestime le retard de toute la durée des conditions de paiement. Cinq colonnes : **Non échu · 0-30 j · 31-60 j · 61-90 j · plus de 90 jours**, plus une colonne **Acomptes** pour les règlements non affectés. L'échéance est **lue sur la pièce** quand elle en porte une ; sinon elle est **déduite des conditions de paiement** — et le mot **« déduite »** est écrit à côté de la date, jamais caché. Les conditions se règlent **par dossier** et **par tiers**.
+
+**Corrigé au passage — l'ancienneté du parcours partait de la mauvaise date.** L'étape 12 (v651) comptait les jours **depuis l'écriture**. Elle compte désormais **depuis l'échéance**, gagne une tranche **« Non échu »** et **pointe sur le nouveau module** (elle renvoyait sur le Suivi des règlements, qui lit `db.reglements` — vide sur un dossier alimenté par FEC).
+
+**Corrigé par la sonde — un règlement partiel était déduit deux fois.** Le restant d'une pièce déduit déjà les règlements qui lui sont imputés ; la **ligne de tiers** de ce règlement était **en plus** comptée en acompte. Sur une facture de 600 réglée 250, le total du tiers tombait à **100** au lieu de **350**. Les écritures portant `reglementDe` sont désormais écartées de la lecture — vérifié : après le règlement partiel, **balance âgée 2 350,00 € = solde non lettré du 411**. Un acompte **réellement non affecté** (style FEC) reste, lui, visible dans sa colonne et déduit du total.
+
+**Trois refus, chacun motivé en clair** — et, à chaque fois, le **dossier reste strictement inchangé** (égalité JSON stricte des écritures) : montant **nul** (« rien à régler »), montant **supérieur au restant dû** de la pièce, **date hors exercice**. Une **seule porte d'écriture**, `poster(libelle,date,lignes)` : elle vérifie l'**équilibre** et l'**appartenance à l'exercice** **avant** d'appeler `posterOD` — aucun chemin ne contourne le contrôle.
+
+**Le lettrage suit le règlement, et le dit.** Un règlement qui **solde** la pièce la **lettre** avec tous ses règlements (via `lzLettrer`, qui exige Σ débit = Σ crédit) ; un règlement **partiel** ne la lettre pas et l'écrit : « reste 350,00 € : le lettrage attend le solde ». Une pièce lettrée **disparaît** du module, parce qu'elle est soldée.
+
+**La liste de relance refuse pour de vrai.** Les clients échus, du plus ancien au plus récent. Sans **adresse e-mail**, ou **moins de quinze jours** après la précédente, la relance est **refusée** — et le motif est écrit. Un premier jet affichait le motif dans la liste mais **acceptait quand même** l'action forcée : la garde est désormais dans `echRelancer` (second appel le même jour → **rang inchangé**). Aucune écriture comptable n'est créée : seul `db.relances` est écrit.
+
+**Comment — nouvel addon `yada-addon-echeancier` (100% ADDITIF) + 3 éditions chirurgicales :** clé `echeancier:(typeof pageEcheancier==='function'?pageEcheancier:repli)` au **dispatch de `render()`**, `'echeancier'` ajouté **après `'constitution'`** dans la rubrique **Traitements** de la barre v641, et l'**étape 12 du parcours** reprise (échéance + module). **Points techniques :** (1) `lignesTiers(type)` lit **toutes** les écritures, pas seulement l'exercice — une créance ouverte peut précéder l'exercice ; le **règlement**, lui, doit y être ; (2) l'imputation est portée par l'écriture (`reglementDe:'<id>|<index>'`, `reglementMontant`, `reglementMode`) → le **restant par pièce** est exact et un règlement ne peut pas dépasser sa pièce ; (3) le dossier n'ayant **qu'un journal de trésorerie**, les règlements — espèces comprises — y sont portés (**BQ**), la caisse se distinguant par son **compte** (`530`) et non par son journal ; (4) rattachement du tiers par **compte auxiliaire**, sinon par le **collectif** via la facture ou le mouvement de banque, sinon « (tiers non identifié) » — et un contrôle le signale ; (5) rendu **Registre N&B** scopé `#yada-ech`, sortie **`echFermer()`** pour que le filet v614 la reconnaisse — **invariant v626 : exactement 1 sortie « Fermer »**. `sw.js` yada-v248, badge v653, `version.json` 653.
+
+**Validé :** `node --check` (**322 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014 statiques · 52/52 pour `ech-mod`) + balises (3/5/3) + **filet d'équilibre** ✅ + quatre sondes Playwright sur des dossiers montés pour couvrir **chaque branche** :
+
+| Mesure | Résultat |
+| --- | --- |
+| **Balance âgée** — 6 pièces posées sur les 5 tranches | Non échu **360** · 0-30 **2 400** · 31-60 **600** · 61-90 **0** · +90 **1 200** (clients) · 61-90 **960** · non échu **600** (fournisseurs) |
+| **Bouclage** clients · fournisseurs | **4 560,00 = 4 560,00** · **1 560,00 = 1 560,00** (solde non lettré) |
+| Pièce **déjà lettrée** | **absente** du module |
+| **Virement** 1 200 (intégral) | `512000000` **1 200 D** / `411HABI00` **1 200 C** — équilibrée, **lettrée** |
+| **Chèque** 250 sur 600 (partiel) | écriture postée, **non lettrée**, restant **350,00 €**, aucune ligne fantôme |
+| **Espèces** 350 (solde) | **`530000000`** **350 D** / `411HABI00` 350 C — **caisse, pas banque** — **lettrée** |
+| **Prélèvement** fournisseur 960 | `401GASO00` **960 D** / `512000000` **960 C** — **lettrée** |
+| **Refus** — montant nul · > restant dû (99 999) · date 2099 | dossier **strictement inchangé** (JSON) — **3 / 3** |
+| **Correctif du double comptage** | après partiel : balance **2 350,00 €** = solde non lettré **2 350,00 €** |
+| **Acompte non affecté** (FEC, 400) | colonne **Acomptes − 400,00 €** · total **2 400 → 2 000** |
+| **Échéance lue sur la pièce** (30/09/2026) | reprise telle quelle, **sans** la mention « déduite » · contrôle **tenu** |
+| **Échéance déduite** des conditions | mention **« déduite »** affichée · contrôle le dit (**6 sur 6**) |
+| **Conditions par tiers** (60 jours) | échéance **14/04 → 14/05/2026** · persistée |
+| **Relance** — client avec e-mail | enregistrée, **rang 1** |
+| **Relance** — sans e-mail · **moins de 15 jours** | **refusées** — `db.relances` vide · **rang inchangé** |
+| **Contrôles** | **10 / 10** sur un dossier sain · les 2 « à revoir » d'un dossier en retard sont **réels** (1 200 € à plus de 90 jours, 6 échéances déduites) |
+| **Lecture seule à l'ouverture** | deux rendus → écritures **identiques** (JSON) |
+| **Dossier vide** | KPI à **0,00 €** · « **RIEN À RELANCER** » · **10 / 10** |
+| **Étape 12 du parcours** | tranche **« Non échu »** ajoutée · ancienneté depuis l'échéance · `pcAller('echeancier')` route réellement |
+| Rubrique **Traitements** | « Parcours » · « Constitution » · « **Règlements & échéances** » · « Automatismes » · … — **clic réel → `data-page=echeancier`** |
+| Sorties « Fermer » · boutons · vides · retour · gras · italique · souligné · débordement | **1** · 6 · **0** · **0** · **0** · **0** · **0** · **0** |
+| Écritures déséquilibrées · pageerror · console.error | **0** · **0** · **0** |
+
+**La suite du cahier des charges :** **v654** provisions (`6815`/`151`) et **provision d'impôt** (`695`/`444`, puis `444`/`512`) tirée du résultat fiscal de la liasse v647, plus l'apurement du compte d'attente `471`.
+
+---
+
+## 🟢 MAJ précédente — CONSTITUTION DE SOCIÉTÉ : la naissance de la société s'écrit — v652
 **Quoi :** **étape 2 du parcours** (v651) — la seule des 22 qui ne renvoyait vers aucun module. Le cahier des charges donne les écritures à la lettre ; elles sont désormais produites :
 
 | Situation | Débit | Crédit |
