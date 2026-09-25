@@ -36,7 +36,51 @@
 
 ---
 
-## 🟢 Dernière mise à jour — PROVISIONS & IMPÔT : les deux charges que l'exercice supporte sans les décaisser — v654
+## 🟢 Dernière mise à jour — LE JOURNAL DE CAISSE : la caisse n'est pas la banque — v655
+**Quoi :** **cahier des charges « Sage Expert IA » reçu** (chaîne Sage Génération Experts : production, révision, fiscalité, immobilisations, gestion cabinet, EDI, FEC). Il est **consigné et confronté à l'existant** dans `CAHIER-DES-CHARGES.md` : **l'essentiel est déjà construit** (l'ordre obligatoire des travaux = le Parcours v651, OCR, imputation apprenante, lettrage, rapprochement, TVA sur les encaissements, révision par cycles, clôture bloquante, liasse, comptes annuels, FEC) ; **huit chantiers manquent vraiment** (CDC-1 → CDC-8). Le premier est livré ici.
+
+**CDC-1 — les journaux.** Le cahier des charges autorise **CA — Caisse** ; YADA n'en avait pas. Le logiciel le **disait lui-même en v653** : « le dossier n'ayant qu'un journal de trésorerie, les règlements — **espèces comprises** — y sont portés (**BQ**), la caisse se distinguant par son **compte** (530) et non par son journal ». Ce compromis est levé.
+
+**Ce n'est pas un code de journal de plus — ce sont trois conséquences comptables :**
+
+| | Règle | Ce qu'elle change |
+| --- | --- | --- |
+| 1 | **Les espèces vont au journal CA** | un règlement **ESP** (compte `53x`) est porté en **CAISSE** ; **VIR / PRLV / CB / CHQ** restent en **BANQUE** |
+| 2 | **Le rapprochement bancaire ne voit pas la caisse** | on ne rapproche pas une caisse contre un relevé, **on la compte** → le journal CA est de type **`Caisse`** et non `Trésorerie`, et `comptesBanque()` (qui ne retient que `Trésorerie`) **ne le voit pas** |
+| 3 | **Une caisse ne peut pas être créditrice** | on ne sort pas d'un coffre plus d'espèces qu'il n'en contient → **nouveau contrôle CRITIQUE** |
+
+**Le retrait d'espèces reste en BANQUE — et c'est voulu.** Une écriture qui bouge **la caisse ET la banque** (`530` + `512`) est un **transfert** : le relevé bancaire la porte, donc elle doit rester rapprochable. La règle de routage est donc « **caisse seule → CA ; dès qu'une ligne de banque apparaît → BQ** », et non « présence d'un 53x ». Vérifié : vente en espèces → **CA**, prélèvement → **BQ**, **retrait d'espèces → BQ**.
+
+**Les écritures déjà saisies sont reclassées.** Toute écriture de trésorerie qui ne bouge **que** la caisse passe de BQ à CA — **aucun montant, aucun compte, aucun équilibre n'est touché**, seul le champ `journal` change. Migration **dossier actif + tout le portefeuille**, au démarrage (+ second passage à 2 s pour les dossiers restaurés depuis IndexedDB), à chaque `chargerDossier`, et à chaque `save` (la mise à jour est persistée par **ce** save, pas par un second). **Idempotent** : deux passages supplémentaires laissent les écritures **strictement identiques** (égalité JSON).
+
+**Comment — nouvel addon `yada-addon-caisse` (100% ADDITIF) + 8 éditions chirurgicales :** `window.journalTreso(lignes)` (la ligne de trésorerie décide du journal), `ensureCA(dossier)` (journal inséré **juste après BQ**, l'ordre de la chaîne comptable), `reclasse(ecritures)`, `caisseAnomalies()` (soldes `53x` créditeurs, à-nouveaux compris), et une **enveloppe de `window.ctlAnalyse`** qui ajoute la famille `caisseCred` **sans réécrire le module Contrôles**. Éditions : `journauxDefaut` (+CA), `sgJournaux` (Consultation), `journauxDoc` **et** `centralisateurDoc` (Éditions), `EC_JOURNAUX` (saisie d'une opération), `JRN` du **module Journal vivant** (`#yada-jr`), le `poster` de **Règlements & échéances** (v653 : `journal:'BQ'` en dur → `journalTreso(lignes)`), et le module **Contrôles** (carte + décompte critique + famille au registre des contrôles en continu).
+
+**Validé :** `node --check` (**324 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014) + balises (3/5/3) + **filet d'équilibre** ✅ + trois sondes Playwright :
+
+| Mesure | Résultat |
+| --- | --- |
+| Journal **CA** créé | `{code:'CA', libelle:'CAISSE', type:'Caisse', compte:'530000000'}` · ordre **HA · VT · BQ · CA · ODP · ODC · ODTVA · OD** |
+| **Rapprochement** — comptes proposés | **`512000000` seul** — la caisse n'y est pas |
+| Reclassement — vente en espèces (BQ) | → **CA** |
+| Reclassement — prélèvement (512) | **reste BQ** |
+| Reclassement — **retrait d'espèces** (530 **et** 512) | **reste BQ** — c'est un transfert, le relevé le porte |
+| Routage `journalTreso` | espèces **CA** · banque **BQ** · retrait **BQ** |
+| **Règlement client ESP** (module v653) | journal **CA** · `530000000` **D 600** / `411HABI00` **C 600** |
+| **Règlement client VIR** | journal **BQ** |
+| Contrôle — caisse saine | **0 anomalie** |
+| Contrôle — sortie de 500 sur un solde de 320 | **1 anomalie CRITIQUE** · solde **−180,00** · compte `530000000` · remontée par `ctlAnalyse` **et** la carte du module |
+| Écritures déséquilibrées | **0** |
+| **Idempotence** — deux migrations de plus | écritures **identiques** (JSON) |
+| Consultation · Éditions · Journal (`#yada-jr`) | **CA listé** · badge « Caisse » rendu |
+| Routage des modules · pageerror · console.error | **34 / 34** · **0** · **0** |
+
+**Une correction annulée en route — la leçon de la v640 resservait.** J'ai d'abord ajouté CA aux onglets **et** au sous-titre de `pageJournal`… dans **une définition morte** : le fichier en contient **quatre** (`function pageJournal` ligne 4950, une enveloppe, une réassignation ligne 9099, puis le **dernier override `window.pageJournal` du module Registre `#yada-jr`**) — seule la dernière vit. La sonde l'a montré (`jrSel('CA')` absent du rendu alors que mon édition était bien là). **Les deux éditions mortes ont été retirées** : corriger ce qui n'est jamais appelé n'est pas une amélioration. La définition vivante, elle, porte CA — vérifié sur le rendu, pas sur le source.
+
+**La suite du cahier des charges :** **CDC-3** — la **2065** (déclaration d'IS), dernier maillon d'une chaîne fiscale déjà construite (résultat fiscal v647 + calcul d'IS v654) ; puis **CDC-5** — la révision à deux étages **Révisé · Supervisé · Validé** ; puis les journaux **SIT** (situation intermédiaire) et **CHE** (chevauchement), les formats **QIF / MT940 / CFONB**, le **FEC provisoire**, et la **gestion cabinet** (temps, coût, marge, encours).
+
+---
+
+## 🟢 MAJ précédente — PROVISIONS & IMPÔT : les deux charges que l'exercice supporte sans les décaisser — v654
 **Quoi :** **étapes 15, 18 et 20 du parcours** (v651). Le dossier savait dire ce qu'il **a gagné** (v643) et ce qu'il **doit au fisc** (v647) ; il ne savait écrire ni la **provision** pour un risque connu, ni la **provision d'impôt**, ni **vider le compte d'attente 471** — or aucun exercice ne se clôture sur un 471 qui traîne. Nouveau module **« Provisions & impôt »** (rubrique **Traitements**).
 
 | Situation | Débit | Crédit |

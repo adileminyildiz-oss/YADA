@@ -4018,6 +4018,7 @@ function journauxDefaut(){ return [
   {code:'HA', libelle:'ACHATS', type:'Achats', jrn:'ACH', compte:''},
   {code:'VT', libelle:'VENTES', type:'Ventes', jrn:'VTE', compte:''},
   {code:'BQ', libelle:'BANQUE', type:'Trésorerie', jrn:'BQ', compte:'512000000'},
+  {code:'CA', libelle:'CAISSE', type:'Caisse', jrn:'CA', compte:'530000000'},
   {code:'ODP', libelle:'OD PAIE', type:'O.D.', jrn:'ODP', compte:''},
   {code:'ODC', libelle:'OD CHARGES', type:'O.D.', jrn:'ODC', compte:''},
   {code:'ODTVA', libelle:'OD TVA', type:'O.D.', jrn:'ODTVA', compte:''},
@@ -5587,7 +5588,7 @@ function sgJournaux(per){
   /* compte les écritures du SEUL mois sélectionné (per = 'AAAA-MM') — cohérent avec
      sgJournalGrid qui n'affiche que le mois ; aucun mois sélectionné → tout le dossier */
   const cnt={}; (db.ecritures||[]).forEach(e=>{ if(!per || ym(e.date)===per) cnt[e.journal]=(cnt[e.journal]||0)+1; });
-  return [['A','ACH','HA ACHATS'],['V','VTE','VT VENTES'],['T','BQ','BQ BANQUE'],['O','ODP','ODP OD PAIE'],['O','ODC','ODC OD CHARGES'],['O','ODTVA','ODTVA OD TVA'],['O','OD','OD OPERATIONS DIVERSES']]
+  return [['A','ACH','HA ACHATS'],['V','VTE','VT VENTES'],['T','BQ','BQ BANQUE'],['T','CA','CA CAISSE'],['O','ODP','ODP OD PAIE'],['O','ODC','ODC OD CHARGES'],['O','ODTVA','ODTVA OD TVA'],['O','OD','OD OPERATIONS DIVERSES']]
     .map(([L,code,name])=>({L,code,name,n:cnt[code]||0}));
 }
 /* Grille du journal sélectionné dans la Consultation (style "Journal OD PAIE") */
@@ -6713,7 +6714,7 @@ function grandLivreDoc(type){
 /* ---- JOURNAUX (détail des écritures par journal) ---- */
 function journauxDoc(filtre){
   const noms={ACH:'HA - ACHATS',VTE:'VT - VENTES',BQ:'BQ - BANQUE',OD:'OD - OPERATIONS DIVERSES',ODP:'OD - PAIE',ODC:'OD - CHARGES',ODTVA:'OD - TVA'};
-  const journaux = filtre?[filtre]:['ACH','VTE','BQ','OD'].concat(['ODP','ODC','ODTVA'].filter(j=>db.ecritures.some(e=>e.journal===j)));
+  const journaux = filtre?[filtre]:['ACH','VTE','BQ','OD'].concat(['CA','ODP','ODC','ODTVA'].filter(j=>db.ecritures.some(e=>e.journal===j)));
   const blocs=journaux.map(j=>{
     const ecr=db.ecritures.filter(e=>e.journal===j).sort((a,b)=>a.date<b.date?-1:1);
     let td=0,tc=0; const rows=ecr.map(e=>e.lignes.map((l,i)=>{ td+=l.debit;tc+=l.credit;
@@ -6735,7 +6736,7 @@ function centralisateurDoc(){
   const noms={ACH:'HA - ACHATS',VTE:'VT - VENTES',BQ:'BQ - BANQUE',OD:'OD - OPERATIONS DIVERSES',ODP:'OD - PAIE',ODC:'OD - CHARGES',ODTVA:'OD - TVA'};
   const months=monthsExo();
   let body='', GD=0,GC=0;
-  ['ACH','VTE','BQ','OD'].concat(['ODP','ODC','ODTVA'].filter(j=>db.ecritures.some(e=>e.journal===j))).forEach(j=>{
+  ['ACH','VTE','BQ','OD'].concat(['CA','ODP','ODC','ODTVA'].filter(j=>db.ecritures.some(e=>e.journal===j))).forEach(j=>{
     let jd=0,jc=0; const ec=db.ecritures.filter(e=>e.journal===j);
     body+=`<tr class="cls"><td class="l">${noms[j]||j}</td><td></td><td></td></tr>`;
     months.forEach(m=>{ let d=0,c=0; ec.filter(e=>ym(e.date)===m).forEach(e=>e.lignes.forEach(l=>{d+=l.debit;c+=l.credit;}));
@@ -11101,7 +11102,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v654';
+    b.textContent='YADA · v655';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -14171,6 +14172,7 @@ ${lignes}
   var EC_JOURNAUX=[
     {code:'OD',   lib:'OD — Opérations diverses'},
     {code:'BQ',   lib:'BQ — Banque'},
+    {code:'CA',   lib:'CA — Caisse'},
     {code:'ACH',  lib:'HA — Achats'},
     {code:'VTE',  lib:'VT — Ventes'},
     {code:'ODTVA',lib:'OD TVA'},
@@ -29701,7 +29703,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
   window.YADA_LBL=window.YADA_LBL||{}; window.YADA_LBL.journal='Journal comptable';
   function e2(x){ return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
   function E(x){ return (typeof eur==='function')?eur(x):((+x||0).toFixed(2)+' €'); }
-  var JRN=[['BQ','Banque','BQ'],['ACH','Achats','HA'],['VTE','Ventes','VT'],['OD','Opérations diverses','OD'],['ODP','OD Paie','ODP'],['ODC','OD Charges','ODC'],['ODTVA','OD TVA','TVA']];
+  var JRN=[['BQ','Banque','BQ'],['CA','Caisse','CA'],['ACH','Achats','HA'],['VTE','Ventes','VT'],['OD','Opérations diverses','OD'],['ODP','OD Paie','ODP'],['ODC','OD Charges','ODC'],['ODTVA','OD TVA','TVA']];
   function badge(code){ var m=JRN.find(function(j){return j[0]===code;}); return m?m[2]:code; }
   function nom(code){ var m=JRN.find(function(j){return j[0]===code;}); return m?m[1]:code; }
   function ofExo(e){ if(typeof exoYear==='function'){ return String(e.date||'').slice(0,4)===exoYear(); } return true; }
@@ -33288,7 +33290,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
 
   window.pageControles=function(){
     var a=analyse();
-    var crit=a.deseq.length+a.sansCpt.length+a.debCred.length;
+    var crit=a.deseq.length+a.sansCpt.length+a.debCred.length+((a.caisseCred||[]).length);
     var warn=a.horsExo.length+a.dup.length+a.sansLib.length;
     var chk=a.tiersInv.length;
     return '<div id="yada-ctl"><div class="ctl-wrap">'
@@ -33302,6 +33304,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
         +card('crit','Écritures déséquilibrées (Débit ≠ Crédit)',a.deseq,'ecr')
         +card('crit','Lignes sans compte valide',a.sansCpt,'ecr')
         +card('crit','Débit ET crédit sur une même ligne',a.debCred,'ecr')
+        +card('crit','Caisse créditrice (une caisse ne peut pas être négative)',a.caisseCred||[],'cpt')
         +card('warn','Écritures hors exercice',a.horsExo,'ecr')
         +card('warn','Doublons de pièce probables',a.dup,'ecr')
         +card('warn','Écritures sans libellé',a.sansLib,'ecr')
@@ -36920,6 +36923,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     {cle:'deseq',   sev:'crit', nom:'Écritures déséquilibrées (Débit ≠ Crédit)'},
     {cle:'sansCpt', sev:'crit', nom:'Lignes sans compte valide'},
     {cle:'debCred', sev:'crit', nom:'Débit ET crédit sur une même ligne'},
+    {cle:'caisseCred', sev:'crit', nom:'Caisse créditrice (solde négatif impossible)'},
     {cle:'horsExo', sev:'warn', nom:'Écritures hors exercice'},
     {cle:'dup',     sev:'warn', nom:'Doublons de pièce probables'},
     {cle:'sansLib', sev:'warn', nom:'Écritures sans libellé'},
@@ -42164,7 +42168,9 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     if(Math.abs(r(d-c))>0.005) return {ok:false, motif:'écriture déséquilibrée ('+eu(d)+' ≠ '+eu(c)+')'};
     if(!dansExo(date)) return {ok:false, motif:'date '+fr(date)+' hors exercice ('+fr(D0())+' → '+fr(D1())+')'};
     var ecr=null;
-    try{ ecr=posterOD({date:date, libelle:libelle, lignes:lignes, journal:'BQ'}); }
+    /* v655 : la ligne de trésorerie décide du journal — espèces (53x) → CAISSE, sinon BANQUE */
+    var jrn='BQ'; try{ if(typeof journalTreso==='function') jrn=journalTreso(lignes); }catch(e){}
+    try{ ecr=posterOD({date:date, libelle:libelle, lignes:lignes, journal:jrn}); }
     catch(e){ return {ok:false, motif:'écriture refusée par le journal'}; }
     if(!ecr) return {ok:false, motif:'écriture refusée par le journal'};
     return {ok:true, ecr:ecr};
@@ -43220,6 +43226,160 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
      +'html body:not(#_yz) #yada-pv .pv-b.pv-pri{background:#f5f5f6;color:#0a0a0b;border-color:#f5f5f6}'
      +'html body:not(#_yz) #yada-pv .pv-x{background:#000;color:#8b8b90;border:1px solid #242427;border-radius:3px;cursor:pointer;padding:2px 6px;font-family:ui-monospace,monospace}'
      +'@media(max-width:820px){html body:not(#_yz) #yada-pv .pv-kpis{grid-template-columns:repeat(2,1fr)}}';
+  }catch(e){}
+})();
+</script>
+<script id="yada-addon-caisse">
+/* ============================================================
+   v655 — LE JOURNAL DE CAISSE : la caisse n'est pas la banque
+   Cahier des charges « Sage Expert IA » (CDC-1) : les journaux autorisés
+   comprennent CA — Caisse. YADA n'en avait pas : la v653 le disait en clair —
+   « le dossier n'ayant qu'un journal de trésorerie, les règlements — espèces
+   comprises — y sont portés (BQ), la caisse se distinguant par son COMPTE (530)
+   et non par son journal ». Ce compromis est levé ici.
+
+   Trois conséquences comptables, pas seulement un code de journal :
+   1. Les espèces sont portées au journal CA, jamais en banque.
+   2. Le RAPPROCHEMENT BANCAIRE ne voit pas la caisse — on ne rapproche pas une
+      caisse contre un relevé, on la COMPTE. D'où le type 'Caisse' et non
+      'Trésorerie' : comptesBanque() ne retient que 'Trésorerie'.
+   3. UNE CAISSE NE PEUT PAS ÊTRE CRÉDITRICE — on ne sort pas d'un coffre plus
+      d'espèces qu'il n'en contient. Nouveau contrôle CRITIQUE.
+
+   100% ADDITIF (injecté en dernier) + greffes chirurgicales aux sites
+   d'énumération des journaux.
+   ============================================================ */
+(function(){
+  function C9(x){ try{ return (typeof c9==='function')?c9(x):String(x||''); }catch(e){ return String(x||''); } }
+  function estCaisse(cpt){ return /^53/.test(C9(cpt)); }
+  function estBanque(cpt){ return /^51/.test(C9(cpt)); }
+  function r2b(n){ return Math.round((+n||0)*100)/100; }
+
+  /* ---------- la ligne de trésorerie décide du journal ---------- */
+  window.journalTreso = function(lignes){
+    try{
+      var l=lignes||[], caisse=false, banque=false;
+      for(var i=0;i<l.length;i++){
+        if(estCaisse(l[i].compte)) caisse=true;
+        if(estBanque(l[i].compte)) banque=true;
+      }
+      /* un retrait d'espèces bouge la banque ET la caisse : c'est un mouvement
+         de BANQUE (le relevé le porte), il reste donc en BQ. */
+      if(caisse && !banque) return 'CA';
+    }catch(e){}
+    return 'BQ';
+  };
+
+  /* ---------- 1. le journal CA existe dans chaque dossier ---------- */
+  function ensureCA(d){
+    if(!d || !Array.isArray(d.journaux)) return false;
+    for(var i=0;i<d.journaux.length;i++){ if(d.journaux[i] && d.journaux[i].code==='CA') return false; }
+    var e={code:'CA', libelle:'CAISSE', type:'Caisse', jrn:'CA', compte:'530000000'};
+    var apresBQ=-1;
+    d.journaux.forEach(function(j,k){ if(j && j.code==='BQ') apresBQ=k; });
+    if(apresBQ>=0) d.journaux.splice(apresBQ+1,0,e); else d.journaux.push(e);
+    return true;
+  }
+
+  /* ---------- 2. reclassement : une écriture qui ne bouge QUE la caisse est une écriture de caisse ---------- */
+  function reclasse(ecrs){
+    if(!Array.isArray(ecrs)) return 0;
+    var n=0;
+    ecrs.forEach(function(e){
+      if(!e || !Array.isArray(e.lignes)) return;
+      if(e.journal!=='BQ' && e.journal!=='CA') return;   /* on ne touche que la trésorerie */
+      var caisse=false, banque=false;
+      e.lignes.forEach(function(l){
+        if(estCaisse(l.compte)) caisse=true;
+        if(estBanque(l.compte)) banque=true;
+      });
+      var cible = (caisse && !banque) ? 'CA' : (banque ? 'BQ' : e.journal);
+      if(cible!==e.journal){ e.journal=cible; n++; }
+    });
+    return n;
+  }
+
+  /* ---------- 3. migration : dossier actif + tout le portefeuille ---------- */
+  function migrer(){
+    var j=0, r=0;
+    try{
+      if(typeof db==='undefined' || !db) return {j:0,r:0};
+      if(ensureCA(db)) j++;
+      r+=reclasse(db.ecritures);
+      if(db.dossiersData) Object.keys(db.dossiersData).forEach(function(id){
+        var d=db.dossiersData[id]; if(!d) return;
+        if(ensureCA(d)) j++;
+        r+=reclasse(d.ecritures);
+      });
+    }catch(e){}
+    return {j:j, r:r};
+  }
+  window.caisseMigrer=migrer;
+
+  /* le dossier actif reste classé à chaque enregistrement (la mise à jour est
+     persistée par CE save, pas par un second) */
+  try{
+    var _save=window.save;
+    if(typeof _save==='function'){
+      window.save=function(){
+        try{ ensureCA(db); reclasse(db.ecritures); }catch(e){}
+        return _save.apply(this, arguments);
+      };
+    }
+  }catch(e){}
+
+  /* à chaque ouverture de dossier */
+  try{
+    var _cd=window.chargerDossier;
+    if(typeof _cd==='function'){
+      window.chargerDossier=function(){
+        var out=_cd.apply(this, arguments);
+        try{ ensureCA(db); reclasse(db.ecritures); }catch(e){}
+        return out;
+      };
+    }
+  }catch(e){}
+
+  /* au démarrage — second passage pour les dossiers restaurés depuis IndexedDB */
+  try{ migrer(); }catch(e){}
+  try{ setTimeout(function(){ try{ migrer(); }catch(e){} }, 2000); }catch(e){}
+
+  /* ---------- 4. contrôle : une caisse créditrice est impossible ---------- */
+  function soldesCaisse(){
+    var s={}, out=[];
+    try{
+      (db.ecritures||[]).forEach(function(ec){
+        if(!ec || !Array.isArray(ec.lignes)) return;
+        /* l'à-nouveau reporte un solde d'ouverture : il compte */
+        ec.lignes.forEach(function(l){
+          var cc=C9(l.compte);
+          if(!estCaisse(cc)) return;
+          s[cc]=(s[cc]||0)+(+l.debit||0)-(+l.credit||0);
+        });
+      });
+    }catch(e){ return out; }
+    Object.keys(s).forEach(function(cc){
+      var v=r2b(s[cc]);
+      if(v < -0.005) out.push({
+        compte: cc,
+        solde: v,
+        note: 'solde créditeur — une caisse ne peut pas contenir moins que rien : il manque une recette, ou une sortie est en trop'
+      });
+    });
+    return out;
+  }
+  window.caisseAnomalies=soldesCaisse;
+
+  /* l'audit du module Contrôles (v610) gagne la famille, sans être réécrit */
+  try{
+    var _an=window.ctlAnalyse;
+    if(typeof _an==='function'){
+      window.ctlAnalyse=function(){
+        var a=_an.apply(this, arguments) || {};
+        try{ a.caisseCred=soldesCaisse(); }catch(e){ a.caisseCred=[]; }
+        return a;
+      };
+    }
   }catch(e){}
 })();
 </script>
