@@ -4214,6 +4214,7 @@ function render(){
   flux:(typeof pageFlux==='function'?pageFlux:function(){return'<div class="mod-wrap"><div class="card"><h2>Tableau de flux de trésorerie</h2></div></div>';}),
   parcours:(typeof pageParcours==='function'?pageParcours:function(){return'<div class="mod-wrap"><div class="card"><h2>Parcours comptable guidé</h2></div></div>';}),
   constitution:(typeof pageConstitution==='function'?pageConstitution:function(){return'<div class="mod-wrap"><div class="card"><h2>Constitution de société</h2></div></div>';}),
+  provisions:(typeof pageProvisions==='function'?pageProvisions:function(){return'<div class="mod-wrap"><div class="card"><h2>Provisions &amp; impôt</h2></div></div>';}),
   echeancier:(typeof pageEcheancier==='function'?pageEcheancier:function(){return'<div class="mod-wrap"><div class="card"><h2>Règlements &amp; échéances</h2></div></div>';}),
   importbanque:(typeof pageImportBanque==='function'?pageImportBanque:function(){return'<div class="mod-wrap"><div class="card"><h2>Import bancaire</h2></div></div>';}),
   recurrentes:(typeof pageRecurrentes==='function'?pageRecurrentes:function(){return'<div class="mod-wrap"><div class="card"><h2>Écritures récurrentes</h2></div></div>';}),
@@ -11100,7 +11101,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v653';
+    b.textContent='YADA · v654';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -37431,7 +37432,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     {id:'yb-saisie',  lbl:'Saisie',       prend:[],
      mods:['journal','achats','recurrentes','importbanque','chargespaie']},
     {id:'yb-trait',   lbl:'Traitements',  prend:[['sg-util','Utilitaires']],
-     mods:['parcours','constitution','echeancier','automatismes','inventaire','rappro','banque','immos']},
+     mods:['parcours','constitution','echeancier','provisions','automatismes','inventaire','rappro','banque','immos']},
     {id:'yb-decl',    lbl:'Déclarations', prend:[], mods:['tva','liasse']},
     {id:'yb-etats',   lbl:'États',        prend:[], mods:['editions','annexe','flux']},
     {id:'yb-revis',   lbl:'Révision',     prend:[], mods:['revision','controles']},
@@ -39004,22 +39005,27 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       return {reduit:r(a*0.15), normal:r(b*0.25), total:r(a*0.15+b*0.25)}; }
     return {reduit:0, normal:r(base*0.25), total:r(base*0.25)};
   }
-  function fiscal(){
-    var E=etat(), C=crLiasse();
-    var comptable=C?C.net:0;
-    var tReint=E.reint.reduce(function(s,x){ return r(s+(+x.mt||0)); },0);
-    var tDeduc=E.deduc.reduce(function(s,x){ return r(s+(+x.mt||0)); },0);
-    var avant=r(comptable+tReint-tDeduc);
-    /* imputation des déficits antérieurs : 1 000 000 € + 50 % de la fraction au-delà */
+  /* imputation des déficits antérieurs (plafond art. 209 I : 1 000 000 € + 50 % au-delà) puis IS.
+     UN seul calcul : la liasse et le module Provisions & impôt (v654) passent tous deux par ici. */
+  function impotSur(avant){
+    var E=etat(); avant=r(avant);
     var stock=r(+E.deficit||0), impute=0;
     if(avant>0.005 && stock>0.005){
       var plafond=(avant<=1000000)?avant:r(1000000+(avant-1000000)*0.5);
       impute=r(Math.min(stock,plafond));
     }
     var apres=r(avant-impute);
-    var is=calcIS2(apres, !!E.pme);
-    return {comptable:comptable, tReint:r(tReint), tDeduc:r(tDeduc), avant:avant,
-            stock:stock, impute:impute, reportable:r(stock-impute), apres:apres, is:is, pme:!!E.pme};
+    return {avant:avant, stock:stock, impute:impute, reportable:r(stock-impute),
+            apres:apres, is:calcIS2(apres, !!E.pme), pme:!!E.pme};
+  }
+  function fiscal(){
+    var E=etat(), C=crLiasse();
+    var comptable=C?C.net:0;
+    var tReint=E.reint.reduce(function(s,x){ return r(s+(+x.mt||0)); },0);
+    var tDeduc=E.deduc.reduce(function(s,x){ return r(s+(+x.mt||0)); },0);
+    var I=impotSur(r(comptable+tReint-tDeduc));
+    return {comptable:comptable, tReint:r(tReint), tDeduc:r(tDeduc), avant:I.avant,
+            stock:I.stock, impute:I.impute, reportable:I.reportable, apres:I.apres, is:I.is, pme:I.pme};
   }
 
   /* ============================ 2059-A — PLUS ET MOINS-VALUES ============================ */
@@ -39042,6 +39048,9 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
   }
 
   /* ============================ actions ============================ */
+  /* le résultat fiscal est LU par le module Provisions & impôt (v654) : un seul calcul, aucune divergence */
+  window.liFiscal=function(){ try{ return fiscal(); }catch(e){ return null; } };
+  window.liImpotSur=function(base){ try{ return impotSur(base); }catch(e){ return null; } };
   window.liOnglet=function(k){ window.__liTab=k; RENDER(); };
   window.liAdd=function(quoi){ var E=etat(); E[quoi].push({rep:(quoi==='reint'?'WK':'WU'), lib:'', mt:0}); SAVE(); RENDER(); };
   window.liDel=function(quoi,i){ var E=etat(); E[quoi].splice(i,1); SAVE(); RENDER(); };
@@ -41130,7 +41139,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     (function(){
       var od=ecrExo().filter(function(e){ return String(e.journal||'')==='OD'&&!estAN(e)&&!estRes(e); }).length;
       var att=mvt(pref('471'),{sansAN:true});
-      E.push({n:15, t:'Opérations diverses', mod:'inventaire', req:[1],
+      E.push({n:15, t:'Opérations diverses', mod:(Math.abs(att.solde)>0.005?'provisions':'inventaire'), req:[1],
         st: Math.abs(att.solde)>0.005 ? 'afaire' : (od>0?'fait':'encours'),
         q: Math.abs(att.solde)>0.005 ? ('compte d\'attente 471 non soldé : '+eu(att.solde))
                                      : (od+' opération(s) diverse(s) · compte 471 soldé'),
@@ -41170,7 +41179,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
       var p15=mvt(pref('15'),{sansAN:true}), dot=mvt(pref('6815','6817'),{sansAN:true});
       var dep=mvt(pref('29','39','49','59'),{sansAN:true});
       var y=(p15.n+dot.n+dep.n)>0;
-      E.push({n:18, t:'Provisions', mod:'inventaire', req:[1],
+      E.push({n:18, t:'Provisions', mod:'provisions', req:[1],
         st: y ? 'fait' : 'afaire',
         q: y ? ('provisions pour risques et charges '+eu(-p15.solde)+' · dépréciations '+eu(-dep.solde))
              : 'aucune provision ni dépréciation constatée — à examiner (litiges, risques, charges)',
@@ -41196,7 +41205,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     (function(){
       var li=(param('liasse',{})[exo()])||null;
       var is=mvt(pref('444'),{sansAN:true}), ch=mvt(pref('695','698'),{sansAN:true});
-      E.push({n:20, t:'Déclarations fiscales', mod:'liasse', req:[19],
+      E.push({n:20, t:'Déclarations fiscales', mod:((li&&ch.d<=0.005)?'provisions':'liasse'), req:[19],
         st: ch.d>0.005 ? 'fait' : (li?'encours':'afaire'),
         q: ch.d>0.005 ? ('impôt sur les sociétés comptabilisé : '+eu(ch.d))
           : (li ? 'résultat fiscal préparé — provision d\'impôt non comptabilisée' : 'liasse non préparée'),
@@ -42598,6 +42607,619 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
      +'html body:not(#_yz) #yada-ech .ech-b.ech-pri{background:#f5f5f6;color:#0a0a0b;border-color:#f5f5f6}'
      +'html body:not(#_yz) #yada-ech .ech-b[disabled]{opacity:.4;cursor:not-allowed}'
      +'@media(max-width:820px){html body:not(#_yz) #yada-ech .ech-kpis{grid-template-columns:repeat(2,1fr)}html body:not(#_yz) #yada-ech .ech-form{grid-template-columns:1fr}}';
+  }catch(e){}
+})();
+</script>
+<script id="yada-addon-provisions">
+/* ===== YADA — PROVISIONS & IMPÔT (v654) — 100% ADDITIF =====
+   Le dossier sait dire ce qu'il A GAGNÉ (v643) et ce qu'il DOIT au fisc (v647).
+   Il ne savait pas écrire les deux charges qui ne se décaissent pas cette année :
+   la PROVISION pour un risque connu, et la PROVISION D'IMPÔT sur le résultat fiscal.
+   Il ne savait pas non plus VIDER le compte d'attente 471 — or aucun exercice ne se
+   clôture sur un 471 qui traîne.
+
+     Provision pour risques et charges     débit 6815 / crédit 151
+     Reprise (le risque a disparu)         débit 151  / crédit 7815
+     Charge d'impôt sur les sociétés       débit 695  / crédit 444
+     Paiement de l'impôt                   débit 444  / crédit 512
+
+   Le résultat fiscal n'est PAS recalculé ici : il est LU sur la liasse (window.liFiscal,
+   v647) — un seul calcul, donc aucune divergence possible entre le 2058-A et l'écriture.
+   Une seule porte d'écriture, poster() : elle vérifie l'équilibre ET l'appartenance à
+   l'exercice AVANT de poster. Aucun chemin ne la contourne. */
+(function(){
+  if(window.__yadaProvisions) return; window.__yadaProvisions=true;
+
+  function r(n){ return Math.round((+n||0)*100)/100; }
+  function eu(n){ try{ return eur(n); }catch(e){ return r(n).toFixed(2)+' €'; } }
+  function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function C9(x){ try{ return c9(String(x||'')); }catch(e){ return String(x||''); } }
+  function S(){ try{ return db.societe||{}; }catch(e){ return {}; } }
+  function SAVE(){ try{ if(typeof save==='function') save(); }catch(e){} }
+  function RENDER(){ try{ if(typeof render==='function') render(); }catch(e){} }
+  function TOAST(m){ try{ if(typeof toast==='function') toast(m); }catch(e){} }
+  function D0(){ return String(S().exoDebut||''); }
+  function D1(){ return String(S().exoFin||''); }
+  function exo(){ return (D1()||D0()||String(new Date().getFullYear())).slice(0,4); }
+  function dansExo(d){ var a=D0(), b=D1(); d=String(d||''); return !!d && (!a||d>=a) && (!b||d<=b); }
+  function fr(d){ try{ return frDate(d); }catch(e){ return String(d||''); } }
+  function AUJ(){ try{ return todayStr(); }catch(e){ return new Date().toISOString().slice(0,10); } }
+  function finExo(){ return D1()||AUJ(); }
+  function nb(v){ return parseFloat(String(v==null?'':v).replace(/\s/g,'').replace(',','.'))||0; }
+
+  /* ---------- natures de provision : chacune porte SES trois comptes ---------- */
+  var NATURES=[
+    {k:'litige',   n:'Litige (contentieux, prud’hommes)',   cpt:'151100000', dot:'681500000', rep:'781500000'},
+    {k:'garantie', n:'Garanties données aux clients',       cpt:'151200000', dot:'681500000', rep:'781500000'},
+    {k:'change',   n:'Perte de change',                     cpt:'151500000', dot:'686500000', rep:'786500000'},
+    {k:'risque',   n:'Autre risque',                        cpt:'151800000', dot:'681500000', rep:'781500000'},
+    {k:'grosrep',  n:'Grosses réparations',                 cpt:'157200000', dot:'681500000', rep:'781500000'},
+    {k:'charge',   n:'Autre charge',                        cpt:'158000000', dot:'681500000', rep:'781500000'},
+    {k:'excep',    n:'Risque exceptionnel',                 cpt:'151800000', dot:'687500000', rep:'787500000'}
+  ];
+  function nat(k){ for(var i=0;i<NATURES.length;i++) if(NATURES[i].k===k) return NATURES[i]; return NATURES[3]; }
+
+  /* ---------- comptes, ajoutés au plan s'ils manquent ---------- */
+  var PLAN={
+    '151100000':'Provisions pour litiges',
+    '151200000':'Provisions pour garanties données aux clients',
+    '151500000':'Provisions pour pertes de change',
+    '151800000':'Autres provisions pour risques',
+    '157200000':'Provisions pour grosses réparations',
+    '158000000':'Autres provisions pour charges',
+    '681500000':'Dotations aux provisions d’exploitation',
+    '686500000':'Dotations aux provisions financières',
+    '687500000':'Dotations aux provisions exceptionnelles',
+    '781500000':'Reprises sur provisions d’exploitation',
+    '786500000':'Reprises sur provisions financières',
+    '787500000':'Reprises sur provisions exceptionnelles',
+    '695000000':'Impôts sur les bénéfices',
+    '444000000':'État — impôts sur les bénéfices',
+    '471000000':'Compte d’attente',
+    '512000000':'Banque'
+  };
+  function assurerPlan(){
+    try{
+      if(!Array.isArray(db.plan)) return;
+      Object.keys(PLAN).forEach(function(k){
+        var vu=db.plan.some(function(c){ return C9(c.code||c.num||c[0]||'')===k; });
+        if(!vu) db.plan.push({code:k, libelle:PLAN[k]});
+      });
+    }catch(e){}
+  }
+  function lib(k){ k=C9(k); try{ return COMPTES[k]||PLAN[k]||k; }catch(e){ return PLAN[k]||k; } }
+
+  /* ---------- ce que le dossier porte RÉELLEMENT ---------- */
+  function estAN(e){ var l=String(e.libelle||''); return l.indexOf('À-NOUVEAUX')>=0||l.indexOf('A-NOUVEAUX')>=0; }
+  function estRes(e){ return String(e.libelle||'').indexOf('OD RÉSULTAT')>=0; }
+  function ecrExo(){ return (db.ecritures||[]).filter(function(e){ return e&&dansExo(e.date); }); }
+  function mvt(prefixes, sansAN){
+    var P=[].concat(prefixes), o={d:0,c:0,n:0};
+    ecrExo().forEach(function(e){
+      if(sansAN&&(estAN(e)||estRes(e))) return;
+      (e.lignes||[]).forEach(function(l){
+        var k=C9(l.compte); if(!k) return;
+        var ok=false; for(var i=0;i<P.length;i++){ if(k.indexOf(P[i])===0){ ok=true; break; } }
+        if(!ok) return;
+        o.d=r(o.d+(+l.debit||0)); o.c=r(o.c+(+l.credit||0)); o.n++;
+      });
+    });
+    o.solde=r(o.d-o.c); return o;
+  }
+
+  /* ---------- état persistant : le registre des provisions ---------- */
+  function etat(){
+    try{
+      db.parametres=db.parametres||{};
+      var P=db.parametres.provisions; if(!P||typeof P!=='object'){ P={}; db.parametres.provisions=P; }
+      var e=exo();
+      if(!P[e]||typeof P[e]!=='object') P[e]={lignes:[]};
+      if(!Array.isArray(P[e].lignes)) P[e].lignes=[];
+      return P[e];
+    }catch(err){ return {lignes:[]}; }
+  }
+  function provDe(id){ var L=etat().lignes; for(var i=0;i<L.length;i++) if(L[i].id===id) return L[i]; return null; }
+
+  /* ---------- libellés stables : régénérer REMPLACE, jamais de doublon ---------- */
+  function LIBD(id){ return 'PROVISION '+id+' '+exo(); }
+  function LIBR(id){ return 'REPRISE PROVISION '+id+' '+exo(); }
+  function LIBIS(){ return 'PROVISION IMPÔT '+exo(); }
+  function LIBPAY(){ return 'PAIEMENT IMPÔT '+exo(); }
+  function LIB471(){ return 'APUREMENT 471 '+exo(); }
+  function ecrituresDe(a){ return (db.ecritures||[]).filter(function(e){ return String(e.libelle||'').indexOf(a)>=0; }); }
+  function retirer(a){
+    var ids=ecrituresDe(a).map(function(e){ return e.id; });
+    if(!ids.length) return 0;
+    db.ecritures=(db.ecritures||[]).filter(function(e){ return ids.indexOf(e.id)<0; });
+    db.odiv=(db.odiv||[]).filter(function(o){ return ids.indexOf(o.ecritureId)<0; });
+    return ids.length;
+  }
+
+  /* ---------- LA porte d'écriture : équilibre + exercice, avant tout ---------- */
+  function poster(libelle, date, lignes, journal){
+    var d=r(lignes.reduce(function(a,l){ return a+(+l.debit||0); },0));
+    var c=r(lignes.reduce(function(a,l){ return a+(+l.credit||0); },0));
+    if(Math.abs(r(d-c))>0.005) return {ok:false, motif:'écriture déséquilibrée ('+eu(d)+' ≠ '+eu(c)+')'};
+    if(!dansExo(date)) return {ok:false, motif:'date '+fr(date)+' hors exercice ('+fr(D0())+' → '+fr(D1())+')'};
+    var ecr=null;
+    try{ ecr=posterOD({date:date, libelle:libelle, lignes:lignes, journal:journal||'OD'}); }
+    catch(e){ return {ok:false, motif:'écriture refusée par le journal'}; }
+    if(!ecr) return {ok:false, motif:'écriture refusée par le journal'};
+    return {ok:true, ecr:ecr};
+  }
+
+  /* ---------- le résultat fiscal est LU sur la liasse (v647), jamais recalculé ---------- */
+  function fiscalLu(){
+    try{ if(typeof window.liFiscal==='function') return window.liFiscal(); }catch(e){}
+    return null;
+  }
+  /* L'IS est une charge NON DÉDUCTIBLE : la comptabiliser diminue le résultat comptable, donc
+     la base de l'impôt suivant. Sans neutralisation, « régénérer » donnerait un montant différent
+     à chaque passage. La base retenue est donc le résultat AVANT impôt : on remet la charge déjà
+     comptabilisée, et on retire la réintégration d'IS que la liasse aurait déjà portée (repère WJ)
+     pour ne pas la compter deux fois. Le barème et les déficits restent ceux de la liasse. */
+  function isExercice(){
+    var F=fiscalLu(); if(!F) return null;
+    var charge=r(mvt(['695','698'], true).d), reintIS=0;
+    try{
+      var E=((db.parametres||{}).liasse||{})[exo()]||{};
+      (E.reint||[]).forEach(function(x){ if(String(x.rep||'')==='WJ') reintIS=r(reintIS+(+x.mt||0)); });
+    }catch(e){}
+    var base=r(F.avant+charge-reintIS), I=null;
+    try{ if(typeof window.liImpotSur==='function') I=window.liImpotSur(base); }catch(e){}
+    if(!I) return null;
+    return {F:F, charge:charge, reintIS:reintIS, base:base, I:I, du:r(I.is.total)};
+  }
+  function liassePrete(){
+    try{ var L=(db.parametres||{}).liasse||{}; return !!L[exo()]; }catch(e){ return false; }
+  }
+  function paiementsIS(){
+    var L=[], t=0;
+    (db.ecritures||[]).forEach(function(e){
+      if(!e||!e.impotPaiement) return;
+      if(!dansExo(e.date)) return;
+      var m=r(+e.impotPaiement||0); if(m<0.005) return;
+      L.push({id:e.id, date:e.date, montant:m, lib:String(e.libelle||'')});
+      t=r(t+m);
+    });
+    L.sort(function(a,b){ return a.date<b.date?-1:(a.date>b.date?1:0); });
+    return {lignes:L, total:t};
+  }
+
+  /* ---------- compte d'attente 471 : ce qui reste RÉELLEMENT à apurer ---------- */
+  function lignes471(){
+    var L=[], imp={};
+    (db.ecritures||[]).forEach(function(e){
+      if(!e||!e.apureDe) return;
+      imp[e.apureDe]=r((imp[e.apureDe]||0)+(+e.apureMontant||0));
+    });
+    (db.ecritures||[]).forEach(function(e){
+      if(!e||!e.lignes) return;
+      /* la contre-passation d'un apurement porte elle aussi une ligne 471 : la compter
+         ici ferait apparaître une pièce fantôme et doublerait ce qui reste à apurer. */
+      if(e.apureDe) return;
+      if(estAN(e)||estRes(e)) return;
+      if(!dansExo(e.date)) return;
+      (e.lignes||[]).forEach(function(l,i){
+        if(C9(l.compte)!=='471000000') return;
+        var m=r((+l.debit||0)-(+l.credit||0));
+        if(Math.abs(m)<0.005) return;
+        var cle=e.id+'|'+i, dej=r(imp[cle]||0), reste=r(Math.abs(m)-dej);
+        if(reste<0.005) return;
+        L.push({cle:cle, date:e.date, jrn:String(e.journal||''), lib:String(e.libelle||''),
+                sens:(m>0?'D':'C'), montant:r(Math.abs(m)), apure:dej, reste:reste});
+      });
+    });
+    L.sort(function(a,b){ return a.date<b.date?-1:(a.date>b.date?1:0); });
+    return L;
+  }
+
+  /* ============================ actions — registre des provisions ============================ */
+  window.pvAdd=function(){
+    var E=etat();
+    E.lignes.push({id:'P'+String(E.lignes.length+1)+'-'+Math.random().toString(36).slice(2,6).toUpperCase(),
+                   nature:'litige', lib:'', montant:0, date:finExo(), rMontant:0, rDate:finExo()});
+    SAVE(); RENDER();
+  };
+  window.pvSet=function(id, champ, v){
+    var p=provDe(id); if(!p) return;
+    if(champ==='montant'||champ==='rMontant') p[champ]=r(nb(v)); else p[champ]=String(v||'');
+    SAVE(); if(champ!=='lib') RENDER();
+  };
+  window.pvDel=function(id){
+    var E=etat(), i=-1;
+    for(var k=0;k<E.lignes.length;k++) if(E.lignes[k].id===id){ i=k; break; }
+    if(i<0) return;
+    var n=retirer(LIBD(id))+retirer(LIBR(id));
+    E.lignes.splice(i,1); SAVE(); RENDER();
+    TOAST(n?('Provision retirée · '+n+' écriture(s) supprimée(s).'):'Provision retirée.');
+  };
+  window.pvDoter=function(id){
+    var p=provDe(id); if(!p) return TOAST('Provision introuvable.');
+    var m=r(p.montant||0);
+    if(m<0.005) return TOAST('Refusé : montant nul — il n’y a rien à provisionner.');
+    if(!dansExo(p.date)) return TOAST('Refusé : date '+fr(p.date)+' hors exercice ('+fr(D0())+' → '+fr(D1())+').');
+    var N=nat(p.nature), nom=(p.lib||N.n);
+    retirer(LIBD(id));
+    var res=poster(LIBD(id), p.date,
+      [{compte:N.dot, lib:'Dotation — '+nom, debit:m, credit:0},
+       {compte:N.cpt, lib:nom,               debit:0, credit:m}], 'OD');
+    if(!res.ok){ TOAST('Refusé : '+res.motif); RENDER(); return; }
+    SAVE(); RENDER();
+    TOAST('Dotation comptabilisée : '+eu(m)+' — débit '+N.dot.slice(0,4)+' / crédit '+N.cpt.slice(0,4)+'.');
+  };
+  window.pvReprendre=function(id){
+    var p=provDe(id); if(!p) return TOAST('Provision introuvable.');
+    var m=r(p.rMontant||0), dote=r(p.montant||0);
+    if(!ecrituresDe(LIBD(id)).length) return TOAST('Refusé : la dotation n’a pas été comptabilisée — on ne reprend pas une provision qui n’existe pas.');
+    if(m<0.005) return TOAST('Refusé : montant nul — il n’y a rien à reprendre.');
+    if(m>r(dote+0.005)) return TOAST('Refusé : reprise de '+eu(m)+' supérieure à la provision dotée ('+eu(dote)+').');
+    if(!dansExo(p.rDate)) return TOAST('Refusé : date '+fr(p.rDate)+' hors exercice ('+fr(D0())+' → '+fr(D1())+').');
+    var N=nat(p.nature), nom=(p.lib||N.n);
+    retirer(LIBR(id));
+    var res=poster(LIBR(id), p.rDate,
+      [{compte:N.cpt, lib:nom,              debit:m, credit:0},
+       {compte:N.rep, lib:'Reprise — '+nom, debit:0, credit:m}], 'OD');
+    if(!res.ok){ TOAST('Refusé : '+res.motif); RENDER(); return; }
+    SAVE(); RENDER();
+    TOAST('Reprise comptabilisée : '+eu(m)+' — débit '+N.cpt.slice(0,4)+' / crédit '+N.rep.slice(0,4)+'.');
+  };
+
+  /* ============================ actions — provision d'impôt ============================ */
+  window.pvImpotDate=function(v){ window.__pvImpDate=String(v||''); };
+  window.pvImpot=function(){
+    var X=isExercice();
+    if(!X) return TOAST('Refusé : la liasse fiscale n’est pas disponible — préparez le 2058-A d’abord.');
+    var m=r(X.du);
+    if(m<0.005) return TOAST('Refusé : résultat fiscal nul ou déficitaire — il n’y a pas d’impôt à provisionner.');
+    var d=window.__pvImpDate||finExo();
+    if(!dansExo(d)) return TOAST('Refusé : date '+fr(d)+' hors exercice ('+fr(D0())+' → '+fr(D1())+').');
+    retirer(LIBIS());
+    var res=poster(LIBIS(), d,
+      [{compte:'695000000', lib:'Impôt sur les sociétés '+exo(), debit:m, credit:0},
+       {compte:'444000000', lib:'Impôt sur les sociétés dû',     debit:0, credit:m}], 'OD');
+    if(!res.ok){ TOAST('Refusé : '+res.motif); RENDER(); return; }
+    SAVE(); RENDER();
+    TOAST('Charge d’impôt comptabilisée : '+eu(m)+' — débit 695 / crédit 444.');
+  };
+  window.pvImpotRetirer=function(){
+    var n=retirer(LIBIS());
+    if(!n) return TOAST('Aucune charge d’impôt à retirer.');
+    SAVE(); RENDER(); TOAST('Charge d’impôt retirée.');
+  };
+  window.pvPayerSet=function(champ,v){ window['__pvPay'+champ]=String(v||''); };
+  window.pvPayer=function(){
+    var du=r(-mvt('444', true).solde);
+    var m=r(nb(window.__pvPaymontant||0)), d=String(window.__pvPaydate||AUJ());
+    if(!ecrituresDe(LIBIS()).length) return TOAST('Refusé : la charge d’impôt n’est pas comptabilisée — on ne paie pas une dette qui n’est pas au bilan.');
+    if(m<0.005) return TOAST('Refusé : montant nul — il n’y a rien à payer.');
+    if(m>r(du+0.005)) return TOAST('Refusé : '+eu(m)+' dépasse l’impôt restant dû ('+eu(du)+').');
+    if(!dansExo(d)) return TOAST('Refusé : date '+fr(d)+' hors exercice ('+fr(D0())+' → '+fr(D1())+').');
+    var res=poster(LIBPAY(), d,
+      [{compte:'444000000', lib:'Impôt sur les sociétés '+exo(), debit:m, credit:0},
+       {compte:'512000000', lib:'Paiement de l’impôt',           debit:0, credit:m}], 'BQ');
+    if(!res.ok){ TOAST('Refusé : '+res.motif); RENDER(); return; }
+    try{ res.ecr.impotPaiement=m; }catch(e){}
+    window.__pvPaymontant='';
+    SAVE(); RENDER();
+    var reste=r(du-m);
+    TOAST('Paiement enregistré : '+eu(m)+' — débit 444 / crédit 512.'+(reste>0.005?(' Reste dû : '+eu(reste)+'.'):' Impôt soldé.'));
+  };
+  window.pvPayerRetirer=function(eid){
+    var n=(db.ecritures||[]).length;
+    db.ecritures=(db.ecritures||[]).filter(function(e){ return e.id!==eid; });
+    db.odiv=(db.odiv||[]).filter(function(o){ return o.ecritureId!==eid; });
+    if(n===(db.ecritures||[]).length) return TOAST('Paiement introuvable.');
+    SAVE(); RENDER(); TOAST('Paiement retiré.');
+  };
+
+  /* ============================ actions — apurement du 471 ============================ */
+  window.pvApurSet=function(cle, champ, v){
+    window.__pvApur=window.__pvApur||{};
+    window.__pvApur[cle]=window.__pvApur[cle]||{};
+    window.__pvApur[cle][champ]=String(v||'');
+  };
+  window.pvApurer=function(cle){
+    var L=lignes471(), x=null;
+    for(var i=0;i<L.length;i++) if(L[i].cle===cle){ x=L[i]; break; }
+    if(!x) return TOAST('Ligne d’attente introuvable — elle a peut-être déjà été apurée.');
+    var f=((window.__pvApur||{})[cle])||{};
+    var cpt=C9(f.cpt||''), d=String(f.date||x.date);
+    var m=(f.montant!=null&&String(f.montant)!=='')?r(nb(f.montant)):x.reste;
+    if(!cpt||cpt==='000000000') return TOAST('Refusé : aucun compte de reclassement choisi — on ne devine pas la nature d’une opération.');
+    if(cpt==='471000000') return TOAST('Refusé : on n’apure pas le 471 par le 471.');
+    if(m<0.005) return TOAST('Refusé : montant nul — il n’y a rien à apurer.');
+    if(m>r(x.reste+0.005)) return TOAST('Refusé : '+eu(m)+' dépasse ce qui reste en attente sur cette ligne ('+eu(x.reste)+').');
+    if(!dansExo(d)) return TOAST('Refusé : date '+fr(d)+' hors exercice ('+fr(D0())+' → '+fr(D1())+').');
+    var nom=x.lib||'Opération en attente';
+    var lignes = (x.sens==='D')
+      ? [{compte:cpt, lib:nom, debit:m, credit:0}, {compte:'471000000', lib:'Apurement — '+nom, debit:0, credit:m}]
+      : [{compte:'471000000', lib:'Apurement — '+nom, debit:m, credit:0}, {compte:cpt, lib:nom, debit:0, credit:m}];
+    var res=poster(LIB471(), d, lignes, 'OD');
+    if(!res.ok){ TOAST('Refusé : '+res.motif); RENDER(); return; }
+    try{ res.ecr.apureDe=cle; res.ecr.apureMontant=m; }catch(e){}
+    SAVE(); RENDER();
+    var solde=r(mvt('471', true).solde);
+    TOAST('Apuré : '+eu(m)+' reclassé en '+cpt.slice(0,6)+'.'+(Math.abs(solde)<0.005?' Le compte d’attente est soldé.':(' Solde 471 : '+eu(solde)+'.')));
+  };
+
+  window.pvAller=function(p){ try{ if(typeof pcAller==='function') return pcAller(p); current=p; RENDER(); }catch(e){} };
+  window.pvFermer=function(){ try{ if(typeof yadaFermerPage==='function') yadaFermerPage(); }catch(e){} };
+
+  /* ============================ mesures : lues sur le dossier, jamais déclarées ============================ */
+  function mesure(){
+    var prov = mvt(['151','157','158'], true);          /* crédit = provisions au passif */
+    var dot  = mvt(['6815','6865','6875'], true);        /* débit  = dotations de l'exercice */
+    var rep  = mvt(['7815','7865','7875'], true);        /* crédit = reprises de l'exercice */
+    var ch   = mvt(['695','698'], true);                 /* débit  = charge d'impôt */
+    var du   = mvt('444', true);                         /* crédit = impôt restant dû */
+    var att  = mvt('471', true);                         /* doit finir à zéro */
+    var E=etat(), sDot=0, sRep=0, nDot=0, nRep=0;
+    E.lignes.forEach(function(p){
+      if(ecrituresDe(LIBD(p.id)).length){ sDot=r(sDot+r(p.montant||0)); nDot++; }
+      if(ecrituresDe(LIBR(p.id)).length){ sRep=r(sRep+r(p.rMontant||0)); nRep++; }
+    });
+    return {prov:prov, dot:dot, rep:rep, ch:ch, du:du, att:att,
+            sDot:sDot, sRep:sRep, nDot:nDot, nRep:nRep,
+            att471:lignes471(), pay:paiementsIS(), fisc:fiscalLu(), isx:isExercice(), liasse:liassePrete()};
+  }
+
+  /* ============================ rendu ============================ */
+  function selNature(p){
+    var h='<select class="pv-in" onchange="pvSet(\''+p.id+'\',\'nature\',this.value)">';
+    NATURES.forEach(function(N){ h+='<option value="'+N.k+'"'+(p.nature===N.k?' selected':'')+'>'+esc(N.n)+'</option>'; });
+    return h+'</select>';
+  }
+  function carteProvisions(M){
+    var E=etat(), h='';
+    h+='<div class="pv-card"><div class="pv-h"><span class="pv-nom">Provisions pour risques et charges</span>'
+      +'<span class="pv-tag'+(M.nDot?' on':'')+'">'+M.nDot+' dotée(s)</span>'
+      +'<span class="pv-tag'+(M.nRep?' on':'')+'">'+M.nRep+' reprise(s)</span></div>';
+    h+='<div class="pv-sub">Une provision constate une charge PROBABLE dont le montant ou l’échéance n’est pas certain — un litige, une garantie donnée, une grosse réparation. La nature choisie décide des trois comptes : dotation, provision, reprise. Le résultat de l’exercice en est diminué ; aucune trésorerie ne bouge.</div>';
+    if(!E.lignes.length){
+      h+='<div class="pv-vide">Aucune provision au registre. La question à se poser à la clôture : un litige est-il en cours, une garantie a-t-elle été donnée, une charge connue reste-t-elle à venir ?</div>';
+    }else{
+      h+='<table class="pv-t"><thead><tr><th>Nature</th><th>Objet</th><th class="r">Montant</th><th>Date</th><th>Comptes</th><th>Dotation</th><th class="r">Reprise</th><th>Date</th><th>Action</th></tr></thead><tbody>';
+      E.lignes.forEach(function(p){
+        var N=nat(p.nature), fait=!!ecrituresDe(LIBD(p.id)).length, repFait=!!ecrituresDe(LIBR(p.id)).length;
+        h+='<tr>'
+          +'<td>'+selNature(p)+'</td>'
+          +'<td><input class="pv-in" value="'+esc(p.lib||'')+'" placeholder="objet du risque" onchange="pvSet(\''+p.id+'\',\'lib\',this.value)"></td>'
+          +'<td class="r"><input class="pv-in pv-mt" value="'+r(p.montant||0)+'" onchange="pvSet(\''+p.id+'\',\'montant\',this.value)"></td>'
+          +'<td><input class="pv-in" type="date" value="'+esc(p.date||finExo())+'" onchange="pvSet(\''+p.id+'\',\'date\',this.value)"></td>'
+          +'<td class="mono">'+N.dot.slice(0,4)+' → '+N.cpt.slice(0,4)+'</td>'
+          +'<td>'+(fait
+              ? '<span class="pv-ok">comptabilisée</span> <button class="pv-b" onclick="pvDoter(\''+p.id+'\')">Régénérer</button>'
+              : '<button class="pv-b pv-pri" onclick="pvDoter(\''+p.id+'\')">Comptabiliser</button>')+'</td>'
+          +'<td class="r"><input class="pv-in pv-mt" value="'+r(p.rMontant||0)+'" onchange="pvSet(\''+p.id+'\',\'rMontant\',this.value)"></td>'
+          +'<td><input class="pv-in" type="date" value="'+esc(p.rDate||finExo())+'" onchange="pvSet(\''+p.id+'\',\'rDate\',this.value)"></td>'
+          +'<td>'+(repFait
+              ? '<span class="pv-ok">reprise ✓</span>'
+              : '<button class="pv-b" onclick="pvReprendre(\''+p.id+'\')">Reprendre</button>')
+            +' <button class="pv-x" title="Retirer la provision" onclick="pvDel(\''+p.id+'\')">✕</button></td>'
+          +'</tr>';
+      });
+      h+='</tbody></table>';
+    }
+    h+='<div class="pv-acts"><button class="pv-b pv-pri" onclick="pvAdd()">Ajouter une provision</button>'
+      +'<span class="pv-d">Comptabilisé : dotations '+eu(M.dot.d)+' · reprises '+eu(M.rep.c)+' · provisions au passif '+eu(-M.prov.solde)+'</span></div>';
+    return h+'</div>';
+  }
+
+  function carteImpot(M){
+    var F=M.fisc, X=M.isx, h='';
+    var du=r(-M.du.solde), fait=!!ecrituresDe(LIBIS()).length;
+    h+='<div class="pv-card"><div class="pv-h"><span class="pv-nom">Provision d’impôt sur les sociétés</span>'
+      +'<span class="pv-tag'+(fait?' on':'')+'">'+(fait?'comptabilisée':'à comptabiliser')+'</span></div>';
+    h+='<div class="pv-sub">L’impôt se calcule sur le résultat FISCAL, pas sur le résultat comptable. Ce chiffre n’est pas recalculé ici : il est lu sur le 2058-A de la liasse — un seul calcul, donc aucune divergence entre la déclaration et l’écriture.</div>';
+    if(!F||!X){
+      h+='<div class="pv-vide">La liasse fiscale n’est pas disponible. Ouvrez la Liasse fiscale, préparez le 2058-A (réintégrations, déductions, déficits), puis revenez ici.</div>'
+        +'<div class="pv-acts"><button class="pv-b pv-pri" onclick="pvAller(\'liasse\')">Ouvrir la liasse fiscale</button></div></div>';
+      return h;
+    }
+    var I=X.I;
+    h+='<table class="pv-t"><tbody>'
+      +'<tr><td>Résultat comptable de l’exercice</td><td class="r">'+eu(F.comptable)+'</td></tr>'
+      +'<tr><td>+ Réintégrations (non déductibles)</td><td class="r">'+eu(F.tReint)+'</td></tr>'
+      +'<tr><td>− Déductions</td><td class="r">'+eu(F.tDeduc)+'</td></tr>'
+      +'<tr class="tot"><td>= Résultat fiscal lu sur le 2058-A</td><td class="r">'+eu(F.avant)+'</td></tr>'
+      +((X.charge>0.005||X.reintIS>0.005)
+        ? '<tr><td>± Neutralisation de l’impôt déjà comptabilisé<span class="pv-d"> charge 695 '+eu(X.charge)+' · déjà réintégrée '+eu(X.reintIS)+'</span></td><td class="r">'+eu(r(X.charge-X.reintIS))+'</td></tr>'
+          +'<tr class="tot"><td>= Résultat AVANT impôt — la base retenue</td><td class="r">'+eu(X.base)+'</td></tr>'
+        : '')
+      +'<tr><td>− Déficits antérieurs imputés<span class="pv-d"> (plafond : 1 000 000 € + 50 % au-delà)</span></td><td class="r">'+eu(I.impute)+'</td></tr>'
+      +'<tr class="tot"><td>= Résultat fiscal imposable</td><td class="r">'+eu(I.apres)+'</td></tr>'
+      +'<tr><td>Impôt au taux réduit'+(I.pme?' 15 % (jusqu’à 42 500 €)':' — régime PME non retenu')+'</td><td class="r">'+eu(I.is.reduit)+'</td></tr>'
+      +'<tr><td>Impôt au taux normal 25 %</td><td class="r">'+eu(I.is.normal)+'</td></tr>'
+      +'<tr class="tot"><td>Impôt sur les sociétés</td><td class="r">'+eu(I.is.total)+'</td></tr>'
+      +'</tbody></table>';
+    if(X.charge>0.005||X.reintIS>0.005)
+      h+='<div class="pv-d">L’impôt est une charge non déductible : le comptabiliser diminue le résultat, donc la base de l’impôt suivant. La base retenue est le résultat AVANT impôt — régénérer donne toujours le même montant.</div>';
+    h+='<div class="pv-ap"><table class="pv-t"><thead><tr><th>Écriture — charge d’impôt</th><th>Compte</th><th class="r">Débit</th><th class="r">Crédit</th></tr></thead><tbody>'
+      +'<tr><td>Impôt sur les sociétés '+exo()+'</td><td class="mono">695000000</td><td class="r">'+eu(I.is.total)+'</td><td class="r"></td></tr>'
+      +'<tr><td>État — impôts sur les bénéfices</td><td class="mono">444000000</td><td class="r"></td><td class="r">'+eu(I.is.total)+'</td></tr>'
+      +'</tbody></table></div>';
+    h+='<div class="pv-acts">'
+      +'<label class="pv-f"><span class="k">Date de l’écriture</span><input class="pv-in" type="date" value="'+esc(window.__pvImpDate||finExo())+'" onchange="pvImpotDate(this.value)"></label>'
+      +'<button class="pv-b pv-pri" onclick="pvImpot()">'+(fait?'Régénérer la charge d’impôt':'Comptabiliser la charge d’impôt')+'</button>'
+      +(fait?'<button class="pv-b" onclick="pvImpotRetirer()">Retirer</button>':'')
+      +'</div>';
+    /* paiements */
+    h+='<div class="pv-sep"></div><div class="pv-h"><span class="pv-nom2">Paiement de l’impôt</span>'
+      +'<span class="pv-tag'+(du<0.005&&fait?' on':'')+'">'+(fait?(du<0.005?'soldé':('reste dû '+eu(du))):'aucune dette au bilan')+'</span></div>';
+    h+='<div class="pv-sub">Le paiement ne touche pas le résultat : il solde la dette. Débit 444, crédit 512 — la banque sort, le passif disparaît.</div>';
+    if(M.pay.lignes.length){
+      h+='<table class="pv-t"><thead><tr><th>Date</th><th>Libellé</th><th class="r">Montant</th><th>Action</th></tr></thead><tbody>';
+      M.pay.lignes.forEach(function(x){
+        h+='<tr><td class="mono">'+fr(x.date)+'</td><td>'+esc(x.lib)+'</td><td class="r">'+eu(x.montant)+'</td>'
+          +'<td><button class="pv-x" title="Retirer le paiement" onclick="pvPayerRetirer(\''+x.id+'\')">✕</button></td></tr>';
+      });
+      h+='<tr class="tot"><td>Total payé</td><td></td><td class="r">'+eu(M.pay.total)+'</td><td></td></tr></tbody></table>';
+    }
+    h+='<div class="pv-acts">'
+      +'<label class="pv-f"><span class="k">Montant</span><input class="pv-in pv-mt" value="'+esc(window.__pvPaymontant||(du>0.005?r(du):''))+'" onchange="pvPayerSet(\'montant\',this.value)"></label>'
+      +'<label class="pv-f"><span class="k">Date du paiement</span><input class="pv-in" type="date" value="'+esc(window.__pvPaydate||AUJ())+'" onchange="pvPayerSet(\'date\',this.value)"></label>'
+      +'<button class="pv-b pv-pri" onclick="pvPayer()">Enregistrer le paiement</button></div>';
+    return h+'</div>';
+  }
+
+  function carteAttente(M){
+    var L=M.att471, solde=r(M.att.solde), h='';
+    h+='<div class="pv-card"><div class="pv-h"><span class="pv-nom">Apurement du compte d’attente 471</span>'
+      +'<span class="pv-tag'+(Math.abs(solde)<0.005?' on':'')+'">'+(Math.abs(solde)<0.005?'soldé':('solde '+eu(solde)))+'</span></div>';
+    h+='<div class="pv-sub">Le 471 est une salle d’attente, pas un compte. Tout ce qui s’y trouve est une opération dont on n’a pas encore su dire la nature — et aucun exercice ne se clôture sur un 471 qui traîne. Choisissez le compte définitif : YADA contre-passe l’attente et impute l’opération.</div>';
+    if(!L.length){
+      h+='<div class="pv-vide">'+(Math.abs(solde)<0.005
+          ? 'Rien en attente : le compte 471 est soldé.'
+          : 'Aucune ligne d’attente à apurer sur l’exercice, mais le compte n’est pas soldé ('+eu(solde)+') — le reliquat vient d’un exercice antérieur ou d’un à-nouveau.')+'</div>';
+    }else{
+      h+='<table class="pv-t"><thead><tr><th>Date</th><th>Jnl</th><th>Libellé</th><th class="r">En attente</th><th>Compte de reclassement</th><th class="r">Montant</th><th>Date</th><th>Action</th></tr></thead><tbody>';
+      L.forEach(function(x){
+        var f=((window.__pvApur||{})[x.cle])||{};
+        h+='<tr>'
+          +'<td class="mono">'+fr(x.date)+'</td>'
+          +'<td class="mono">'+esc(x.jrn)+'</td>'
+          +'<td>'+esc(x.lib)+(x.apure>0.005?'<span class="pv-d"> · déjà apuré '+eu(x.apure)+'</span>':'')+'</td>'
+          +'<td class="r">'+eu(x.reste)+' <span class="pv-d">'+(x.sens==='D'?'D':'C')+'</span></td>'
+          +'<td><input class="pv-in mono" value="'+esc(f.cpt||'')+'" placeholder="ex. 606100000" onchange="pvApurSet(\''+x.cle+'\',\'cpt\',this.value)"></td>'
+          +'<td class="r"><input class="pv-in pv-mt" value="'+esc(f.montant!=null&&f.montant!==''?f.montant:r(x.reste))+'" onchange="pvApurSet(\''+x.cle+'\',\'montant\',this.value)"></td>'
+          +'<td><input class="pv-in" type="date" value="'+esc(f.date||x.date)+'" onchange="pvApurSet(\''+x.cle+'\',\'date\',this.value)"></td>'
+          +'<td><button class="pv-b pv-pri" onclick="pvApurer(\''+x.cle+'\')">Apurer</button></td>'
+          +'</tr>';
+      });
+      h+='</tbody></table>';
+    }
+    return h+'</div>';
+  }
+
+  function carteControles(M){
+    var C=[], du=r(-M.du.solde);
+    function ok(t,v,d){ C.push({t:t, ok:!!v, d:d||''}); }
+    var ecartProv=r((-M.prov.solde)-r(M.sDot-M.sRep));
+    ok('Provisions au passif conformes au registre', Math.abs(ecartProv)<0.01,
+       'bilan '+eu(-M.prov.solde)+' · registre '+eu(r(M.sDot-M.sRep)));
+    ok('Dotations comptabilisées conformes au registre', Math.abs(r(M.dot.d-M.sDot))<0.01,
+       'comptabilisé '+eu(M.dot.d)+' · registre '+eu(M.sDot));
+    ok('Reprises comptabilisées conformes au registre', Math.abs(r(M.rep.c-M.sRep))<0.01,
+       'comptabilisé '+eu(M.rep.c)+' · registre '+eu(M.sRep));
+    var mal=etat().lignes.filter(function(p){ return r(p.montant||0)<0.005; }).length;
+    ok('Chaque provision porte un montant', !mal, mal?(mal+' provision(s) sans montant'):'aucune provision vide');
+    var repTrop=etat().lignes.filter(function(p){ return r(p.rMontant||0)>r((p.montant||0)+0.005); }).length;
+    ok('Aucune reprise supérieure à sa dotation', !repTrop, repTrop?(repTrop+' reprise(s) excédentaire(s)'):'aucune reprise excédentaire');
+    var X=M.isx, isRef=X?X.du:0;
+    ok('Résultat fiscal disponible (liasse préparée)', !!X,
+       X?('résultat fiscal '+eu(X.I.apres)+' · impôt '+eu(isRef)):'le 2058-A n’a pas été préparé');
+    ok('Impôt calculé sur le résultat AVANT impôt', !!X,
+       X?('base '+eu(X.base)+' = 2058-A '+eu(X.F.avant)+' + charge 695 '+eu(X.charge)+' − réintégration WJ '+eu(X.reintIS)):'non calculable');
+    ok('Charge d’impôt conforme au résultat fiscal', !!X && Math.abs(r(M.ch.d-isRef))<0.01,
+       X?('comptabilisé '+eu(M.ch.d)+' · calculé '+eu(isRef)):'non calculable');
+    ok('Impôt dû = charge − paiements', Math.abs(r(du-r(M.ch.d-M.pay.total)))<0.01,
+       'dette 444 '+eu(du)+' · charge '+eu(M.ch.d)+' − payé '+eu(M.pay.total));
+    ok('Aucun paiement au-delà de la charge', M.pay.total<=r(M.ch.d+0.005),
+       'payé '+eu(M.pay.total)+' · charge '+eu(M.ch.d));
+    ok('Compte d’attente 471 soldé', Math.abs(r(M.att.solde))<0.005,
+       Math.abs(r(M.att.solde))<0.005?'solde 0,00 €':(M.att471.length+' ligne(s) en attente · solde '+eu(M.att.solde)));
+    var tenus=C.filter(function(x){ return x.ok; }).length;
+    var h='<div class="pv-card"><div class="pv-h"><span class="pv-nom">Contrôles — aucune validation sans contrôle</span>'
+      +'<span class="pv-tag'+(tenus===C.length?' on':'')+'">'+tenus+' / '+C.length+' tenus</span></div>'
+      +'<table class="pv-t"><thead><tr><th>Contrôle</th><th>État</th><th>Détail</th></tr></thead><tbody>';
+    C.forEach(function(x){
+      h+='<tr><td>'+esc(x.t)+'</td><td>'+(x.ok?'<span class="pv-ok">tenu</span>':'<span class="pv-ko">à revoir</span>')+'</td><td class="pv-d">'+esc(x.d)+'</td></tr>';
+    });
+    return h+'</tbody></table></div>';
+  }
+
+  window.pageProvisions=function(){
+    assurerPlan();
+    var s=S(), M=mesure();
+    var du=r(-M.du.solde), solde471=r(M.att.solde);
+    var h='<div id="yada-pv">';
+    h+='<div class="pv-mast"><div class="pv-eyebrow">YADA · PROVISIONS &amp; IMPÔT</div>'
+      +'<h1 class="pv-title">Provisions &amp; impôt</h1>'
+      +'<div class="pv-soc">'+esc(s.raison||'')+' · exercice '+esc(fr(D0()))+' → '+esc(fr(D1()))+'</div>'
+      +'<button class="pv-close" title="Fermer" onclick="pvFermer()">✕</button></div>';
+    h+='<div class="pv-kpis">'
+      +'<div class="pv-k"><div class="l">Provisions au passif (15x)</div><div class="v">'+eu(-M.prov.solde)+'</div></div>'
+      +'<div class="pv-k"><div class="l">Dotations de l’exercice</div><div class="v">'+eu(M.dot.d)+'</div></div>'
+      +'<div class="pv-k"><div class="l">Impôt sur les sociétés</div><div class="v">'+(M.isx?eu(M.isx.du):'—')+'</div></div>'
+      +'<div class="pv-k"><div class="l">Compte d’attente 471</div><div class="v">'+eu(solde471)+'</div></div>'
+      +'</div>';
+    h+='<div class="pv-note">Deux charges que l’exercice supporte sans les décaisser : la PROVISION, qui constate un risque connu, et la PROVISION D’IMPÔT, qui constate ce que le résultat fiscal doit au Trésor. Les montants ci-dessus sont LUS sur les écritures, jamais déclarés — et un contrôle confronte le registre à la comptabilité. Montant nul, reprise supérieure à la dotation, paiement supérieur à la dette, date hors exercice : chacun est un refus motivé, et le dossier reste inchangé.</div>';
+    if(!M.liasse && !M.isx)
+      h+='<div class="pv-note pv-warn">La liasse fiscale de l’exercice n’a pas été préparée : le résultat fiscal n’est pas connu, donc la provision d’impôt ne peut pas être calculée. Le 2058-A se prépare dans le module Liasse fiscale.</div>';
+    if(Math.abs(solde471)>0.005)
+      h+='<div class="pv-note pv-warn">Le compte d’attente 471 n’est pas soldé ('+eu(solde471)+'). Tant qu’il porte un solde, la clôture reste ouverte sur des opérations dont la nature n’a pas été tranchée.</div>';
+    h+=carteProvisions(M)+carteImpot(M)+carteAttente(M)+carteControles(M);
+    h+='<div class="pv-card"><div class="pv-h"><span class="pv-nom">Le schéma appliqué</span></div>'
+      +'<table class="pv-t"><thead><tr><th>Situation</th><th>Débit</th><th>Crédit</th></tr></thead><tbody>'
+      +'<tr><td>Provision pour un risque connu</td><td class="mono">6815 Dotation aux provisions</td><td class="mono">151 Provisions pour risques</td></tr>'
+      +'<tr><td>Reprise — le risque a disparu</td><td class="mono">151 Provisions pour risques</td><td class="mono">7815 Reprise sur provisions</td></tr>'
+      +'<tr><td>Charge d’impôt sur le résultat fiscal</td><td class="mono">695 Impôts sur les bénéfices</td><td class="mono">444 État — impôts sur les bénéfices</td></tr>'
+      +'<tr><td>Paiement de l’impôt</td><td class="mono">444 État — impôts sur les bénéfices</td><td class="mono">512 Banque</td></tr>'
+      +'<tr><td>Apurement d’une attente (sens débiteur)</td><td class="mono">compte définitif</td><td class="mono">471 Compte d’attente</td></tr>'
+      +'</tbody></table>'
+      +'<div class="pv-acts"><span style="flex:1"></span>'
+      +'<button class="pv-b" onclick="pvAller(\'liasse\')">Ouvrir la liasse fiscale</button>'
+      +'<button class="pv-b" onclick="pvAller(\'parcours\')">Ouvrir le parcours comptable</button>'
+      +'<button class="pv-b" onclick="pvAller(\'compta\')">Voir les écritures</button></div></div>';
+    h+='</div>';
+    return h;
+  };
+
+  /* ---------- enregistrement du module ---------- */
+  try{
+    window.YADA_OK=(window.YADA_OK||[]);
+    if(window.YADA_OK.indexOf('provisions')<0) window.YADA_OK.push('provisions');
+    window.YADA_LBL=(window.YADA_LBL||{});
+    window.YADA_LBL.provisions='Provisions & impôt';
+  }catch(e){}
+
+  /* ---------- style Registre N&B, scopé #yada-pv ---------- */
+  try{
+    var st=document.getElementById('pv-mod');
+    if(!st){ st=document.createElement('style'); st.id='pv-mod'; document.head.appendChild(st); }
+    st.textContent=
+      'html body:not(#_yz) #yada-pv{background:#000;color:#f5f5f6;min-height:100dvh;padding:0 0 60px;font-family:Georgia,"Times New Roman",serif}'
+     +'html body:not(#_yz) #yada-pv *{font-family:inherit}'
+     +'html body:not(#_yz) #yada-pv .pv-mast{position:relative;padding:26px 24px 16px;border-bottom:1px solid #242427}'
+     +'html body:not(#_yz) #yada-pv .pv-eyebrow{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;letter-spacing:.14em;color:#8b8b90}'
+     +'html body:not(#_yz) #yada-pv .pv-title{font-size:27px;margin:6px 0 4px;font-weight:400}'
+     +'html body:not(#_yz) #yada-pv .pv-soc{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:#8b8b90}'
+     +'html body:not(#_yz) #yada-pv .pv-close{position:absolute;top:22px;right:22px;width:30px;height:30px;background:#000;color:#f5f5f6;border:1px solid #f5f5f6;border-radius:5px;cursor:pointer;font-family:ui-monospace,monospace;font-size:14px}'
+     +'html body:not(#_yz) #yada-pv .pv-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:#242427;margin:0 0 2px}'
+     +'html body:not(#_yz) #yada-pv .pv-k{background:#0b0b0c;padding:14px 16px}'
+     +'html body:not(#_yz) #yada-pv .pv-k .l{font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.07em;color:#8b8b90;text-transform:uppercase}'
+     +'html body:not(#_yz) #yada-pv .pv-k .v{font-size:20px;margin-top:5px}'
+     +'html body:not(#_yz) #yada-pv .pv-note{padding:14px 24px;color:#a8a9ad;font-size:13px;border-bottom:1px solid #242427}'
+     +'html body:not(#_yz) #yada-pv .pv-warn{color:#f5f5f6;background:#121214}'
+     +'html body:not(#_yz) #yada-pv .pv-card{border-bottom:1px solid #242427;padding:18px 24px 22px}'
+     +'html body:not(#_yz) #yada-pv .pv-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap}'
+     +'html body:not(#_yz) #yada-pv .pv-nom{font-size:18px}'
+     +'html body:not(#_yz) #yada-pv .pv-nom2{font-size:15px}'
+     +'html body:not(#_yz) #yada-pv .pv-tag{font-family:ui-monospace,monospace;font-size:9.5px;letter-spacing:.09em;padding:2px 7px;border:1px solid #35353a;color:#8b8b90;border-radius:3px}'
+     +'html body:not(#_yz) #yada-pv .pv-tag.on{background:#f5f5f6;color:#0a0a0b;border-color:#f5f5f6}'
+     +'html body:not(#_yz) #yada-pv .pv-sub{color:#8b8b90;font-size:12.5px;margin:6px 0 10px;max-width:96ch}'
+     +'html body:not(#_yz) #yada-pv .pv-vide{color:#8b8b90;font-size:12.5px;padding:10px 0}'
+     +'html body:not(#_yz) #yada-pv .pv-sep{height:1px;background:#242427;margin:18px 0 14px}'
+     +'html body:not(#_yz) #yada-pv .pv-t{width:100%;border-collapse:collapse;margin:8px 0}'
+     +'html body:not(#_yz) #yada-pv .pv-t th{font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#8b8b90;background:#121214;padding:6px 8px;text-align:left;font-weight:400;border-bottom:1px solid #242427}'
+     +'html body:not(#_yz) #yada-pv .pv-t td{padding:4px 8px;border-bottom:1px solid #1c1c1f;font-size:13px;vertical-align:middle}'
+     +'html body:not(#_yz) #yada-pv .pv-t th.r,html body:not(#_yz) #yada-pv .pv-t td.r{text-align:right}'
+     +'html body:not(#_yz) #yada-pv .pv-t .mono{font-family:ui-monospace,monospace;font-size:12px}'
+     +'html body:not(#_yz) #yada-pv .pv-t .tot td{border-top:1px solid #35353a;border-bottom:none}'
+     +'html body:not(#_yz) #yada-pv .pv-ap{margin-top:12px;opacity:.92}'
+     +'html body:not(#_yz) #yada-pv .pv-d{color:#8b8b90;font-size:11.5px}'
+     +'html body:not(#_yz) #yada-pv .pv-ok{font-family:ui-monospace,monospace;font-size:11px;color:#f5f5f6}'
+     +'html body:not(#_yz) #yada-pv .pv-ko{font-family:ui-monospace,monospace;font-size:11px;color:#8b8b90}'
+     +'html body:not(#_yz) #yada-pv .pv-in{width:100%;background:#000;color:#f5f5f6;border:1px solid #242427;border-radius:3px;padding:4px 6px;font-family:ui-monospace,monospace;font-size:12px}'
+     +'html body:not(#_yz) #yada-pv .pv-mt{text-align:right}'
+     +'html body:not(#_yz) #yada-pv .pv-f{display:block}'
+     +'html body:not(#_yz) #yada-pv .pv-f .k{display:block;font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#8b8b90;margin-bottom:4px}'
+     +'html body:not(#_yz) #yada-pv .pv-acts{display:flex;gap:8px;align-items:flex-end;margin-top:10px;flex-wrap:wrap}'
+     +'html body:not(#_yz) #yada-pv .pv-b{background:#000;color:#f5f5f6;border:1px solid #35353a;border-radius:4px;padding:5px 11px;cursor:pointer;font-family:ui-monospace,monospace;font-size:11.5px}'
+     +'html body:not(#_yz) #yada-pv .pv-b.pv-pri{background:#f5f5f6;color:#0a0a0b;border-color:#f5f5f6}'
+     +'html body:not(#_yz) #yada-pv .pv-x{background:#000;color:#8b8b90;border:1px solid #242427;border-radius:3px;cursor:pointer;padding:2px 6px;font-family:ui-monospace,monospace}'
+     +'@media(max-width:820px){html body:not(#_yz) #yada-pv .pv-kpis{grid-template-columns:repeat(2,1fr)}}';
   }catch(e){}
 })();
 </script>

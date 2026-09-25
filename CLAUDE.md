@@ -36,7 +36,59 @@
 
 ---
 
-## 🟢 Dernière mise à jour — RÈGLEMENTS & ÉCHÉANCES : une facture comptabilisée n'est pas une facture réglée — v653
+## 🟢 Dernière mise à jour — PROVISIONS & IMPÔT : les deux charges que l'exercice supporte sans les décaisser — v654
+**Quoi :** **étapes 15, 18 et 20 du parcours** (v651). Le dossier savait dire ce qu'il **a gagné** (v643) et ce qu'il **doit au fisc** (v647) ; il ne savait écrire ni la **provision** pour un risque connu, ni la **provision d'impôt**, ni **vider le compte d'attente 471** — or aucun exercice ne se clôture sur un 471 qui traîne. Nouveau module **« Provisions & impôt »** (rubrique **Traitements**).
+
+| Situation | Débit | Crédit |
+| --- | --- | --- |
+| **Provision** pour un risque connu | **6815** Dotation aux provisions | **151** Provisions pour risques |
+| **Reprise** — le risque a disparu | **151** Provisions pour risques | **7815** Reprise sur provisions |
+| **Charge d'impôt** sur le résultat fiscal | **695** Impôts sur les bénéfices | **444** État — impôts sur les bénéfices |
+| **Paiement** de l'impôt | **444** État — impôts sur les bénéfices | **512** Banque |
+| **Apurement** d'une attente (sens débiteur) | compte définitif | **471** Compte d'attente |
+
+**La nature du risque décide des trois comptes**, pas l'utilisateur : litige → `1511`, garanties clients → `1512`, **perte de change → `1515` avec une dotation FINANCIÈRE `6865`** (et non `6815`), grosses réparations → `1572`, autre charge → `158`, **risque exceptionnel → dotation `6875`**. Une dotation d'exploitation, une dotation financière et une dotation exceptionnelle ne se lisent pas au même étage du compte de résultat : les confondre fausse les soldes intermédiaires de gestion.
+
+**Corrigé avant la livraison — l'impôt dérivait à chaque régénération.** L'IS est une charge **non déductible** : la comptabiliser diminue le résultat comptable, donc la base de l'impôt suivant. En cliquant trois fois « Régénérer », on obtenait **9 625 → 7 218,75 → 7 820,31** — trois montants, tous faux sauf le premier. La base retenue est désormais le **résultat AVANT impôt** : on **remet la charge `695` déjà comptabilisée** et on **retire la réintégration d'IS que la liasse aurait déjà portée** (repère **WJ** du 2058-A) pour ne pas la compter deux fois. Mesuré : **11 250 quatre fois de suite**, et **le même 11 250 que la liasse ait réintégré l'IS ou non** — la formule est stable dans les deux configurations. La ligne de neutralisation est **écrite à l'écran**, jamais cachée.
+
+**Le barème n'est pas dupliqué.** L'imputation des déficits (plafond **art. 209 I** : 1 000 000 € + 50 % au-delà) et les taux (**15 % jusqu'à 42 500 €** puis **25 %**) restent ceux de la liasse : `fiscal()` a été refactorée autour d'un **`impotSur(base)`** unique, exposé par **`window.liImpotSur`** — le 2058-A et l'écriture passent par le même calcul, donc **aucune divergence n'est possible**. Le résultat fiscal lui-même est **lu** par `window.liFiscal`, jamais recalculé.
+
+**Le 471 s'apure ligne par ligne.** Chaque opération en attente est listée (date, journal, libellé, sens, reste) avec le **compte de reclassement** à choisir ; YADA contre-passe l'attente et impute l'opération. **Le piège du double comptage de la v653 est évité d'emblée** : la contre-passation porte elle-même une ligne `471` — écartée de la liste (`apureDe`), sinon une pièce fantôme apparaîtrait et doublerait ce qui reste à apurer. Vérifié : après un apurement **partiel de 500 sur 1 200**, la liste affiche toujours **2 lignes** (les deux d'origine), pas 3.
+
+**Les refus, chacun motivé en clair** — et, à chaque fois, le **dossier reste strictement inchangé** (égalité JSON stricte des écritures) : montant **nul**, **reprise sans dotation** (« on ne reprend pas une provision qui n'existe pas »), **reprise supérieure à la dotation**, **paiement sans charge au bilan**, **paiement supérieur au restant dû**, **apurement sans compte** (« on ne devine pas la nature d'une opération »), **apurement du 471 par le 471**, **apurement supérieur au reste**, **date hors exercice** — **9 refus sur 9**. Une **seule porte d'écriture**, `poster(libelle,date,lignes,journal)` : elle vérifie l'**équilibre** et l'**appartenance à l'exercice** **avant** d'appeler `posterOD` — aucun chemin ne contourne le contrôle.
+
+**Onze contrôles, tous mesurés sur le dossier** — et ils **réagissent**. Le registre est confronté à la comptabilité : gonfler une provision de 8 000 à 12 000 **sans régénérer** fait basculer deux contrôles (« bilan 8 000,00 € · registre 12 000,00 € »). Poster une charge **après** avoir calculé l'impôt fait basculer « Charge d'impôt conforme » — et régénérer le remet au vert. Reclasser 400 € du 471 en frais bancaires change le résultat, donc l'impôt : **8 650** au lieu de 8 750, et le contrôle le dit jusqu'à la régénération.
+
+**Comment — nouvel addon `yada-addon-provisions` (100% ADDITIF) + 8 éditions chirurgicales :** clé `provisions:(typeof pageProvisions==='function'?pageProvisions:repli)` au **dispatch de `render()`**, `'provisions'` ajouté **après `'echeancier'`** dans la rubrique **Traitements** de la barre v641, **refactorisation de `fiscal()` autour d'`impotSur`** + exposition de **`liFiscal`** et **`liImpotSur`**, et **trois étapes du parcours re-routées** — 15 (`mod:'provisions'` **tant que le 471 n'est pas soldé**), 18 (`mod:'provisions'`), 20 (`mod:'provisions'` **quand la liasse est prête mais l'IS non comptabilisé**, sinon `'liasse'`). **Points techniques :** (1) les seize comptes nécessaires sont **ajoutés au plan s'ils manquent** ; (2) libellés stables `PROVISION <id> <exercice>`, `REPRISE PROVISION <id>`, `PROVISION IMPÔT`, `APUREMENT 471` → **régénérer remplace** (détection par `indexOf(...)>=0`, `posterOD` préfixant le libellé du numéro de pièce) ; (3) les **paiements d'impôt s'accumulent** (marqués `impotPaiement`) au lieu d'être remplacés — un acompte n'efface pas le précédent ; (4) journaux : dotations, reprises, charge d'impôt et apurements en **OD**, **paiement en BQ** (c'est un mouvement de trésorerie) ; (5) rendu **Registre N&B** scopé `#yada-pv`, sortie **`pvFermer()`** pour que le filet v614 la reconnaisse — **invariant v626 : exactement 1 sortie « Fermer »**, vérifié : le filet **ne greffe pas**. `sw.js` yada-v249, badge v654, `version.json` 654.
+
+**Validé :** `node --check` (**323 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014 statiques · 42/42 pour `pv-mod`) + balises (3/5/3) + **filet d'équilibre** ✅ + six sondes Playwright sur des dossiers montés pour couvrir **chaque branche** :
+
+| Mesure | Résultat |
+| --- | --- |
+| **Dotation** litige 8 000 | `681500000` **8 000 D** / `151100000` **8 000 C** — équilibrée · régénérer 3× → **1 écriture** |
+| **Reprise** 3 000 | `151100000` **3 000 D** / `781500000` **3 000 C** |
+| **Dotation financière** (perte de change) | **`686500000`** / `151500000` — pas `6815` |
+| **IS régénéré 4 fois** | **11 250 · 11 250 · 11 250 · 11 250** — la dérive (9 625 → 7 218,75 → 7 820,31) est cassée |
+| **IS avec réintégration WJ** de la liasse | **11 250** — identique · **1 seule écriture** |
+| **Déficit reportable 30 000** | base 62 000 − 30 000 = 32 000 → IS **4 800** (tout au taux réduit) |
+| **Charge d'impôt** | `695000000` **D** / `444000000` **C** · paiement `444` **D** / `512000000` **C** au journal **BQ** |
+| **Paiements** 5 000 puis le solde | dette 444 **7 820,31 → 2 820,31 → 0,00** · **2 paiements** conservés |
+| **471** — 2 lignes (1 200 D, 900 C) | apurement partiel 500 → **toujours 2 lignes** (aucune pièce fantôme) · écriture `606100000` 500 D / `471000000` 500 C |
+| **471 soldé** | 0 ligne · solde **0,00 €** |
+| **Refus** — 9 cas | dossier **strictement inchangé** (JSON) — **9 / 9** |
+| **Contrôles** | **11 / 11** sur un dossier sain · **11 / 11** sur un dossier vide · le seul « à revoir » d'un dossier en retard est **réel** (471 à 400 €) |
+| **Contrôles réactifs** | charge postée après calcul → « à revoir » · régénérer → vert (IS **9 500**) · registre gonflé 8 000 → 12 000 → **2 contrôles** basculent avec les deux chiffres |
+| **Lecture seule à l'ouverture** | deux rendus → écritures **identiques** (JSON) |
+| **Parcours** — étapes 15 · 18 · 20 | **`pcAller('provisions')`** pour les trois · 15 « compte d'attente 471 non soldé : 400,00 € » · 20 « résultat fiscal préparé — provision d'impôt non comptabilisée » |
+| Rubrique **Traitements** | « … » · « Règlements & échéances » · « **Provisions & impôt** » · « Automatismes » · … — **clic réel → `data-page=provisions`** |
+| Sorties « Fermer » · filet v614 · boutons · vides · sans action · en-têtes vides · gras · italique · souligné · débordement | **1** · **ne greffe pas** · 12 · **0** · **0** · **0** · **0** · **0** · **0** · **0** |
+| Écritures déséquilibrées · pageerror · console.error | **0** · **0** · **0** |
+
+**La suite du cahier des charges :** **v655** — le dossier produit désormais provisions et impôt ; restent les **engagements hors bilan** et le **suivi des acomptes d'IS** (comptes `444` par échéance), à confronter à la liasse.
+
+---
+
+## 🟢 MAJ précédente — RÈGLEMENTS & ÉCHÉANCES : une facture comptabilisée n'est pas une facture réglée — v653
 **Quoi :** **étapes 11 et 12 du parcours** (v651). Le dossier savait enregistrer une facture ; il ne savait pas dire **ce qui reste dû, depuis combien de temps, et à qui**. Nouveau module **« Règlements & échéances »** (rubrique **Traitements**) : il lit les comptes de tiers, ne retient que **ce qui n'est pas lettré** — donc ce qui reste réellement dû — le ventile par ancienneté, puis **règle**, avec le **mode de paiement** qui décide du compte de trésorerie.
 
 | Mode de paiement | Compte mouvementé |
