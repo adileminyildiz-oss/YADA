@@ -243,10 +243,18 @@
   Le cahier des charges corrige ce compromis. *(SIT = situation intermédiaire, à exclure des
   comptes annuels ; CHE = écritures de chevauchement d'exercice.)*
 - ⏳ **[CDC-2 · Import bancaire] Formats QIF, MT940, CFONB** — seuls **OFX** et **CSV** sont lus.
-- ⏳ **[CDC-3 · Liasse] Formulaires 2031/2033 (BIC réel simplifié), 2065 (IS), 2072 (SCI),
-  2069 (crédits d'impôt)** — seuls 2050 → 2059-A existent. YADA **calcule** l'IS (v647/v654)
-  mais ne **produit pas** la déclaration 2065 qui le porte : c'est le dernier kilomètre vers
-  l'administration.
+- ✅ **[CDC-3 · Liasse] — LA 2065 EST LIVRÉE (v657).** Module **Déclaration 2065 (IS)** :
+  cadres A (récapitulation des éléments d'imposition), B (imputations), C (**contribution
+  sociale de 3,3 %**, art. 235 ter ZC — abattement de 763 000 € proratisé sur la durée de
+  l'exercice, exonération sous double condition), D (renseignements divers), **2065 bis**
+  (capital, dirigeants, filiales) et **relevé de solde** (IS + contribution − acomptes versés
+  = solde à payer **ou excédent à restituer**, échéancier des acomptes de l'art. 1668, dates
+  limites de dépôt et de paiement). La 2065 **LIT** la liasse (2058-A, v647) : elle ne
+  recalcule rien, donc elle ne peut pas en diverger. **Le dépôt est REFUSÉ** tant qu'un
+  contrôle critique est en défaut — c'est la règle absolue du cahier des charges, appliquée.
+- ⏳ **[CDC-3 · reste] Formulaires 2031/2033 (BIC réel simplifié), 2072 (SCI), 2069 (crédits
+  d'impôt)** — non traités : ils relèvent de régimes que YADA ne tient pas encore (IR/BIC
+  simplifié, revenus fonciers).
 - ⏳ **[CDC-4 · Déclarations] DES et DEB** (échanges intracommunautaires de services et de biens)
   — absentes.
 - ⏳ **[CDC-5 · Révision] Les trois niveaux « Révisé · Supervisé · Validé »** — la révision v646
@@ -265,7 +273,8 @@
 1. **CDC-1** — les journaux manquants, en commençant par la **CAISSE** : c'est le seul chantier
    qui **corrige un compromis déjà reconnu** dans le logiciel, et il porte une vraie règle
    comptable (*une caisse ne peut pas être créditrice*).
-2. **CDC-3** — la **2065**, dernier maillon de la chaîne fiscale déjà construite (v647 + v654).
+2. ~~**CDC-3** — la **2065**~~ → **livrée en v657** (dernier maillon de la chaîne fiscale
+   construite en v647 + v654 : résultat fiscal → IS → écriture → **déclaration**).
 3. **CDC-5** — la supervision à deux étages : c'est la phrase qui clôt le cahier des charges
    (« prêt à être **supervisé** puis transmis »).
 4. **CDC-2**, **CDC-8** — les formats et le FEC provisoire (techniques, cernés).

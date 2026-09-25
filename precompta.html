@@ -4213,6 +4213,7 @@ function render(){
   inventaire:(typeof pageInventaire==='function'?pageInventaire:function(){return'<div class="mod-wrap"><div class="card"><h2>Inventaire &amp; cut-off</h2></div></div>';}),
   revision:(typeof pageRevision==='function'?pageRevision:function(){return'<div class="mod-wrap"><div class="card"><h2>Dossier de révision</h2></div></div>';}),
   liasse:(typeof pageLiasse==='function'?pageLiasse:function(){return'<div class="mod-wrap"><div class="card"><h2>Liasse fiscale</h2></div></div>';}),
+  is2065:(typeof pageDecl2065==='function'?pageDecl2065:function(){return'<div class="mod-wrap"><div class="card"><h2>Déclaration 2065 (IS)</h2></div></div>';}),
   axes:(typeof pageAxes==='function'?pageAxes:function(){return'<div class="mod-wrap"><div class="card"><h2>Analytique par affaire</h2></div></div>';}),
   annexe:(typeof pageAnnexe==='function'?pageAnnexe:function(){return'<div class="mod-wrap"><div class="card"><h2>Annexe des comptes annuels</h2></div></div>';}),
   flux:(typeof pageFlux==='function'?pageFlux:function(){return'<div class="mod-wrap"><div class="card"><h2>Tableau de flux de trésorerie</h2></div></div>';}),
@@ -11103,7 +11104,7 @@ ${lignes}
 (function(){ try{
   function add(){ if(document.getElementById('yada-ver')) return;
     var b=document.createElement('div'); b.id='yada-ver';
-    b.textContent='YADA · v656';
+    b.textContent='YADA · v657';
     b.title='Repère de version — déploiement GitHub Pages (peut être retiré)';
     b.style.cssText='position:fixed;left:12px;bottom:82px;z-index:9999;font:700 11px system-ui,sans-serif;background:linear-gradient(120deg,#5ab0ff,#0a64d6);color:#ffffff;padding:5px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:.85;pointer-events:none';
     document.body.appendChild(b); }
@@ -37435,7 +37436,7 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
      mods:['journal','achats','recurrentes','importbanque','chargespaie']},
     {id:'yb-trait',   lbl:'Traitements',  prend:[['sg-util','Utilitaires']],
      mods:['parcours','constitution','echeancier','provisions','automatismes','inventaire','rappro','banque','immos']},
-    {id:'yb-decl',    lbl:'Déclarations', prend:[], mods:['tva','liasse']},
+    {id:'yb-decl',    lbl:'Déclarations', prend:[], mods:['tva','liasse','is2065']},
     {id:'yb-etats',   lbl:'États',        prend:[], mods:['editions','annexe','flux']},
     {id:'yb-revis',   lbl:'Révision',     prend:[], mods:['revision','controles']},
     {id:'yb-analyse', lbl:'Analyse',      prend:[],
@@ -39053,6 +39054,11 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
   /* le résultat fiscal est LU par le module Provisions & impôt (v654) : un seul calcul, aucune divergence */
   window.liFiscal=function(){ try{ return fiscal(); }catch(e){ return null; } };
   window.liImpotSur=function(base){ try{ return impotSur(base); }catch(e){ return null; } };
+  /* la déclaration 2065 (v657) LIT la liasse — chiffre d'affaires, bilan, plus-values :
+     un seul calcul, donc aucune divergence entre la liasse et la déclaration. */
+  window.liCA=function(){ try{ var C=crLiasse(); return C?r(C.ca):0; }catch(e){ return 0; } };
+  window.liBilan=function(){ try{ return bilanLiasse(); }catch(e){ return null; } };
+  window.liPMV=function(){ try{ return pmv(); }catch(e){ return null; } };
   window.liOnglet=function(k){ window.__liTab=k; RENDER(); };
   window.liAdd=function(quoi){ var E=etat(); E[quoi].push({rep:(quoi==='reint'?'WK':'WU'), lib:'', mt:0}); SAVE(); RENDER(); };
   window.liDel=function(quoi,i){ var E=etat(); E[quoi].splice(i,1); SAVE(); RENDER(); };
@@ -40026,6 +40032,8 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     var t=0; mois.forEach(function(m){ t+=Object.keys(parMois[m]).length; });
     return {n:Math.round(t/mois.length*10)/10, src:'bulletins', mois:mois.length};
   }
+  /* l'effectif moyen sert aussi au cadre D de la 2065 (v657) : une seule source */
+  window.anxEffectif=function(){ try{ return effectif(); }catch(e){ return {n:null,src:'aucun'}; } };
 
   /* ---------- RÉGIME D'ANNEXE ----------------------------------------------
      Une micro-entreprise est DISPENSÉE d'annexe (art. L123-16-1), une petite entreprise
@@ -41209,12 +41217,17 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
     (function(){
       var li=(param('liasse',{})[exo()])||null;
       var is=mvt(pref('444'),{sansAN:true}), ch=mvt(pref('695','698'),{sansAN:true});
-      E.push({n:20, t:'Déclarations fiscales', mod:((li&&ch.d<=0.005)?'provisions':'liasse'), req:[19],
-        st: ch.d>0.005 ? 'fait' : (li?'encours':'afaire'),
-        q: ch.d>0.005 ? ('impôt sur les sociétés comptabilisé : '+eu(ch.d))
-          : (li ? 'résultat fiscal préparé — provision d\'impôt non comptabilisée' : 'liasse non préparée'),
+      /* la chaîne fiscale ne s'achève pas à l'écriture, elle s'achève au DÉPÔT de la 2065 (v657) */
+      var dep=false; try{ dep=(typeof window.dcDepose==='function')&&window.dcDepose(); }catch(e){}
+      E.push({n:20, t:'Déclarations fiscales',
+        mod: (dep||ch.d>0.005) ? 'is2065' : (li ? 'provisions' : 'liasse'), req:[19],
+        st: dep ? 'fait' : ((ch.d>0.005||li) ? 'encours' : 'afaire'),
+        q: dep ? 'déclaration 2065 déposée'
+          : (ch.d>0.005 ? ('impôt comptabilisé : '+eu(ch.d)+' — déclaration 2065 non déposée')
+            : (li ? 'résultat fiscal préparé — provision d\'impôt non comptabilisée' : 'liasse non préparée')),
         d:[['Charge d\'impôt (695/698)', eu(ch.d)],
            ['Impôt dû (444)', eu(-is.solde)],
+           ['Déclaration 2065', dep?'déposée':'non déposée'],
            ['Écriture type', 'débit 695 · crédit 444 · paiement : débit 444 · crédit 512']]});
     })();
 
@@ -43473,6 +43486,606 @@ html body,html body *{font-family:'IBM Plex Sans','Segoe UI',-apple-system,Blink
   /* au démarrage — second passage pour les dossiers restaurés depuis IndexedDB */
   try{ migrer(); }catch(x){}
   try{ setTimeout(function(){ try{ migrer(); }catch(x){} }, 2200); }catch(x){}
+})();
+</script>
+<script id="yada-addon-2065">
+/* ============================================================
+   v657 — LA 2065 : LA DÉCLARATION DE RÉSULTATS (IMPÔT SUR LES SOCIÉTÉS)
+   ------------------------------------------------------------
+   Le dossier savait dire ce qu'il a GAGNÉ (v643), ce qu'il DOIT au fisc (résultat
+   fiscal, v647) et comptabiliser cette dette (v654). Il ne savait pas la DÉCLARER.
+   La 2065 est le dernier maillon : la pièce qui porte le résultat fiscal à
+   l'administration, et qui dit combien il reste à payer une fois les acomptes déduits.
+
+   Trois choses qu'une déclaration doit savoir, et que l'IS seul ne dit pas :
+
+   1. LA CONTRIBUTION SOCIALE N'EST PAS L'IS (art. 235 ter ZC). Elle vaut 3,3 % de
+      l'IS de référence APRÈS un abattement de 763 000 € par période de douze mois,
+      et n'est due que si l'entreprise n'est pas exonérée (chiffre d'affaires
+      inférieur à 7 630 000 € ET capital entièrement libéré détenu à 75 % au moins
+      par des personnes physiques). L'abattement se proratise sur la durée réelle
+      de l'exercice.
+
+   2. LE SOLDE N'EST PAS L'IMPÔT (art. 1668). L'impôt se paie par QUATRE ACOMPTES
+      d'un quart de l'IS de référence, puis par un SOLDE. Ce qu'il reste à payer,
+      c'est l'impôt dû MOINS les acomptes déjà versés — et cela peut être un
+      EXCÉDENT à restituer.
+
+   3. UN DÉFICIT NE SE DÉCLARE PAS COMME UN BÉNÉFICE. Bénéfice ou déficit, jamais
+      les deux : un déficit ne donne aucun impôt, il grossit le stock reportable.
+
+   ET LA RÈGLE ABSOLUE : AUCUNE VALIDATION SANS CONTRÔLE. Le dépôt est REFUSÉ tant
+   qu'un contrôle critique est en défaut — et le motif est écrit en clair.
+
+   Le module est en LECTURE SEULE sur la comptabilité : il ne crée aucune écriture.
+   Le seul écrit est db.parametres.decl2065[exercice].
+   100% ADDITIF. */
+(function(){
+  function S(){ try{ return db.societe||{}; }catch(e){ return {}; } }
+  function SAVE(){ try{ if(typeof save==='function') save(); }catch(e){} }
+  function RENDER(){ try{ if(typeof render==='function') render(); }catch(e){} }
+  function TOAST(m){ try{ if(typeof toast==='function') toast(m); }catch(e){} }
+  function r(v){ return Math.round((+v||0)*100)/100; }
+  function eu(v){ try{ return eur(v); }catch(e){ return r(v)+' €'; } }
+  function C9(x){ try{ return c9(String(x||'')); }catch(e){ return String(x||''); } }
+  function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function fr(d){ try{ return frDate(d); }catch(e){ return String(d||''); } }
+  function AUJ(){ try{ return todayStr(); }catch(e){ return new Date().toISOString().slice(0,10); } }
+  function D0(){ return String(S().exoDebut||''); }
+  function D1(){ return String(S().exoFin||''); }
+  function exo(){ return (D1()||D0()||String(new Date().getFullYear())).slice(0,4); }
+  function dansExo(d){ var a=D0(), b=D1(); d=String(d||''); return !!d && (!a||d>=a) && (!b||d<=b); }
+  function nb(v){ return parseFloat(String(v==null?'':v).replace(/\s/g,'').replace(',','.'))||0; }
+
+  /* ---------- état persistant : rien d'autre n'est écrit ---------- */
+  function etat(){
+    db.parametres=db.parametres||{};
+    var D=db.parametres.decl2065; if(!D||typeof D!=='object'){ D={}; db.parametres.decl2065=D; }
+    var e=exo();
+    if(!D[e]||typeof D[e]!=='object') D[e]={};
+    var E=D[e];
+    if(!Array.isArray(E.credits)) E.credits=[];
+    if(!Array.isArray(E.assoc)) E.assoc=[];
+    if(!Array.isArray(E.filiales)) E.filiales=[];
+    if(!Array.isArray(E.dirigeants)) E.dirigeants=[];
+    if(!E.pvlt||typeof E.pvlt!=='object') E.pvlt={t15:0,t19:0,t0:0,t10:0};
+    if(E.sie==null) E.sie='';
+    if(E.capitalPME==null) E.capitalPME=false;
+    if(E.depot===undefined) E.depot=null;
+    return E;
+  }
+
+  /* ---------- lecture de la comptabilité (aucune écriture n'est touchée) ---------- */
+  function estAN(e){ var l=String(e.libelle||''); return l.indexOf('À-NOUVEAUX')>=0||l.indexOf('A-NOUVEAUX')>=0; }
+  function mvt(prefixes){
+    var P=[].concat(prefixes), o={d:0,c:0};
+    (db.ecritures||[]).forEach(function(e){
+      if(!e||!dansExo(e.date)||estAN(e)) return;
+      (e.lignes||[]).forEach(function(l){
+        var k=C9(l.compte); if(!k) return;
+        for(var i=0;i<P.length;i++){ if(k.indexOf(P[i])===0){
+          o.d=r(o.d+(+l.debit||0)); o.c=r(o.c+(+l.credit||0)); return; } }
+      });
+    });
+    o.solde=r(o.d-o.c);
+    return o;
+  }
+
+  /* ---------- ce que la liasse dit : LU, jamais recalculé ---------- */
+  function F(){ try{ return (typeof window.liFiscal==='function')?window.liFiscal():null; }catch(e){ return null; } }
+  function CA(){ try{ return (typeof window.liCA==='function')?r(window.liCA()):0; }catch(e){ return 0; } }
+  function BIL(){ try{ return (typeof window.liBilan==='function')?window.liBilan():null; }catch(e){ return null; } }
+  function PMV(){ try{ return (typeof window.liPMV==='function')?window.liPMV():null; }catch(e){ return null; } }
+  function EFF(){ try{ return (typeof window.anxEffectif==='function')?window.anxEffectif():{n:null,src:'aucun'}; }
+                  catch(e){ return {n:null,src:'aucun'}; } }
+  function liassePrete(){ try{ return !!((db.parametres||{}).liasse||{})[exo()]; }catch(e){ return false; } }
+
+  /* ---------- durée de l'exercice, en mois : l'abattement de la contribution s'y proratise ---------- */
+  function dureeMois(){
+    var a=D0(), b=D1(); if(!a||!b) return 12;
+    var t0=Date.parse(a+'T00:00:00Z'), t1=Date.parse(b+'T00:00:00Z');
+    if(isNaN(t0)||isNaN(t1)||t1<=t0) return 12;
+    var m=Math.round((t1-t0)/86400000/30.4375);
+    return Math.max(1, Math.min(36, m));
+  }
+
+  /* ---------- CONTRIBUTION SOCIALE SUR L'IS — art. 235 ter ZC ---------- */
+  var ABATTEMENT=763000, SEUIL_CA=7630000, TAUX_CONTRIB=0.033;
+  function contribution(){
+    var f=F(); if(!f) return null;
+    var E=etat(), ca=CA(), mois=dureeMois();
+    var isRef=r(f.is.total);
+    var abat=r(ABATTEMENT*mois/12);
+    var exonere=(ca<SEUIL_CA) && !!E.capitalPME;
+    var base=Math.max(0, r(isRef-abat));
+    var due=!exonere && base>0.005;
+    return {isRef:isRef, ca:ca, mois:mois, abat:abat, base:base, exonere:exonere,
+            capitalPME:!!E.capitalPME, montant: due?r(base*TAUX_CONTRIB):0, due:due};
+  }
+
+  /* ---------- ACOMPTES VERSÉS : les paiements d'impôt datés dans l'exercice (v654) ---------- */
+  function acomptes(){
+    var L=[], t=0;
+    (db.ecritures||[]).forEach(function(e){
+      if(!e||!e.impotPaiement||!dansExo(e.date)) return;
+      var m=r(+e.impotPaiement||0); if(m<0.005) return;
+      L.push({date:e.date, montant:m, lib:String(e.libelle||'')});
+      t=r(t+m);
+    });
+    L.sort(function(a,b){ return a.date<b.date?-1:(a.date>b.date?1:0); });
+    return {lignes:L, total:t};
+  }
+
+  /* ---------- CE QU'IL RESTE À PAYER ---------- */
+  function solde(){
+    var f=F(); if(!f) return null;
+    var K=contribution(), A=acomptes();
+    var du=r(f.is.total+(K?K.montant:0));
+    var net=r(du-A.total);
+    return {is:r(f.is.total), contrib:(K?K.montant:0), du:du, acomptes:A.total,
+            net:net, sens:(net>0.005?'a_payer':(net<-0.005?'excedent':'solde'))};
+  }
+
+  /* ---------- dates : dépôt, solde, acomptes ---------- */
+  function addMois(iso, n){
+    var y=+iso.slice(0,4), m=+iso.slice(5,7)-1+n, d=+iso.slice(8,10);
+    var dt=new Date(Date.UTC(y, m, 1));
+    var fin=new Date(Date.UTC(dt.getUTCFullYear(), dt.getUTCMonth()+1, 0)).getUTCDate();
+    dt.setUTCDate(Math.min(d, fin));
+    return dt.toISOString().slice(0,10);
+  }
+  function clotureCivile(){ return D1().slice(5)==='12-31'; }
+  function limiteDepot(){
+    var d1=D1(); if(!d1) return null;
+    if(clotureCivile()){
+      var an=+d1.slice(0,4)+1, dt=new Date(Date.UTC(an,4,1)), n=0;
+      while(n<2){ dt.setUTCDate(dt.getUTCDate()+1); var w=dt.getUTCDay(); if(w!==0&&w!==6) n++; }
+      return {date:dt.toISOString().slice(0,10),
+              regle:'deuxième jour ouvré suivant le 1er mai', approx:true};
+    }
+    return {date:addMois(d1,3), regle:'dans les trois mois de la clôture', approx:false};
+  }
+  function limiteSolde(){
+    var d1=D1(); if(!d1) return null;
+    if(clotureCivile()) return {date:(+d1.slice(0,4)+1)+'-05-15', regle:'15 mai — exercice clos le 31 décembre'};
+    return {date:addMois(d1.slice(0,8)+'01',4).slice(0,8)+'15',
+            regle:'le 15 du quatrième mois suivant la clôture'};
+  }
+  function echeancier(){
+    var f=F(); if(!f) return null;
+    var isRef=r(f.is.total), an=+exo()+1;
+    if(isRef<3000) return {dispense:true, an:an, isRef:isRef, lignes:[]};
+    var q=r(isRef/4);
+    return {dispense:false, an:an, isRef:isRef, lignes:[
+      {d:an+'-03-15', m:q}, {d:an+'-06-15', m:q}, {d:an+'-09-15', m:q},
+      {d:an+'-12-15', m:r(isRef-3*q)}]};
+  }
+
+  /* ============================ CONTRÔLES — aucune validation sans contrôle ============================ */
+  function controles(){
+    var K=[], f=F(), s=S(), So=solde(), C=contribution(), A=acomptes();
+    function add(crit,t,ok,d){ K.push({crit:!!crit, t:t, ok:(ok===null?null:!!ok), d:d||''}); }
+
+    add(true, 'Identification — SIREN', !!String(s.siren||'').trim(),
+        String(s.siren||'').trim() ? ('SIREN '+esc(s.siren)) : 'aucun SIREN au dossier : la déclaration n’est pas identifiable');
+    add(true, 'Exercice clos', !!(D1() && AUJ()>D1()),
+        D1() ? ((AUJ()>D1())?('clos le '+fr(D1())) : ('en cours jusqu’au '+fr(D1())+' — on ne déclare pas un exercice qui court'))
+             : 'aucune date de fin d’exercice');
+    add(true, 'Résultat fiscal préparé', !!(f && liassePrete()),
+        f ? ('résultat fiscal '+eu(f.apres)+' (2058-A, repère XN)') : 'la liasse n’est pas préparée : ouvrez le module Liasse fiscale');
+
+    var B=BIL();
+    add(true, 'Bilan équilibré', B?B.equilibre:null,
+        B ? (B.equilibre ? ('actif '+eu(B.ta)+' = passif '+eu(B.tp))
+                         : ('écart de '+eu(B.ecart)+' entre l’actif et le passif'))
+          : 'bilan indisponible');
+
+    var an=null; try{ if(typeof window.ctlAnalyse==='function') an=window.ctlAnalyse(); }catch(e){}
+    var nCrit = an ? ((an.deseq||[]).length+(an.sansCpt||[]).length+(an.debCred||[]).length) : null;
+    add(true, 'Aucune anomalie critique au dossier', (nCrit===null?null:nCrit===0),
+        (nCrit===null) ? 'contrôles indisponibles'
+          : (nCrit===0 ? 'écritures équilibrées, comptes renseignés'
+                       : (nCrit+' anomalie(s) critique(s) — on ne déclare pas un dossier qui ne tient pas')));
+
+    var ch=mvt(['695','698','699']).d, attendu=So?So.du:0;
+    add(true, 'Impôt déclaré = impôt comptabilisé', Math.abs(r(ch-attendu))<0.015,
+        'charge 695/698 : '+eu(ch)+' · déclaration : '+eu(attendu)
+        +(C&&C.due?(' (dont contribution sociale '+eu(C.montant)+')'):'')
+        +(Math.abs(r(ch-attendu))<0.015?'':' — écart de '+eu(r(attendu-ch))
+          +(C&&C.due&&Math.abs(r(attendu-ch-C.montant))<0.015?' : la contribution sociale n’est pas comptabilisée':'')));
+
+    var d444=mvt(['444']);
+    var det=r(ch-A.total);
+    add(false, 'Dette d’impôt (444) cohérente', Math.abs(r(-d444.solde-det))<0.015,
+        'compte 444 : '+eu(-d444.solde)+' · charge '+eu(ch)+' − acomptes '+eu(A.total)+' = '+eu(det));
+
+    var c471=mvt(['471']);
+    add(false, 'Compte d’attente 471 soldé', Math.abs(c471.solde)<0.005,
+        Math.abs(c471.solde)<0.005 ? 'soldé' : ('solde de '+eu(c471.solde)+' — à apurer avant de déclarer'));
+
+    add(false, 'Code activité (APE)', !!String(s.codeAPE||'').trim(),
+        String(s.codeAPE||'').trim()||'non renseigné');
+
+    if(C) add(false, 'Contribution sociale — conditions lues',
+        true,
+        C.exonere ? ('exonérée : chiffre d’affaires '+eu(C.ca)+' < '+eu(SEUIL_CA)+' et capital détenu à 75 % par des personnes physiques')
+          : (C.due ? ('due : IS de référence '+eu(C.isRef)+' − abattement '+eu(C.abat)+' = '+eu(C.base)+' × 3,3 %')
+                   : ('non due : IS de référence '+eu(C.isRef)+' inférieur à l’abattement de '+eu(C.abat))));
+
+    var lim=limiteDepot();
+    if(lim) add(false, 'Date limite de dépôt', AUJ()<=lim.date,
+        fr(lim.date)+' — '+lim.regle+(AUJ()>lim.date?' · DÉPASSÉE':'')
+        +(lim.approx?' (jours fériés non pris en compte)':''));
+
+    return K;
+  }
+  function refus(){
+    return controles().filter(function(c){ return c.crit && c.ok!==true; });
+  }
+
+  /* ============================ actions ============================ */
+  window.dcOnglet=function(k){ window.__dcTab=k; RENDER(); };
+  window.dcSetChamp=function(champ,v){
+    var E=etat();
+    if(champ==='capitalPME') E.capitalPME=!!v; else E[champ]=v;
+    SAVE(); RENDER();
+  };
+  window.dcPV=function(k,v){ var E=etat(); E.pvlt[k]=nb(v); SAVE(); RENDER(); };
+  window.dcAdd=function(quoi){
+    var E=etat();
+    if(quoi==='credits') E.credits.push({lib:'', mt:0});
+    else if(quoi==='assoc') E.assoc.push({nom:'', part:0});
+    else if(quoi==='filiales') E.filiales.push({nom:'', siren:'', part:0});
+    else if(quoi==='dirigeants') E.dirigeants.push({nom:'', fonction:'', remu:0});
+    SAVE(); RENDER();
+  };
+  window.dcDel=function(quoi,i){ var E=etat(); if(E[quoi]) E[quoi].splice(i,1); SAVE(); RENDER(); };
+  window.dcSet=function(quoi,i,champ,v){
+    var E=etat(), L=E[quoi]; if(!L||!L[i]) return;
+    L[i][champ]=(champ==='mt'||champ==='part'||champ==='remu')?nb(v):v;
+    SAVE(); if(champ==='mt'||champ==='part'||champ==='remu') RENDER();
+  };
+  /* LE dépôt : refusé tant qu'un contrôle critique est en défaut. Le motif est écrit. */
+  window.dcDeposer=function(){
+    var ko=refus();
+    if(ko.length){
+      TOAST('Dépôt refusé — '+ko.length+' contrôle(s) critique(s) en défaut : '+ko[0].t);
+      return;
+    }
+    var f=F(), So=solde(), C=contribution(), E=etat();
+    E.depot={date:AUJ(), fiscal:(f?f.apres:0), is:(f?f.is.total:0),
+             contrib:(C?C.montant:0), du:(So?So.du:0), acomptes:(So?So.acomptes:0), net:(So?So.net:0)};
+    SAVE(); TOAST('Déclaration 2065 déposée le '+fr(AUJ())+'.'); RENDER();
+  };
+  window.dcAnnulerDepot=function(){
+    var E=etat(); E.depot=null; SAVE(); TOAST('Dépôt annulé — la déclaration redevient modifiable.'); RENDER();
+  };
+
+  /* ============================ impression ============================ */
+  function ent(t){
+    var s=S();
+    return '<h1 style="margin:0 0 2px">'+esc(t)+'</h1><div style="font-size:12px;margin-bottom:8px">'
+      +esc(s.raison||'')+' · SIREN '+esc(s.siren||'—')+' · exercice du '+fr(D0())+' au '+fr(D1())
+      +' · édité le '+fr(AUJ())+'</div>';
+  }
+  function tbl(rows, entete){
+    return '<table style="width:100%;border-collapse:collapse;font-size:11px" border="1" cellpadding="3">'
+      +(entete?('<thead><tr>'+entete.map(function(h){ return '<th>'+esc(h)+'</th>'; }).join('')+'</tr></thead>'):'')
+      +'<tbody>'+rows.map(function(x){
+        if(x.sec) return '<tr><td colspan="2"><b>'+esc(x.sec)+'</b></td></tr>';
+        return '<tr'+(x.tot?' style="font-weight:700"':'')+'><td>'+esc(x.l)+'</td>'
+          +'<td style="text-align:right">'+(x.txt!=null?esc(x.txt):eu(x.v))+'</td></tr>'; }).join('')
+      +'</tbody></table>';
+  }
+  function lignes2065(){
+    var f=F(), C=contribution(), E=etat(), eff=EFF(), s=S();
+    if(!f) return [{l:'Résultat fiscal indisponible', txt:'—'}];
+    var ben=f.apres>0.005, def=f.apres<-0.005;
+    var cred=E.credits.reduce(function(a,x){ return r(a+(+x.mt||0)); },0);
+    var sal=0; try{ var C2=window.etnCR(D0(),D1()); if(C2&&C2.acc){ Object.keys(C2.acc).forEach(function(k){
+      if(k.indexOf('641')===0){ var a=C2.acc[k]; sal=r(sal+a.d-a.c); } }); } }catch(e){}
+    var L=[];
+    L.push({sec:'CADRE A — RÉCAPITULATION DES ÉLÉMENTS D’IMPOSITION'});
+    L.push({l:'Résultat fiscal — bénéfice', txt: ben?eu(f.apres):'néant'});
+    L.push({l:'Résultat fiscal — déficit', txt: def?eu(Math.abs(f.apres)):'néant'});
+    L.push({l:'Dont bénéfice imposable au taux réduit de 15 % (PME)', v:f.is.reduit?r(f.is.reduit/0.15):0});
+    L.push({l:'Dont bénéfice imposable au taux normal de 25 %', v:f.is.normal?r(f.is.normal/0.25):0});
+    L.push({l:'Plus-values à long terme imposées à 15 %', v:E.pvlt.t15});
+    L.push({l:'Plus-values à long terme imposées à 19 %', v:E.pvlt.t19});
+    L.push({l:'Plus-values à long terme imposées à 10 %', v:E.pvlt.t10});
+    L.push({l:'Plus-values à long terme imposées à 0 %', v:E.pvlt.t0});
+    L.push({l:'Déficit restant reportable après imputation', v:f.reportable});
+    L.push({l:'IMPÔT SUR LES SOCIÉTÉS', v:f.is.total, tot:true});
+    L.push({sec:'CADRE B — IMPUTATIONS'});
+    if(E.credits.length) E.credits.forEach(function(x){ L.push({l:x.lib||'(crédit d’impôt)', v:x.mt}); });
+    else L.push({l:'Crédits d’impôt', txt:'néant'});
+    L.push({l:'TOTAL DES IMPUTATIONS', v:cred, tot:true});
+    L.push({sec:'CADRE C — CONTRIBUTION SOCIALE SUR L’IMPÔT SUR LES SOCIÉTÉS (art. 235 ter ZC)'});
+    if(C){
+      L.push({l:'IS de référence', v:C.isRef});
+      L.push({l:'Abattement ('+eu(ABATTEMENT)+' pour douze mois · exercice de '+C.mois+' mois)', v:C.abat});
+      L.push({l:'Base de la contribution', v:C.base});
+      L.push({l:'CONTRIBUTION SOCIALE (3,3 %)', txt: C.exonere?'exonérée':eu(C.montant), tot:true});
+    }
+    L.push({sec:'CADRE D — RENSEIGNEMENTS DIVERS'});
+    L.push({l:'Chiffre d’affaires net (2052, repère FJ)', v:CA()});
+    L.push({l:'Effectif moyen du personnel', txt:(eff.n==null?'non renseigné':String(eff.n))});
+    L.push({l:'Montant brut des salaires (compte 641)', v:sal});
+    L.push({l:'Service des impôts des entreprises', txt:(E.sie||'non renseigné')});
+    L.push({l:'Code activité (APE)', txt:(s.codeAPE||'non renseigné')});
+    return L;
+  }
+  function lignesBis(){
+    var E=etat(), s=S(), L=[];
+    L.push({sec:'RÉPARTITION DU CAPITAL SOCIAL'});
+    /* le capital social ne se déclare pas : il se LIT au compte 101 */
+    var cap=r(-mvt(['101']).solde);
+    L.push({l:'Capital social (compte 101)', txt:(Math.abs(cap)>0.005?eu(cap):'aucun mouvement au compte 101')});
+    if(E.assoc.length) E.assoc.forEach(function(x){ L.push({l:x.nom||'(associé)', txt:(r(x.part)+' %')}); });
+    else L.push({l:'Associés', txt:'non renseignés'});
+    L.push({sec:'DIRIGEANTS'});
+    if(E.dirigeants.length) E.dirigeants.forEach(function(x){
+      L.push({l:(x.nom||'(dirigeant)')+(x.fonction?(' — '+x.fonction):''), v:x.remu}); });
+    else L.push({l:'Dirigeants', txt:'non renseignés'});
+    L.push({sec:'FILIALES ET PARTICIPATIONS'});
+    if(E.filiales.length) E.filiales.forEach(function(x){
+      L.push({l:(x.nom||'(filiale)')+(x.siren?(' · SIREN '+x.siren):''), txt:(r(x.part)+' %')}); });
+    else L.push({l:'Filiales', txt:'néant'});
+    return L;
+  }
+  function lignesSolde(){
+    var So=solde(), A=acomptes(), ech=echeancier(), ls=limiteSolde(), L=[];
+    if(!So) return [{l:'Impôt indisponible', txt:'—'}];
+    L.push({sec:'RELEVÉ DE SOLDE'});
+    L.push({l:'Impôt sur les sociétés', v:So.is});
+    L.push({l:'Contribution sociale (3,3 %)', v:So.contrib});
+    L.push({l:'TOTAL DÛ', v:So.du, tot:true});
+    A.lignes.forEach(function(x){ L.push({l:'Acompte versé le '+fr(x.date), v:x.montant}); });
+    L.push({l:'TOTAL DES ACOMPTES VERSÉS', v:A.total, tot:true});
+    L.push({l: So.sens==='excedent'?'EXCÉDENT À RESTITUER':'SOLDE À PAYER',
+            v: Math.abs(So.net), tot:true});
+    if(ls) L.push({l:'Date limite de paiement du solde', txt:fr(ls.date)+' — '+ls.regle});
+    if(ech){
+      L.push({sec:'ACOMPTES DE L’EXERCICE '+ech.an+' (art. 1668 du CGI)'});
+      if(ech.dispense) L.push({l:'Dispense d’acomptes', txt:'IS de référence '+eu(ech.isRef)+' inférieur à 3 000 €'});
+      else ech.lignes.forEach(function(x){ L.push({l:'Acompte du '+fr(x.d), v:x.m}); });
+    }
+    return L;
+  }
+  function docDe(k){
+    if(k==='bis') return '<div class="doc-page">'+ent('2065 bis — Renseignements divers · exercice '+exo())+tbl(lignesBis())+'</div>';
+    if(k==='solde') return '<div class="doc-page">'+ent('Relevé de solde d’impôt sur les sociétés · exercice '+exo())+tbl(lignesSolde())+'</div>';
+    return '<div class="doc-page">'+ent('2065 — Déclaration de résultats (impôt sur les sociétés) · exercice '+exo())+tbl(lignes2065())+'</div>';
+  }
+  window.dcImprimer=function(k){
+    try{ var z=document.getElementById('print-area'); if(!z) return; z.innerHTML=docDe(k); window.print(); }catch(e){}
+  };
+  window.dcImprimerTout=function(){
+    try{ var z=document.getElementById('print-area'); if(!z) return;
+      z.innerHTML=['2065','bis','solde'].map(docDe).join(''); window.print(); }catch(e){}
+  };
+
+  /* ============================ page ============================ */
+  var ONGLETS=[['2065','2065 — Déclaration'],['bis','2065 bis — Renseignements'],
+               ['solde','Acomptes & solde'],['ctl','Contrôles & dépôt']];
+  function tabActif(){ var k=window.__dcTab; for(var i=0;i<ONGLETS.length;i++){ if(ONGLETS[i][0]===k) return k; } return '2065'; }
+
+  function vLignes(L){
+    return '<table class="dc-t"><tbody>'+L.map(function(x){
+      if(x.sec) return '<tr class="sec"><td colspan="2">'+esc(x.sec)+'</td></tr>';
+      return '<tr'+(x.tot?' class="tot"':'')+'><td>'+esc(x.l)+'</td><td class="r">'
+        +(x.txt!=null?esc(x.txt):eu(x.v))+'</td></tr>'; }).join('')+'</tbody></table>';
+  }
+  function champ(lbl, id, val, handler, type){
+    return '<label class="dc-f"><span class="k">'+esc(lbl)+'</span>'
+      +'<input class="dc-in'+(type==='num'?' dc-mt':'')+'" type="'+(type==='num'?'number':'text')+'"'
+      +(type==='num'?' step="0.01"':'')+' value="'+esc(val==null?'':val)+'" oninput="'+handler+'"></label>';
+  }
+  function v2065(){
+    var f=F(), C=contribution(), E=etat(), V=PMV();
+    if(!f) return '<div class="dc-vide">La liasse fiscale n’est pas préparée : le résultat fiscal n’existe pas encore. Ouvrez le module <b>Liasse fiscale</b>, reprenez les réintégrations, puis revenez ici.</div>';
+    var h='<div class="dc-card">'+vLignes(lignes2065())+'</div>';
+    h+='<div class="dc-card"><div class="dc-h"><span class="dc-nom2">Plus-values à long terme</span></div>'
+      +'<div class="dc-sub">Pour une société à l’impôt sur les sociétés, les plus-values de cession sont en principe comprises dans le résultat imposable au taux de droit commun : elles sont déjà dans le résultat fiscal et n’ont rien à faire ici. Ces cases ne servent qu’aux régimes particuliers (titres de participation, brevets, SIIC) — elles restent donc à zéro, et à la main.'
+      +(V&&V.lignes.length?(' Pour mémoire, l’exercice porte '+V.lignes.length+' cession(s) pour une plus-value nette de '+eu(V.pv)+', déjà dans le résultat.'):'')
+      +'</div><div class="dc-grid">'
+      +champ('Taux 15 %','', E.pvlt.t15, 'dcPV(\'t15\',this.value)', 'num')
+      +champ('Taux 19 %','', E.pvlt.t19, 'dcPV(\'t19\',this.value)', 'num')
+      +champ('Taux 10 %','', E.pvlt.t10, 'dcPV(\'t10\',this.value)', 'num')
+      +champ('Taux 0 %','', E.pvlt.t0, 'dcPV(\'t0\',this.value)', 'num')
+      +'</div></div>';
+    h+='<div class="dc-card"><div class="dc-h"><span class="dc-nom2">Cadre B — crédits d’impôt</span></div>'
+      +'<div class="dc-sub">YADA ne connaît aucun crédit d’impôt : ni recherche, ni apprentissage, ni mécénat. Ils se saisissent — le logiciel ne devine pas ce qu’il ne sait pas.</div>'
+      +'<table class="dc-t"><thead><tr><th>Nature</th><th class="r">Montant</th><th></th></tr></thead><tbody>'
+      +(E.credits.length?E.credits.map(function(x,i){
+          return '<tr><td><input class="dc-in" value="'+esc(x.lib||'')+'" onchange="dcSet(\'credits\','+i+',\'lib\',this.value)"></td>'
+            +'<td class="r"><input class="dc-in dc-mt" type="number" step="0.01" value="'+esc(x.mt||0)+'" onchange="dcSet(\'credits\','+i+',\'mt\',this.value)"></td>'
+            +'<td class="r"><button class="dc-x" onclick="dcDel(\'credits\','+i+')">✕</button></td></tr>'; }).join('')
+        :'<tr><td colspan="3" class="dc-vide2">Aucun crédit d’impôt.</td></tr>')
+      +'</tbody></table><div class="dc-acts"><button class="dc-b" onclick="dcAdd(\'credits\')">Ajouter un crédit d’impôt</button></div></div>';
+    h+='<div class="dc-card"><div class="dc-h"><span class="dc-nom2">Contribution sociale — les conditions</span></div>'
+      +'<div class="dc-sub">La contribution de 3,3 % (art. 235 ter ZC) ne frappe que l’IS qui dépasse un abattement de '+eu(ABATTEMENT)+' par période de douze mois. Elle ne joue pas pour une entreprise dont le chiffre d’affaires est inférieur à '+eu(SEUIL_CA)+' <b>et</b> dont le capital, entièrement libéré, est détenu à 75 % au moins par des personnes physiques — cette seconde condition, YADA ne peut pas la lire : elle se déclare.</div>'
+      +'<label class="dc-chk"><input type="checkbox"'+(E.capitalPME?' checked':'')+' onchange="dcSetChamp(\'capitalPME\',this.checked)"> Capital entièrement libéré et détenu à 75 % au moins par des personnes physiques</label>'
+      +(C?('<div class="dc-d">Chiffre d’affaires lu : '+eu(C.ca)+' · exercice de '+C.mois+' mois · abattement '+eu(C.abat)
+          +' · '+(C.exonere?'exonérée':(C.due?('contribution due : '+eu(C.montant)):'non due — l’IS n’atteint pas l’abattement'))+'</div>'):'')
+      +'</div>';
+    h+='<div class="dc-card"><div class="dc-h"><span class="dc-nom2">Cadre D — service des impôts</span></div>'
+      +'<div class="dc-grid">'+champ('Service des impôts des entreprises (SIE)','', E.sie, 'dcSetChamp(\'sie\',this.value)')+'</div></div>';
+    return h;
+  }
+  function v2065bis(){
+    var E=etat();
+    function table(quoi, cols, vide){
+      var L=E[quoi];
+      return '<table class="dc-t"><thead><tr>'+cols.map(function(c){ return '<th'+(c[2]==='num'?' class="r"':'')+'>'+esc(c[1])+'</th>'; }).join('')+'<th></th></tr></thead><tbody>'
+        +(L.length?L.map(function(x,i){
+            return '<tr>'+cols.map(function(c){
+              return '<td'+(c[2]==='num'?' class="r"':'')+'><input class="dc-in'+(c[2]==='num'?' dc-mt':'')+'"'
+                +(c[2]==='num'?' type="number" step="0.01"':'')+' value="'+esc(x[c[0]]==null?'':x[c[0]])+'" '
+                +'onchange="dcSet(\''+quoi+'\','+i+',\''+c[0]+'\',this.value)"></td>'; }).join('')
+              +'<td class="r"><button class="dc-x" onclick="dcDel(\''+quoi+'\','+i+')">✕</button></td></tr>'; }).join('')
+          :'<tr><td colspan="'+(cols.length+1)+'" class="dc-vide2">'+esc(vide)+'</td></tr>')
+        +'</tbody></table>';
+    }
+    return '<div class="dc-card"><div class="dc-h"><span class="dc-nom2">Répartition du capital social</span></div>'
+      +'<div class="dc-sub">Qui détient la société, et pour quelle part. Le logiciel ne le sait pas : aucune écriture ne le dit.</div>'
+      +table('assoc',[['nom','Associé'],['part','Part (%)','num']],'Aucun associé renseigné.')
+      +'<div class="dc-acts"><button class="dc-b" onclick="dcAdd(\'assoc\')">Ajouter un associé</button></div></div>'
+      +'<div class="dc-card"><div class="dc-h"><span class="dc-nom2">Dirigeants et rémunérations</span></div>'
+      +table('dirigeants',[['nom','Nom'],['fonction','Fonction'],['remu','Rémunération nette','num']],'Aucun dirigeant renseigné.')
+      +'<div class="dc-acts"><button class="dc-b" onclick="dcAdd(\'dirigeants\')">Ajouter un dirigeant</button></div></div>'
+      +'<div class="dc-card"><div class="dc-h"><span class="dc-nom2">Filiales et participations</span></div>'
+      +table('filiales',[['nom','Filiale'],['siren','SIREN'],['part','Part (%)','num']],'Aucune filiale.')
+      +'<div class="dc-acts"><button class="dc-b" onclick="dcAdd(\'filiales\')">Ajouter une filiale</button></div></div>'
+      +'<div class="dc-card">'+vLignes(lignesBis())+'</div>';
+  }
+  function vSolde(){
+    var So=solde(), A=acomptes(), ech=echeancier(), ls=limiteSolde(), ld=limiteDepot();
+    if(!So) return '<div class="dc-vide">La liasse fiscale n’est pas préparée : l’impôt n’est pas connu.</div>';
+    var h='<div class="dc-card"><div class="dc-h"><span class="dc-nom2">Ce qu’il reste à payer</span></div>'
+      +'<div class="dc-sub">L’impôt ne se paie pas en une fois : quatre acomptes le précèdent. Le solde, c’est l’impôt dû moins ce qui a déjà été versé — et lorsque les acomptes ont dépassé l’impôt, c’est un <b>excédent à restituer</b>, pas une dette.</div>'
+      +vLignes(lignesSolde())+'</div>';
+    if(!A.lignes.length) h+='<div class="dc-card"><div class="dc-d">Aucun acompte versé sur l’exercice. Les paiements d’impôt se comptabilisent dans le module <b>Provisions &amp; impôt</b> (débit 444 · crédit 512) : ils remontent ici automatiquement.</div></div>';
+    h+='<div class="dc-card"><div class="dc-h"><span class="dc-nom2">Les dates</span></div><table class="dc-t"><tbody>'
+      +(ld?('<tr><td>Dépôt de la déclaration 2065</td><td class="r">'+fr(ld.date)+'</td></tr>'
+           +'<tr><td class="dc-d2">'+esc(ld.regle)+(ld.approx?' — jours fériés non pris en compte':'')+'</td><td></td></tr>'):'')
+      +(ls?('<tr><td>Paiement du solde</td><td class="r">'+fr(ls.date)+'</td></tr>'
+           +'<tr><td class="dc-d2">'+esc(ls.regle)+'</td><td></td></tr>'):'')
+      +'</tbody></table>'
+      +(ech&&!ech.dispense&&!clotureCivile()?'<div class="dc-d">L’exercice n’est pas calendaire : les quatre dates d’acompte ci-dessus sont celles du régime de droit commun ; le premier acompte suivant la clôture est régularisé.</div>':'')
+      +'</div>';
+    return h;
+  }
+  function vControles(){
+    var K=controles(), E=etat(), ko=K.filter(function(c){ return c.crit && c.ok!==true; }),
+        tenus=K.filter(function(c){ return c.ok===true; }).length;
+    var h='<div class="dc-card"><div class="dc-h"><span class="dc-nom2">Contrôles — aucune validation sans contrôle</span>'
+      +'<span class="dc-tag'+(ko.length?'':' on')+'">'+tenus+' / '+K.length+' tenus</span></div>'
+      +'<div class="dc-sub">Un contrôle critique en défaut ferme le dépôt. Ce n’est pas un avertissement que l’on peut passer : une déclaration qui ne concorde pas avec les comptes n’est pas déposable.</div>'
+      +'<table class="dc-t"><thead><tr><th>Contrôle</th><th>État</th><th>Détail</th></tr></thead><tbody>'
+      +K.map(function(c){
+        return '<tr><td>'+esc(c.t)+(c.crit?' <span class="dc-tag">critique</span>':'')+'</td>'
+          +'<td class="'+(c.ok===true?'dc-ok':'dc-ko')+'">'+(c.ok===true?'tenu':(c.ok===null?'indisponible':'à revoir'))+'</td>'
+          +'<td class="dc-d2">'+esc(c.d)+'</td></tr>'; }).join('')
+      +'</tbody></table></div>';
+    h+='<div class="dc-card"><div class="dc-h"><span class="dc-nom2">Dépôt de la déclaration</span></div>';
+    if(E.depot){
+      h+='<div class="dc-d">Déclaration déposée le <b>'+fr(E.depot.date)+'</b> — résultat fiscal '+eu(E.depot.fiscal)
+        +' · impôt '+eu(E.depot.is)+(E.depot.contrib?(' · contribution '+eu(E.depot.contrib)):'')
+        +' · '+(E.depot.net<-0.005?'excédent ':'solde ')+eu(Math.abs(E.depot.net))+'.</div>'
+        +'<div class="dc-acts"><button class="dc-b" onclick="dcAnnulerDepot()">Annuler le dépôt</button>'
+        +'<button class="dc-b dc-pri" onclick="dcImprimerTout()">Imprimer la déclaration complète</button></div>';
+    } else if(ko.length){
+      h+='<div class="dc-refus"><b>Dépôt refusé.</b> '+ko.length+' contrôle(s) critique(s) en défaut :<ul>'
+        +ko.map(function(c){ return '<li>'+esc(c.t)+' — '+esc(c.d)+'</li>'; }).join('')+'</ul></div>';
+    } else {
+      h+='<div class="dc-d">Tous les contrôles critiques sont tenus : la déclaration peut être déposée.</div>'
+        +'<div class="dc-acts"><button class="dc-b dc-pri" onclick="dcDeposer()">Déposer la déclaration</button>'
+        +'<button class="dc-b" onclick="dcImprimerTout()">Imprimer la déclaration complète</button></div>';
+    }
+    h+='<div class="dc-d2">Le dépôt est un marquage interne et une édition : la transmission réelle se fait par EDI-TDFC ou sur impots.gouv.fr.</div></div>';
+    return h;
+  }
+
+  window.pageDecl2065=function(){
+    var s=S(), f=F(), So=solde(), C=contribution(), E=etat(), k=tabActif();
+    var corps=(k==='bis')?v2065bis():(k==='solde')?vSolde():(k==='ctl')?vControles():v2065();
+    var ko=refus().length;
+    return '<div id="yada-dc">'
+      +'<div class="dc-mast"><div class="dc-eyebrow">YADA · DÉCLARATION 2065</div>'
+      +'<h1 class="dc-title">Déclaration de résultats — impôt sur les sociétés</h1>'
+      +'<div class="dc-soc">'+esc(s.raison||'')+' · SIREN '+esc(s.siren||'—')+' · exercice '+esc(D0())+' → '+esc(D1())+'</div>'
+      +'<button class="dc-close" title="Fermer" onclick="dcFermer()">✕</button></div>'
+      +'<div class="dc-kpis">'
+      +'<div class="dc-k"><div class="l">Résultat fiscal</div><div class="v">'+(f?eu(f.apres):'—')+'</div></div>'
+      +'<div class="dc-k"><div class="l">Impôt sur les sociétés</div><div class="v">'+(f?eu(f.is.total):'—')+'</div></div>'
+      +'<div class="dc-k"><div class="l">Contribution sociale</div><div class="v">'+(C?(C.exonere?'exonérée':eu(C.montant)):'—')+'</div></div>'
+      +'<div class="dc-k"><div class="l">'+(So&&So.sens==='excedent'?'Excédent à restituer':'Solde à payer')+'</div>'
+      +'<div class="v">'+(So?eu(Math.abs(So.net)):'—')+'</div></div>'
+      +'</div>'
+      +'<div class="dc-note'+(ko?' dc-warn':'')+'">'
+      +(E.depot ? ('Déclaration déposée le '+fr(E.depot.date)+'.')
+                : (ko ? ('Dépôt fermé — '+ko+' contrôle(s) critique(s) en défaut. Le détail est dans l’onglet Contrôles.')
+                      : 'Les contrôles critiques sont tenus : la déclaration peut être déposée.'))
+      +' La 2065 <b>lit</b> la liasse (2058-A) : elle ne recalcule rien, donc elle ne peut pas en diverger.'
+      +' <button class="dc-b" onclick="dcImprimerTout()">Imprimer la déclaration complète</button></div>'
+      +'<div class="dc-tabs">'+ONGLETS.map(function(o){
+          return '<button class="dc-tab'+(o[0]===k?' on':'')+'" onclick="dcOnglet(\''+o[0]+'\')">'+esc(o[1])+'</button>'; }).join('')+'</div>'
+      +'<div class="dc-body">'+corps+'</div>'
+      +(k==='ctl'?'':'<div class="dc-acts2"><button class="dc-b" onclick="dcImprimer(\''+(k==='bis'?'bis':(k==='solde'?'solde':'2065'))+'\')">Imprimer ce formulaire</button></div>')
+      +'</div>';
+  };
+
+  /* La sortie s'appelle « …Fermer() » : le filet v614 la reconnaît et n'en greffe pas une
+     seconde (invariant v626 : exactement 1 sortie par module). */
+  window.dcFermer=function(){ try{ if(typeof yadaFermerPage==='function') yadaFermerPage(); }catch(e){} };
+
+  /* lu par le Parcours (étape 20) : la chaîne fiscale ne s'achève qu'au dépôt */
+  window.dcDepose=function(){ try{ var D=((db.parametres||{}).decl2065||{})[exo()]; return !!(D&&D.depot); }catch(e){ return false; } };
+
+  /* ---------- enregistrement du module ---------- */
+  window.YADA_OK=(window.YADA_OK||[]);
+  if(window.YADA_OK.indexOf('is2065')<0) window.YADA_OK.push('is2065');
+  window.YADA_LBL=(window.YADA_LBL||{});
+  window.YADA_LBL.is2065='Déclaration 2065 (IS)';
+
+  /* ---------- style Registre N&B, scopé #yada-dc ---------- */
+  try{
+    var st=document.getElementById('dc-mod');
+    if(!st){ st=document.createElement('style'); st.id='dc-mod'; document.head.appendChild(st); }
+    st.textContent=
+      'html body:not(#_yz) #yada-dc{background:#000;color:#f5f5f6;min-height:100dvh;padding:0 0 60px;font-family:Georgia,"Times New Roman",serif}'
+     +'html body:not(#_yz) #yada-dc *{font-family:inherit}'
+     +'html body:not(#_yz) #yada-dc .dc-mast{position:relative;padding:26px 24px 16px;border-bottom:1px solid #242427}'
+     +'html body:not(#_yz) #yada-dc .dc-eyebrow{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;letter-spacing:.14em;color:#8b8b90}'
+     +'html body:not(#_yz) #yada-dc .dc-title{font-size:27px;margin:6px 0 4px;font-weight:400}'
+     +'html body:not(#_yz) #yada-dc .dc-soc{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:#8b8b90}'
+     +'html body:not(#_yz) #yada-dc .dc-close{position:absolute;top:22px;right:22px;width:30px;height:30px;background:#000;color:#f5f5f6;border:1px solid #f5f5f6;border-radius:5px;cursor:pointer;font-family:ui-monospace,monospace;font-size:14px}'
+     +'html body:not(#_yz) #yada-dc .dc-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:#242427;margin:0 0 2px}'
+     +'html body:not(#_yz) #yada-dc .dc-k{background:#0b0b0c;padding:14px 16px}'
+     +'html body:not(#_yz) #yada-dc .dc-k .l{font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.07em;color:#8b8b90;text-transform:uppercase}'
+     +'html body:not(#_yz) #yada-dc .dc-k .v{font-size:20px;margin-top:5px}'
+     +'html body:not(#_yz) #yada-dc .dc-note{padding:14px 24px;color:#a8a9ad;font-size:13px;border-bottom:1px solid #242427}'
+     +'html body:not(#_yz) #yada-dc .dc-note.dc-warn{background:#121214;color:#f5f5f6}'
+     +'html body:not(#_yz) #yada-dc .dc-tabs{display:flex;flex-wrap:wrap;gap:1px;background:#242427;border-bottom:1px solid #242427}'
+     +'html body:not(#_yz) #yada-dc .dc-tab{background:#0b0b0c;color:#8b8b90;border:0;padding:9px 14px;cursor:pointer;font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.04em}'
+     +'html body:not(#_yz) #yada-dc .dc-tab.on{background:#f5f5f6;color:#0a0a0b}'
+     +'html body:not(#_yz) #yada-dc .dc-body{padding:0}'
+     +'html body:not(#_yz) #yada-dc .dc-card{border-bottom:1px solid #242427;padding:18px 24px 22px}'
+     +'html body:not(#_yz) #yada-dc .dc-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap}'
+     +'html body:not(#_yz) #yada-dc .dc-nom2{font-size:16px}'
+     +'html body:not(#_yz) #yada-dc .dc-sub{color:#8b8b90;font-size:12.5px;margin:6px 0 10px;max-width:96ch}'
+     +'html body:not(#_yz) #yada-dc .dc-tag{font-family:ui-monospace,monospace;font-size:9.5px;letter-spacing:.09em;padding:2px 7px;border:1px solid #35353a;color:#8b8b90;border-radius:3px}'
+     +'html body:not(#_yz) #yada-dc .dc-tag.on{background:#f5f5f6;color:#0a0a0b;border-color:#f5f5f6}'
+     +'html body:not(#_yz) #yada-dc .dc-t{width:100%;border-collapse:collapse;margin:8px 0}'
+     +'html body:not(#_yz) #yada-dc .dc-t th{font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#8b8b90;background:#121214;padding:6px 8px;text-align:left;font-weight:400;border-bottom:1px solid #242427}'
+     +'html body:not(#_yz) #yada-dc .dc-t td{padding:5px 8px;border-bottom:1px solid #1c1c1f;font-size:13px;vertical-align:middle}'
+     +'html body:not(#_yz) #yada-dc .dc-t th.r,html body:not(#_yz) #yada-dc .dc-t td.r{text-align:right}'
+     +'html body:not(#_yz) #yada-dc .dc-t tr.sec td{font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.07em;color:#8b8b90;background:#121214;padding-top:9px;padding-bottom:9px}'
+     +'html body:not(#_yz) #yada-dc .dc-t tr.tot td{border-top:1px solid #35353a}'
+     +'html body:not(#_yz) #yada-dc .dc-vide{padding:22px 24px;color:#8b8b90;font-size:13px}'
+     +'html body:not(#_yz) #yada-dc .dc-vide2{color:#8b8b90;font-size:12.5px}'
+     +'html body:not(#_yz) #yada-dc .dc-d{color:#a8a9ad;font-size:12.5px;margin-top:8px}'
+     +'html body:not(#_yz) #yada-dc .dc-d2{color:#8b8b90;font-size:11.5px}'
+     +'html body:not(#_yz) #yada-dc .dc-ok{font-family:ui-monospace,monospace;font-size:11px;color:#f5f5f6}'
+     +'html body:not(#_yz) #yada-dc .dc-ko{font-family:ui-monospace,monospace;font-size:11px;color:#8b8b90}'
+     +'html body:not(#_yz) #yada-dc .dc-refus{border:1px solid #35353a;background:#121214;padding:12px 14px;margin-top:8px;font-size:13px}'
+     +'html body:not(#_yz) #yada-dc .dc-refus ul{margin:6px 0 0 18px;padding:0}'
+     +'html body:not(#_yz) #yada-dc .dc-refus li{font-size:12.5px;color:#a8a9ad;margin:3px 0}'
+     +'html body:not(#_yz) #yada-dc .dc-grid{display:grid;grid-template-columns:repeat(4,minmax(140px,1fr));gap:10px;margin-top:8px}'
+     +'html body:not(#_yz) #yada-dc .dc-f{display:block}'
+     +'html body:not(#_yz) #yada-dc .dc-f .k{display:block;font-family:ui-monospace,monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#8b8b90;margin-bottom:4px}'
+     +'html body:not(#_yz) #yada-dc .dc-in{width:100%;background:#000;color:#f5f5f6;border:1px solid #242427;border-radius:3px;padding:4px 6px;font-family:ui-monospace,monospace;font-size:12px}'
+     +'html body:not(#_yz) #yada-dc .dc-mt{text-align:right}'
+     +'html body:not(#_yz) #yada-dc .dc-chk{display:block;font-size:12.5px;color:#a8a9ad;margin-top:6px}'
+     +'html body:not(#_yz) #yada-dc .dc-acts,html body:not(#_yz) #yada-dc .dc-acts2{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}'
+     +'html body:not(#_yz) #yada-dc .dc-acts2{padding:14px 24px}'
+     +'html body:not(#_yz) #yada-dc .dc-b{background:#000;color:#f5f5f6;border:1px solid #35353a;border-radius:4px;padding:5px 11px;cursor:pointer;font-family:ui-monospace,monospace;font-size:11.5px}'
+     +'html body:not(#_yz) #yada-dc .dc-b.dc-pri{background:#f5f5f6;color:#0a0a0b;border-color:#f5f5f6}'
+     +'html body:not(#_yz) #yada-dc .dc-x{background:#000;color:#8b8b90;border:1px solid #242427;border-radius:3px;cursor:pointer;padding:2px 6px;font-family:ui-monospace,monospace}'
+     +'@media(max-width:820px){html body:not(#_yz) #yada-dc .dc-kpis{grid-template-columns:repeat(2,1fr)}'
+     +'html body:not(#_yz) #yada-dc .dc-grid{grid-template-columns:repeat(2,minmax(120px,1fr))}}';
+  }catch(e){}
 })();
 </script>
 </body>

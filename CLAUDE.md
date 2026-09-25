@@ -36,7 +36,59 @@
 
 ---
 
-## 🟢 Dernière mise à jour — PLAN COMPTABLE GÉNÉRAL + LES QUATRE JOURNAUX DE BASE — v656
+## 🟢 Dernière mise à jour — LA 2065 : LA DÉCLARATION QUI PORTE L'IMPÔT À L'ADMINISTRATION — v657
+**Quoi :** **CDC-3 du cahier des charges.** Le dossier savait dire ce qu'il a **gagné** (v643), ce qu'il **doit** (résultat fiscal, v647) et **comptabiliser** cette dette (v654). Il ne savait pas la **déclarer**. Nouveau module **« Déclaration 2065 (IS) »** (rubrique **Déclarations**) : la pièce qui porte le résultat fiscal à l'administration, et qui dit **combien il reste à payer** une fois les acomptes déduits.
+
+| Onglet | Contenu |
+| --- | --- |
+| **2065 — Déclaration** | **cadre A** récapitulation des éléments d'imposition (bénéfice **ou** déficit, bases au taux réduit et au taux normal, plus-values à long terme, déficit reportable, IS) · **cadre B** imputations (crédits d'impôt) · **cadre C** contribution sociale · **cadre D** chiffre d'affaires, effectif, salaires bruts, SIE, code APE |
+| **2065 bis** | répartition du capital (lu au compte **101**), dirigeants et rémunérations, filiales et participations |
+| **Acomptes & solde** | IS + contribution **−** acomptes versés = **solde à payer** ou **excédent à restituer** · échéancier des acomptes **art. 1668** · dates limites de dépôt et de paiement |
+| **Contrôles & dépôt** | **11 contrôles**, dont **6 critiques** — et le **bouton de dépôt** |
+
+**Trois choses qu'une déclaration doit savoir, et que l'IS seul ne dit pas :**
+1. **La contribution sociale n'est pas l'IS** (art. 235 ter ZC). Elle vaut **3,3 %** de l'IS de référence **après un abattement de 763 000 €** par période de douze mois — et l'abattement **se proratise** sur la durée réelle de l'exercice (mesuré : **381 500 €** pour un exercice de 6 mois). Elle n'est pas due si l'entreprise est **exonérée**, et l'exonération est une **conjonction** : chiffre d'affaires **inférieur à 7 630 000 €** ET capital entièrement libéré détenu à 75 % par des personnes physiques. **Cocher la case ne suffit donc pas** quand le CA dépasse le seuil — vérifié.
+2. **Le solde n'est pas l'impôt** (art. 1668). L'impôt se paie par **quatre acomptes** d'un quart de l'IS de référence, puis par un **solde**. Ce qu'il reste à payer, c'est l'impôt dû **moins ce qui a déjà été versé** — et cela peut être un **excédent à restituer**, pas une dette. Les acomptes sont **lus** sur les écritures marquées `impotPaiement` par le module Provisions & impôt (v654) : rien à ressaisir.
+3. **Un déficit ne se déclare pas comme un bénéfice.** Bénéfice **ou** déficit, jamais les deux : un déficit ne donne aucun impôt. Mesuré : résultat fiscal **−15 000** → « bénéfice : néant », « déficit : 15 000,00 € », IS **0**, solde **0**.
+
+**Et la règle absolue du cahier des charges, appliquée pour de vrai : AUCUNE VALIDATION SANS CONTRÔLE.** Le **dépôt est REFUSÉ** tant qu'un contrôle **critique** est en défaut, et **le motif est écrit en clair**. Le contrôle qui compte le plus : **l'impôt déclaré doit être l'impôt comptabilisé**. Une déclaration qui dit autre chose que les comptes n'est pas déposable. Mesuré sur un dossier où la **contribution sociale a été oubliée** à l'écriture :
+
+> *« Impôt déclaré = impôt comptabilisé · à revoir · charge 695/698 : 995 750,00 € · déclaration : 1 003 430,75 € (dont contribution sociale 7 680,75 €) — **écart de 7 680,75 € : la contribution sociale n'est pas comptabilisée** »* — et le dépôt est refusé.
+
+**La 2065 LIT la liasse, elle ne la recalcule pas.** Résultat fiscal, IS, bases par taux, déficit reportable, chiffre d'affaires, bilan, plus-values : tout vient de **`liFiscal` / `liCA` / `liBilan` / `liPMV`** (v647) et l'effectif moyen de **`anxEffectif`** (v649). **Aucun second calcul, donc aucune divergence possible** entre la liasse et la déclaration — la discipline des 2050-2053 de la v647, poursuivie. Vérifié : le résultat fiscal reste **30 000** avant comme après la comptabilisation de l'IS (la neutralisation v654 tient).
+
+**Comment — nouvel addon `yada-addon-2065` (100% ADDITIF) + 6 éditions chirurgicales :** clé `is2065:(typeof pageDecl2065==='function'?pageDecl2065:repli)` au **dispatch de `render()`**, `'is2065'` ajouté à la rubrique **Déclarations** de la barre v641, **trois expositions** dans l'addon Liasse (`liCA`, `liBilan`, `liPMV` — « la 2065 lit la liasse »), **une exposition** dans l'addon Annexe (`anxEffectif` — une seule source pour l'effectif moyen), et l'**étape 20 du Parcours** reprise : la chaîne fiscale **ne s'achève plus à l'écriture, elle s'achève au DÉPÔT** (`fait` seulement si la 2065 est déposée, sinon `encours` → le module). **Points techniques :** (1) **lecture seule stricte** sur la comptabilité — vérifié par égalité JSON des écritures ; le seul écrit est `db.parametres.decl2065[exercice]` ; (2) **`window.dcDepose()` n'écrit rien** (le Parcours l'appelle à chaque rendu — passer par `etat()` aurait créé silencieusement l'entrée d'exercice) ; (3) le **capital social est lu au compte 101**, pas demandé : aucune écriture ne ment ; (4) rendu **Registre N&B** scopé `#yada-dc`, sortie **`dcFermer()`** pour que le filet v614 la reconnaisse — **invariant v626 : exactement 1 sortie « Fermer »** par onglet. `sw.js` yada-v252, badge v657, `version.json` 657.
+
+**Ce que le module refuse d'inventer.** Les **crédits d'impôt** (recherche, apprentissage, mécénat), la **répartition du capital**, les **filiales**, les **rémunérations des dirigeants** et la **seconde condition d'exonération** (capital détenu par des personnes physiques) **se saisissent** : aucune écriture ne les porte. Les **numéros de case du cerfa ne sont pas reproduits** — les libellés suivent le formulaire, la transmission réelle se fait par **EDI-TDFC** ou sur **impots.gouv.fr**. Et pour une société à l'IS, les **plus-values de cession sont déjà dans le résultat au taux de droit commun** : les cases à taux particulier restent à **zéro**, et à la main — le module le dit et rappelle, pour mémoire, les cessions de l'exercice lues sur la 2059-A.
+
+**Validé :** `node --check` (**326 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014) + balises (3/5/3) + **filet d'équilibre** ✅ + trois sondes Playwright sur des dossiers montés pour couvrir **chaque branche** :
+
+| Mesure | Résultat |
+| --- | --- |
+| **Chaîne fiscale** — comptable 25 000 + réintégrations 5 000 (amende 500 + IS 4 500) | résultat fiscal **30 000** — **identique** avant et après comptabilisation de l'IS |
+| IS · CA · bilan | **4 500** (tout au taux réduit) · **100 000** · **équilibré**, actif **135 500** |
+| **Solde** — IS 4 500 − acomptes 2 000 | **2 500,00 € à payer** · acomptes lus sur les écritures `impotPaiement` |
+| **Contribution sociale** — IS 995 750, CA 10 000 000 | (995 750 − 763 000) × 3,3 % = **7 680,75 €** · solde **1 003 430,75 €** |
+| **Cocher « capital détenu par des personnes physiques »** avec CA ≥ 7,63 M€ | contribution **toujours due** — l'exonération est une **conjonction** |
+| **Exonération** — CA 5 000 000 + case cochée | **exonérée** |
+| **Abattement proratisé** — exercice de 6 mois | « 763 000,00 € pour douze mois · exercice de 6 mois » → **381 500,00 €** |
+| **Déficit** — résultat fiscal −15 000 | bénéfice **néant** · déficit **15 000,00 €** · IS **0** · solde **0** |
+| Bases par taux (IS 995 750) | taux réduit **42 500,00 €** · taux normal **3 957 500,00 €** |
+| **Exercice non calendaire** (01/01 → 30/06/2026) | dépôt **30/09/2026** (trois mois) · solde **15/10/2026** (15 du 4ᵉ mois) |
+| **Contrôles** | **10 / 11 tenus** — le seul « à revoir » est **réel** : date limite de dépôt du 05/05/2026 dépassée (non bloquante) |
+| **Dépôt accepté** | horodaté · IS 4 500 · acomptes 2 000 · solde 2 500 · **0 écriture créée** |
+| **Dépôt REFUSÉ** — IS comptabilisé 5 500 ≠ 4 500 déclaré | refusé · motif écrit : « écart de −1 000,00 € » |
+| **Dépôt REFUSÉ** — contribution non comptabilisée | refusé · « écart de 7 680,75 € : la contribution sociale n'est pas comptabilisée » |
+| **Lecture seule stricte** | écritures **identiques** (JSON) après quatre onglets et deux rendus |
+| Impression | **3 `.doc-page`** (2065 · 2065 bis · relevé de solde) · **0 champ de saisie** dans le tirage |
+| Sorties « Fermer » (4 onglets) · boutons vides · gras · italique · débordement | **1 / 1 / 1 / 1** · **0** · **0** · **0** · **0** |
+| Routage · pageerror · console.error | **35 / 35** · **0** · **0** |
+
+**La suite du cahier des charges :** **CDC-5** — la révision à deux étages **Révisé · Supervisé · Validé** (la phrase qui clôt le cahier des charges : « prêt à être **supervisé** puis transmis ») ; puis les formats **QIF / MT940 / CFONB**, le **FEC provisoire**, la **gestion cabinet** et les **DES / DEB**.
+
+---
+
+## 🟢 MAJ précédente — PLAN COMPTABLE GÉNÉRAL + LES QUATRE JOURNAUX DE BASE — v656
 **Quoi :** demande — *« Utilise le plan comptable générale ainsi que les journaux de base (HA, VT, BQ, OD) »*. Deux socles sont redressés.
 
 **1. Le plan du dossier est le PLAN COMPTABLE GÉNÉRAL.** Chaque dossier chargeait jusqu'ici une **surcouche BTP de 54 comptes** posée *au-dessus* du PCG (`PLAN_BTP` d'abord, PCG ensuite pour les manquants) — donc des libellés maison (« Prestation de service 20 % » `706002000`, « Travaux en cours » `713350000`, « Assurance obligatoire dommage construction ») **écrasaient** ceux du PCG. Désormais `chargerPlanComptable()` charge **le PCG seul — 970 comptes**, et c'est lui qui nomme. Les comptes **hors PCG restent LISIBLES** (leur libellé est conservé dans `COMPTES`) pour que l'historique déjà saisi ne devienne pas illisible, **mais ils n'entrent plus dans le plan** : le plan, c'est le PCG. La **TVA liée** est reclée sur des comptes du PCG (`TVA_LIEE` : 601/604/616/626/627 → `445667000` déductible 20 %, **706000000** → `445717000` collectée 20 %) et `appliquerTVAauto` (60/61/62 → déductible, 70x → collectée) est inchangée. `chargerPlanBTP()` **survit comme alias** — les neuf appels existants, dont un dans un `onclick`, continuent de fonctionner.
