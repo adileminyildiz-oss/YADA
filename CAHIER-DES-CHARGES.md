@@ -191,3 +191,94 @@
 2. **Sessions modules** : implémenter leurs sections avec, pour chaque PR **comptable**,
    la mention « À VALIDER par la session Règles » et attente du verdict avant merge.
 3. **Session Architecture & Espaces** en dernier (structure transverse lourde).
+
+---
+
+# CAHIER DES CHARGES — 25/09/2026 · « Sage Expert IA » (chaîne Sage Génération Experts)
+
+> Cahier des charges reçu sous forme de **prompt système** : YADA doit se comporter comme un
+> **collaborateur comptable senior** sur Sage Génération Experts — production, révision,
+> fiscalité, immobilisations, gestion cabinet, EDI, FEC, automatisation documentaire —
+> et **refuser** tout ce qui n'est pas conforme.
+>
+> **Confrontation au logiciel existant : l'essentiel est déjà construit.** Ce qui suit distingue
+> ce qui **est fait** (avec la version qui l'a livré) de ce qui **manque réellement**.
+
+## Ce que le cahier des charges demande, et qui EXISTE DÉJÀ
+
+| Exigence | État | Où |
+| --- | --- | --- |
+| **Ordre obligatoire 1→10** (collecte → … → archivage) | ✅ | **Parcours comptable guidé** — 22 étapes *mesurées sur le dossier*, verrouillées par leurs prérequis (v651) |
+| Création dossier : fiche entreprise, SIREN/SIRET/TVA/APE, cohérence | ✅ | Création de dossier (v194) + complétion par API SIRET + **Constitution de société** (v652) |
+| Collecte documentaire : PDF/JPG/PNG/CSV/OFX, index, doublons, illisibles | ✅ | Dépôts client & cabinet (v42/v44), détection de doublon **comptable** avec comparaison côte à côte (v47) |
+| OCR comptable (date, HT, TVA, TTC, tiers, échéance) | ✅ | Lecture PDF couche-texte **hors-ligne** (v51) + OCR image quand connecté (v52) |
+| Imputation classes 1→7, compte manquant, TVA incohérente, déséquilibre | ✅ | Moteur d'**imputation qui apprend** (v634) + **Contrôles de cohérence** 7 familles (v610/v636) |
+| Refus de toute écriture non équilibrée | ✅ | Garde à chaque porte d'écriture + filet CI `equilibre` |
+| Import bancaire (CSV, OFX) | ✅ | Import bancaire (v611), relevé **mémorisé** (v635) |
+| Lettrage 401/411 + balance âgée | ✅ | Lettrage automatique paire & lot (v633), **balance âgée** depuis l'échéance (v653) |
+| Rapprochement bancaire, validation interdite si écart ≠ 0 | ✅ | Pointage automatique (v635) + **verrou de l'étape 6** du parcours (v651) |
+| Immobilisations : linéaire, **dégressif**, cession, +/− value, 6811/28x/675/775 | ✅ | Module Immobilisations + **bascule dégressif→linéaire** art. 39 A (v645) |
+| TVA : collectée, déductible, autoliquidée, CA3, CA12 | ✅ | Module TVA + **TVA sur les encaissements** (v642) + OD de TVA automatique (v637) |
+| Révision : comptes d'attente, soldes anormaux, CCA/PCA/FNP/FAE | ✅ | **Dossier de révision par cycles** (v646) + **Inventaire & cut-off** 8 travaux (v644) |
+| Contrôles de clôture bloquants | ✅ | Clôture refusée si exercice en cours, **anomalie critique** ou CA3 manquante (v637) |
+| Liasse 2050 → 2059 | ✅ | **Liasse fiscale** 6 formulaires, dérivés des états (v647) |
+| Comptes annuels : bilan, compte de résultat, SIG, annexe | ✅ | v643 (bilan/CR/SIG) + **annexe** (v649) + **tableau de flux** (v650) |
+| FEC : génération et contrôle | ✅ | Import/Export FEC + contrôle de conformité (v651, motif corrigé pour les comptes auxiliaires) |
+| Tableau de bord permanent | ✅ | Tableau de bord + **compteur d'actions en attente** porté jusqu'à la Consultation (v638) |
+| Règle absolue « aucune validation sans contrôle » | ✅ | Principe appliqué module par module ; chaque refus **écrit son motif en clair** |
+
+## Ce qui MANQUE réellement — les huit chantiers
+
+- ✅ **[CDC-1 · Journaux] — ARBITRÉ : quatre journaux de base (v656).** Demande de l'utilisateur :
+  *« Utilise le plan comptable générale ainsi que les journaux de base (HA, VT, BQ, OD) »*.
+  Le dossier ne connaît donc que **HA · VT · BQ · OD** ; les sous-journaux (OD PAIE, OD CHARGES,
+  OD TVA) et le journal **CAISSE** ajouté en v655 sont **regroupés dans OD**, et le plan du dossier
+  devient le **PCG (970 comptes)** à la place de la surcouche BTP. Les journaux **SIT** et **CHE**
+  du cahier des charges Sage ne sont donc **pas retenus**. *(Historique de la demande d'origine
+  ci-dessous.)*
+- ⏳ ~~**[CDC-1 · Journaux] Journaux CAISSE (CA), SITUATION (SIT), CHEVAUCHEMENT (CHE)** absents.~~
+  YADA a HA · VT · BQ · ODP · ODC · ODTVA · OD. Conséquence **documentée et assumée en v653** :
+  « le dossier n'ayant qu'un journal de trésorerie, les règlements — **espèces comprises** — y
+  sont portés (BQ), la caisse se distinguant par son **compte** (530) et non par son journal ».
+  Le cahier des charges corrige ce compromis. *(SIT = situation intermédiaire, à exclure des
+  comptes annuels ; CHE = écritures de chevauchement d'exercice.)*
+- ⏳ **[CDC-2 · Import bancaire] Formats QIF, MT940, CFONB** — seuls **OFX** et **CSV** sont lus.
+- ✅ **[CDC-3 · Liasse] — LA 2065 EST LIVRÉE (v657).** Module **Déclaration 2065 (IS)** :
+  cadres A (récapitulation des éléments d'imposition), B (imputations), C (**contribution
+  sociale de 3,3 %**, art. 235 ter ZC — abattement de 763 000 € proratisé sur la durée de
+  l'exercice, exonération sous double condition), D (renseignements divers), **2065 bis**
+  (capital, dirigeants, filiales) et **relevé de solde** (IS + contribution − acomptes versés
+  = solde à payer **ou excédent à restituer**, échéancier des acomptes de l'art. 1668, dates
+  limites de dépôt et de paiement). La 2065 **LIT** la liasse (2058-A, v647) : elle ne
+  recalcule rien, donc elle ne peut pas en diverger. **Le dépôt est REFUSÉ** tant qu'un
+  contrôle critique est en défaut — c'est la règle absolue du cahier des charges, appliquée.
+- ⏳ **[CDC-3 · reste] Formulaires 2031/2033 (BIC réel simplifié), 2072 (SCI), 2069 (crédits
+  d'impôt)** — non traités : ils relèvent de régimes que YADA ne tient pas encore (IR/BIC
+  simplifié, revenus fonciers).
+- ⏳ **[CDC-4 · Déclarations] DES et DEB** (échanges intracommunautaires de services et de biens)
+  — absentes.
+- ✅ **[CDC-5 · Révision] — LA CHAÎNE EST LIVRÉE (v658).** Trois niveaux : **RÉVISÉ** et
+  **SUPERVISÉ** cycle par cycle, **VALIDÉ** sur le dossier entier (c'est la signature du
+  signataire, elle ne se répète pas six fois). Quatre règles en font une chaîne et pas trois
+  cases : l'**ordre est un verrou** ; on **ne se supervise pas soi-même** ; un **bouclage en
+  défaut ferme la signature** ; et une **signature porte sur un MONTANT** — si le solde bouge
+  après coup, le visa est **périmé**. Le visa unique de la v646 est **migré** en révision.
+  L'étape 19 du Parcours ne s'achève qu'à la **validation du dossier**.
+- ⏳ **[CDC-6 · Gestion cabinet] Temps passé, coût, marge et rentabilité par dossier, encours,
+  honoraires, SEPA, relances** — quasi inexistant (l'Analytique v648 mesure la rentabilité des
+  **chantiers du client**, pas celle des **dossiers du cabinet**).
+- ⏳ **[CDC-7 · Comptes annuels] Plaquette, rapport de gestion, export Excel et Word** — seule
+  l'édition **PDF** (impression A4) existe.
+- ⏳ **[CDC-8 · FEC] Distinction FEC provisoire / FEC définitif** — un seul FEC aujourd'hui.
+
+## Ordre retenu
+
+1. **CDC-1** — les journaux manquants, en commençant par la **CAISSE** : c'est le seul chantier
+   qui **corrige un compromis déjà reconnu** dans le logiciel, et il porte une vraie règle
+   comptable (*une caisse ne peut pas être créditrice*).
+2. ~~**CDC-3** — la **2065**~~ → **livrée en v657** (dernier maillon de la chaîne fiscale
+   construite en v647 + v654 : résultat fiscal → IS → écriture → **déclaration**).
+3. ~~**CDC-5** — la supervision à deux étages~~ → **livrée en v658** (« prêt à être
+   **supervisé** puis transmis » : la phrase qui clôt le cahier des charges).
+4. **CDC-2**, **CDC-8** — les formats et le FEC provisoire (techniques, cernés).
+5. **CDC-6**, **CDC-7**, **CDC-4** — gestion cabinet, plaquette, DES/DEB (chantiers larges).

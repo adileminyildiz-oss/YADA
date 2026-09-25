@@ -36,7 +36,1268 @@
 
 ---
 
-## 🟢 Dernière mise à jour — UN SEUL bouton : FERMER (plus aucun bouton « retour ») — v626
+## 🟢 Dernière mise à jour — RÉVISÉ · SUPERVISÉ · VALIDÉ : LA CHAÎNE DE RESPONSABILITÉ — v658
+**Quoi :** **CDC-5 du cahier des charges.** Le dossier de révision (v646) savait dire si un solde était **justifié** — mais il ne connaissait qu'**un seul visa**. Le cahier des charges demande une **chaîne de responsabilité** : *le collaborateur révise, le chef de mission supervise, puis validation.* Elle est posée.
+
+| Niveau | Qui | Portée |
+| --- | --- | --- |
+| **1 · RÉVISÉ** | le collaborateur | **le cycle** — il a rapproché le solde d'une pièce extérieure et signe son travail |
+| **2 · SUPERVISÉ** | le chef de mission | **le cycle** — il contrôle le travail du collaborateur |
+| **3 · VALIDÉ** | le signataire | **le DOSSIER ENTIER** — sa signature engage sa responsabilité, elle ne se répète pas six fois |
+
+**Quatre règles font que c'est une chaîne, et pas trois cases à cocher.** Chacune **refuse**, et **écrit son motif** :
+1. **L'ordre est un verrou.** « Signature refusée — étage précédent non franchi : le cycle doit être révisé d'abord. »
+2. **On ne se supervise pas soi-même.** « Signature refusée — on ne se supervise pas soi-même : Sarah Durand a révisé ce cycle. » Sans cette règle, le contrôle ne contrôle rien. La comparaison est **insensible à la casse** — « sarah durand » est refusé aussi. Même règle pour la validation, qui **nomme le cycle en cause** : « on ne valide pas son propre travail — Sarah Durand a révisé le cycle « Capitaux & emprunts ». »
+3. **Un contrôle de bouclage en défaut ferme la signature.** La v646 posait le principe (*le contrôle prime sur la signature*) ; il devient **opérant** : « fermé — contrôle de bouclage en défaut : on ne signe pas un cycle qui ne boucle pas », écrit **dans la carte** et opposé au clic.
+4. **Une signature porte sur un MONTANT, pas sur un cycle.** C'est le point qu'on oublie toujours. Chaque visa **mémorise le solde signé** ; si la comptabilité bouge après coup, le visa devient **PÉRIMÉ** — on a supervisé un chiffre qui n'existe plus — et le cycle **redescend d'un étage**. Mesuré : une écriture postée après la validation (512 + 101) fait tomber **exactement les deux cycles concernés** (trésorerie et capitaux) — les quatre autres gardent leurs visas — et la **validation du dossier passe à « À REVALIDER »**.
+
+**Deux conséquences qui ne se voient qu'à l'usage :** (a) **retirer un étage retire ceux du dessus** — on ne reste pas *supervisé* après avoir été dé-révisé —, **et la validation du dossier tombe avec**, puisqu'elle reposait dessus ; (b) la **validation exige les six cycles supervisés** : « on ne valide pas un dossier à moitié supervisé ».
+
+**Le validateur peut être le chef de mission** — dans un petit cabinet, c'est souvent la même personne. Ce choix est **assumé et écrit à l'écran**, plutôt que silencieusement autorisé. Ce qu'il ne peut jamais être, c'est le **réviseur** du cycle qu'il valide.
+
+**Le travail déjà fait n'est pas perdu.** Un visa posé sous la v646 **est** une révision : il est **migré** à l'étage 1 avec son nom et sa date. En revanche le **montant signé n'avait pas été mémorisé à l'époque** — le module le dit (« visa repris de la version précédente — le montant signé n'est pas connu ») au lieu de faire croire que le visa est à jour, et ne le déclare jamais périmé faute de pouvoir le vérifier.
+
+**Comment — 8 éditions chirurgicales de `yada-addon-revision` (aucun nouvel addon) :** `fiche()` accueille `niv{revise,supervise}` et **migre** `visa`→`revise` ; `NIVEAUX` + `sign` / `perime` / `niveauEffectif` (la chaîne s'arrête au premier maillon **absent OU périmé**) ; **`peutSigner`** et **`peutValider`**, les deux portes qui refusent avec un motif ; `empreinte(T)` (les six soldes) qui rend la validation du dossier **périssable** ; actions `revSigner` / `revRetirer` (cascade) / `revValiderDossier` / `revSetNom` / `revSetValideur`, `revViser` conservé (il signe le 1ᵉʳ étage — compat v646) ; `statut()` rend désormais `RÉVISÉ` / `SUPERVISÉ` ; barre **`barreChaine`** à deux étages sous chaque cycle + **carte « Validation du dossier »** en tête ; **tirage** à deux colonnes (Révisé par · Supervisé par) + bloc de validation ; et l'**étape 19 du Parcours** ne s'achève qu'à la **validation** (`window.revEtatChaine()` l'expose). `sw.js` yada-v253, badge v658, `version.json` 658.
+
+**Validé :** `node --check` (**326 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014) + balises (3/5/3) + **filet d'équilibre** ✅ + une sonde Playwright qui **joue la chaîne du refus jusqu'à la validation** :
+
+| Mesure | Résultat |
+| --- | --- |
+| **Ordre** — superviser avant de réviser | **refusé** · « étage précédent non franchi » · rien n'est signé |
+| Révision par le collaborateur | « Cycle révisé par Sarah Durand » · **solde signé mémorisé** |
+| **Séparation des tâches** — « sarah durand » supervise | **refusé** · « on ne se supervise pas soi-même » (casse ignorée) |
+| Supervision par le chef de mission | « Cycle supervisé par Marc Leroy » |
+| **Validation à 1 / 6 supervisés** | **refusée** · « on ne valide pas un dossier à moitié supervisé » |
+| **Validateur = réviseur** | **refusée** · le cycle en cause est **nommé** |
+| Validation à 6 / 6 par le signataire | « Dossier validé par Paul Expert » |
+| **Étape 19 du Parcours** | **terminé** · « dossier validé par Paul Expert le 25/09/2026 » |
+| **La comptabilité bouge après la validation** | **4 / 6** cycles gardent leurs visas · les **2 concernés** tombent · dossier **À REVALIDER** · étape 19 repasse **en cours** |
+| **Bouclage en défaut** (trésorerie sans relevé) | signature **refusée** · motif **écrit dans la carte** |
+| **Retirer la révision** | supervision **et** validation du dossier **tombent avec** |
+| **Migration v646** | visa « Ancien Réviseur · 15/01/2026 » → **étage RÉVISÉ** · montant signé inconnu, **dit à l'écran** |
+| Tirage | colonnes **Révisé par · Supervisé par** + bloc « Validation du dossier » |
+| Sorties « Fermer » · boutons vides · gras · italique · débordement | **1** · **0** · **0** · **0** · **0** |
+| Routage · pageerror · console.error | **35 / 35** · **0** · **0** |
+
+**La suite du cahier des charges :** les formats **QIF / MT940 / CFONB** (CDC-2) et le **FEC provisoire / définitif** (CDC-8) — techniques et cernés ; puis la **gestion cabinet** (temps, coût, marge, encours), la **plaquette** et les **DES / DEB**.
+
+---
+
+## 🟢 MAJ précédente — LA 2065 : LA DÉCLARATION QUI PORTE L'IMPÔT À L'ADMINISTRATION — v657
+**Quoi :** **CDC-3 du cahier des charges.** Le dossier savait dire ce qu'il a **gagné** (v643), ce qu'il **doit** (résultat fiscal, v647) et **comptabiliser** cette dette (v654). Il ne savait pas la **déclarer**. Nouveau module **« Déclaration 2065 (IS) »** (rubrique **Déclarations**) : la pièce qui porte le résultat fiscal à l'administration, et qui dit **combien il reste à payer** une fois les acomptes déduits.
+
+| Onglet | Contenu |
+| --- | --- |
+| **2065 — Déclaration** | **cadre A** récapitulation des éléments d'imposition (bénéfice **ou** déficit, bases au taux réduit et au taux normal, plus-values à long terme, déficit reportable, IS) · **cadre B** imputations (crédits d'impôt) · **cadre C** contribution sociale · **cadre D** chiffre d'affaires, effectif, salaires bruts, SIE, code APE |
+| **2065 bis** | répartition du capital (lu au compte **101**), dirigeants et rémunérations, filiales et participations |
+| **Acomptes & solde** | IS + contribution **−** acomptes versés = **solde à payer** ou **excédent à restituer** · échéancier des acomptes **art. 1668** · dates limites de dépôt et de paiement |
+| **Contrôles & dépôt** | **11 contrôles**, dont **6 critiques** — et le **bouton de dépôt** |
+
+**Trois choses qu'une déclaration doit savoir, et que l'IS seul ne dit pas :**
+1. **La contribution sociale n'est pas l'IS** (art. 235 ter ZC). Elle vaut **3,3 %** de l'IS de référence **après un abattement de 763 000 €** par période de douze mois — et l'abattement **se proratise** sur la durée réelle de l'exercice (mesuré : **381 500 €** pour un exercice de 6 mois). Elle n'est pas due si l'entreprise est **exonérée**, et l'exonération est une **conjonction** : chiffre d'affaires **inférieur à 7 630 000 €** ET capital entièrement libéré détenu à 75 % par des personnes physiques. **Cocher la case ne suffit donc pas** quand le CA dépasse le seuil — vérifié.
+2. **Le solde n'est pas l'impôt** (art. 1668). L'impôt se paie par **quatre acomptes** d'un quart de l'IS de référence, puis par un **solde**. Ce qu'il reste à payer, c'est l'impôt dû **moins ce qui a déjà été versé** — et cela peut être un **excédent à restituer**, pas une dette. Les acomptes sont **lus** sur les écritures marquées `impotPaiement` par le module Provisions & impôt (v654) : rien à ressaisir.
+3. **Un déficit ne se déclare pas comme un bénéfice.** Bénéfice **ou** déficit, jamais les deux : un déficit ne donne aucun impôt. Mesuré : résultat fiscal **−15 000** → « bénéfice : néant », « déficit : 15 000,00 € », IS **0**, solde **0**.
+
+**Et la règle absolue du cahier des charges, appliquée pour de vrai : AUCUNE VALIDATION SANS CONTRÔLE.** Le **dépôt est REFUSÉ** tant qu'un contrôle **critique** est en défaut, et **le motif est écrit en clair**. Le contrôle qui compte le plus : **l'impôt déclaré doit être l'impôt comptabilisé**. Une déclaration qui dit autre chose que les comptes n'est pas déposable. Mesuré sur un dossier où la **contribution sociale a été oubliée** à l'écriture :
+
+> *« Impôt déclaré = impôt comptabilisé · à revoir · charge 695/698 : 995 750,00 € · déclaration : 1 003 430,75 € (dont contribution sociale 7 680,75 €) — **écart de 7 680,75 € : la contribution sociale n'est pas comptabilisée** »* — et le dépôt est refusé.
+
+**La 2065 LIT la liasse, elle ne la recalcule pas.** Résultat fiscal, IS, bases par taux, déficit reportable, chiffre d'affaires, bilan, plus-values : tout vient de **`liFiscal` / `liCA` / `liBilan` / `liPMV`** (v647) et l'effectif moyen de **`anxEffectif`** (v649). **Aucun second calcul, donc aucune divergence possible** entre la liasse et la déclaration — la discipline des 2050-2053 de la v647, poursuivie. Vérifié : le résultat fiscal reste **30 000** avant comme après la comptabilisation de l'IS (la neutralisation v654 tient).
+
+**Comment — nouvel addon `yada-addon-2065` (100% ADDITIF) + 6 éditions chirurgicales :** clé `is2065:(typeof pageDecl2065==='function'?pageDecl2065:repli)` au **dispatch de `render()`**, `'is2065'` ajouté à la rubrique **Déclarations** de la barre v641, **trois expositions** dans l'addon Liasse (`liCA`, `liBilan`, `liPMV` — « la 2065 lit la liasse »), **une exposition** dans l'addon Annexe (`anxEffectif` — une seule source pour l'effectif moyen), et l'**étape 20 du Parcours** reprise : la chaîne fiscale **ne s'achève plus à l'écriture, elle s'achève au DÉPÔT** (`fait` seulement si la 2065 est déposée, sinon `encours` → le module). **Points techniques :** (1) **lecture seule stricte** sur la comptabilité — vérifié par égalité JSON des écritures ; le seul écrit est `db.parametres.decl2065[exercice]` ; (2) **`window.dcDepose()` n'écrit rien** (le Parcours l'appelle à chaque rendu — passer par `etat()` aurait créé silencieusement l'entrée d'exercice) ; (3) le **capital social est lu au compte 101**, pas demandé : aucune écriture ne ment ; (4) rendu **Registre N&B** scopé `#yada-dc`, sortie **`dcFermer()`** pour que le filet v614 la reconnaisse — **invariant v626 : exactement 1 sortie « Fermer »** par onglet. `sw.js` yada-v252, badge v657, `version.json` 657.
+
+**Ce que le module refuse d'inventer.** Les **crédits d'impôt** (recherche, apprentissage, mécénat), la **répartition du capital**, les **filiales**, les **rémunérations des dirigeants** et la **seconde condition d'exonération** (capital détenu par des personnes physiques) **se saisissent** : aucune écriture ne les porte. Les **numéros de case du cerfa ne sont pas reproduits** — les libellés suivent le formulaire, la transmission réelle se fait par **EDI-TDFC** ou sur **impots.gouv.fr**. Et pour une société à l'IS, les **plus-values de cession sont déjà dans le résultat au taux de droit commun** : les cases à taux particulier restent à **zéro**, et à la main — le module le dit et rappelle, pour mémoire, les cessions de l'exercice lues sur la 2059-A.
+
+**Validé :** `node --check` (**326 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014) + balises (3/5/3) + **filet d'équilibre** ✅ + trois sondes Playwright sur des dossiers montés pour couvrir **chaque branche** :
+
+| Mesure | Résultat |
+| --- | --- |
+| **Chaîne fiscale** — comptable 25 000 + réintégrations 5 000 (amende 500 + IS 4 500) | résultat fiscal **30 000** — **identique** avant et après comptabilisation de l'IS |
+| IS · CA · bilan | **4 500** (tout au taux réduit) · **100 000** · **équilibré**, actif **135 500** |
+| **Solde** — IS 4 500 − acomptes 2 000 | **2 500,00 € à payer** · acomptes lus sur les écritures `impotPaiement` |
+| **Contribution sociale** — IS 995 750, CA 10 000 000 | (995 750 − 763 000) × 3,3 % = **7 680,75 €** · solde **1 003 430,75 €** |
+| **Cocher « capital détenu par des personnes physiques »** avec CA ≥ 7,63 M€ | contribution **toujours due** — l'exonération est une **conjonction** |
+| **Exonération** — CA 5 000 000 + case cochée | **exonérée** |
+| **Abattement proratisé** — exercice de 6 mois | « 763 000,00 € pour douze mois · exercice de 6 mois » → **381 500,00 €** |
+| **Déficit** — résultat fiscal −15 000 | bénéfice **néant** · déficit **15 000,00 €** · IS **0** · solde **0** |
+| Bases par taux (IS 995 750) | taux réduit **42 500,00 €** · taux normal **3 957 500,00 €** |
+| **Exercice non calendaire** (01/01 → 30/06/2026) | dépôt **30/09/2026** (trois mois) · solde **15/10/2026** (15 du 4ᵉ mois) |
+| **Contrôles** | **10 / 11 tenus** — le seul « à revoir » est **réel** : date limite de dépôt du 05/05/2026 dépassée (non bloquante) |
+| **Dépôt accepté** | horodaté · IS 4 500 · acomptes 2 000 · solde 2 500 · **0 écriture créée** |
+| **Dépôt REFUSÉ** — IS comptabilisé 5 500 ≠ 4 500 déclaré | refusé · motif écrit : « écart de −1 000,00 € » |
+| **Dépôt REFUSÉ** — contribution non comptabilisée | refusé · « écart de 7 680,75 € : la contribution sociale n'est pas comptabilisée » |
+| **Lecture seule stricte** | écritures **identiques** (JSON) après quatre onglets et deux rendus |
+| Impression | **3 `.doc-page`** (2065 · 2065 bis · relevé de solde) · **0 champ de saisie** dans le tirage |
+| Sorties « Fermer » (4 onglets) · boutons vides · gras · italique · débordement | **1 / 1 / 1 / 1** · **0** · **0** · **0** · **0** |
+| Routage · pageerror · console.error | **35 / 35** · **0** · **0** |
+
+**La suite du cahier des charges :** **CDC-5** — la révision à deux étages **Révisé · Supervisé · Validé** (la phrase qui clôt le cahier des charges : « prêt à être **supervisé** puis transmis ») ; puis les formats **QIF / MT940 / CFONB**, le **FEC provisoire**, la **gestion cabinet** et les **DES / DEB**.
+
+---
+
+## 🟢 MAJ précédente — PLAN COMPTABLE GÉNÉRAL + LES QUATRE JOURNAUX DE BASE — v656
+**Quoi :** demande — *« Utilise le plan comptable générale ainsi que les journaux de base (HA, VT, BQ, OD) »*. Deux socles sont redressés.
+
+**1. Le plan du dossier est le PLAN COMPTABLE GÉNÉRAL.** Chaque dossier chargeait jusqu'ici une **surcouche BTP de 54 comptes** posée *au-dessus* du PCG (`PLAN_BTP` d'abord, PCG ensuite pour les manquants) — donc des libellés maison (« Prestation de service 20 % » `706002000`, « Travaux en cours » `713350000`, « Assurance obligatoire dommage construction ») **écrasaient** ceux du PCG. Désormais `chargerPlanComptable()` charge **le PCG seul — 970 comptes**, et c'est lui qui nomme. Les comptes **hors PCG restent LISIBLES** (leur libellé est conservé dans `COMPTES`) pour que l'historique déjà saisi ne devienne pas illisible, **mais ils n'entrent plus dans le plan** : le plan, c'est le PCG. La **TVA liée** est reclée sur des comptes du PCG (`TVA_LIEE` : 601/604/616/626/627 → `445667000` déductible 20 %, **706000000** → `445717000` collectée 20 %) et `appliquerTVAauto` (60/61/62 → déductible, 70x → collectée) est inchangée. `chargerPlanBTP()` **survit comme alias** — les neuf appels existants, dont un dans un `onclick`, continuent de fonctionner.
+
+**2. Quatre journaux, et quatre seulement : HA · VT · BQ · OD.** Le dossier en comptait **huit** (HA, VT, BQ, **CA**, **ODP**, **ODC**, **ODTVA**, OD). Les sous-journaux d'opérations diverses et le **journal CAISSE ajouté en v655 sont REGROUPÉS dans OD**.
+
+**Ce que ce regroupement ne touche pas.** Aucun montant, aucun compte, aucun équilibre : **seul le champ `journal` change**. Les **libellés** (`OD TVA CA3 03/2026`, `OD PAIE 03/2026`, `OD CHARGES 03/2026`, `DOTATION IMMO …`) continuent d'identifier chaque pièce — c'est précisément ce qui a permis de **rendre les sept gardes anti-doublon indépendantes du journal** : elles testaient `e.journal==='ODTVA' && libellé…`, elles ne testent plus que le **libellé**, qui est stable et unique. Sans cette reprise, regrouper les journaux aurait **rouvert la porte aux doublons** d'OD de TVA et d'OD de paie.
+
+**Ce qui aurait re-scindé les journaux, et qui ne le fait plus.** Deux automatismes travaillaient en sens inverse : (a) l'addon **v205**, qui **classait** chaque O.D. en ODP/ODC/ODTVA d'après son libellé — il les **regroupe désormais en OD** (la même machinerie, retournée) et ne crée plus les sous-journaux ; (b) l'addon **caisse de la v655**, qui routait les espèces en CA — **désactivé par un drapeau `JOURNAL_CA=false`**. Le **classement à l'import FEC** suit la même règle : `fecJournalMoteur` rend ACH / VTE / BQ, et **toute opération diverse entre en OD** (une caisse comptée à l'import va donc en **BQ**).
+
+**Ce qui SURVIT de la v655 : le contrôle comptable.** « **Une caisse ne peut pas être créditrice** » ne dépend pas du journal — c'est un fait de caisse, pas de classement. Le contrôle reste **CRITIQUE** dans le module Contrôles et au registre des contrôles en continu. Seul le **journal** CA est retiré.
+
+**Comment — nouvel addon `yada-addon-journaux-base` (100% ADDITIF) + 16 éditions chirurgicales :** l'addon ramène **toute écriture d'un journal hors des quatre à OD** et **élague `db.journaux`** aux quatre de base (rétablissant un journal de base manquant), sur le **dossier actif et tout le portefeuille**, au démarrage (+ second passage à 2,2 s pour les dossiers restaurés depuis IndexedDB), à chaque `chargerDossier` et à chaque `save`. Éditions : `chargerPlanComptable` (+ alias), `journauxDefaut`, les **cinq sites d'énumération** (Consultation, Éditions, centralisateur, saisie d'une opération, module Journal vivant `#yada-jr`), les **liens « journal lié »** des modules TVA et Charges & Paie, **sept postages** (`journal:'ODP'|'ODC'|'ODTVA'` → `'OD'`), **sept gardes anti-doublon** passées au libellé seul, `bpJrn`, `fecJournalMoteur`, l'**étape 14 du Parcours** (les OD de paie se comptent désormais **par leur libellé**, plus par leur journal — sinon l'étape serait retombée à zéro), et le `poster` de Règlements & échéances (retour à BQ).
+
+**Validé :** `node --check` (**325 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014) + balises (3/5/3) + **filet d'équilibre** ✅ + deux sondes Playwright :
+
+| Mesure | Résultat |
+| --- | --- |
+| **Plan du dossier** | **970 comptes** — le PCG · `chargerPlanBTP` toujours appelable (alias) |
+| Libellés | `601000000` **ACHATS STOCKES MAT. PREM.** · `706000000` **PRESTATIONS DE SERVICES** · `530000000` **CAISSE** — ceux du PCG |
+| Compte **hors PCG** (`706002000`) | **absent du plan** · **libellé toujours lisible** |
+| **TVA liée** | `601` → `445667000` · `706` → `445717000` |
+| **Journaux** — défaut · dossier · Consultation · module Journal | **HA · VT · BQ · OD** dans les quatre surfaces |
+| Migration — 8 écritures (ODP, ODC, ODTVA, **CA**, ACH, VTE, BQ, OD) | **4 migrées** → `OD 5 · ACH 1 · VTE 1 · BQ 1` |
+| **Montants** après migration | **strictement intacts** · **0 écriture déséquilibrée** |
+| **Libellés** préservés | oui — `OD TVA CA3 …` et `OD PAIE …` retrouvés |
+| **Idempotence** — re-migration + `reclasserJournauxPaieCharges` | répartition **identique** — plus aucune re-scission |
+| **OD de TVA** postée | journal **OD** · garde anti-doublon **tenue** · second appel → **0 écriture de plus** |
+| **Import FEC** | achat **ACH** · vente **VTE** · banque **BQ** · **caisse → BQ** · TVA / paie / divers → **OD** |
+| Parcours · modules · pageerror · console.error | rendu ✓ · **34 / 34** · **0** · **0** |
+
+**Ce que cela retire de la v655 :** le **journal CA** et le routage des espèces. Les règlements en espèces repartent au journal **BQ**, la caisse se distinguant — comme avant — par son **compte `530`**. Le **contrôle de caisse créditrice**, lui, est conservé.
+
+**La suite du cahier des charges :** **CDC-3** — la **2065** (déclaration d'IS), dernier maillon d'une chaîne fiscale déjà construite (résultat fiscal v647 + calcul d'IS v654) ; puis **CDC-5** — la révision à deux étages **Révisé · Supervisé · Validé** ; puis les formats **QIF / MT940 / CFONB**, le **FEC provisoire**, la **gestion cabinet** et les **DES / DEB**.
+
+---
+
+## 🟢 MAJ précédente — LE JOURNAL DE CAISSE : la caisse n'est pas la banque — v655
+**Quoi :** **cahier des charges « Sage Expert IA » reçu** (chaîne Sage Génération Experts : production, révision, fiscalité, immobilisations, gestion cabinet, EDI, FEC). Il est **consigné et confronté à l'existant** dans `CAHIER-DES-CHARGES.md` : **l'essentiel est déjà construit** (l'ordre obligatoire des travaux = le Parcours v651, OCR, imputation apprenante, lettrage, rapprochement, TVA sur les encaissements, révision par cycles, clôture bloquante, liasse, comptes annuels, FEC) ; **huit chantiers manquent vraiment** (CDC-1 → CDC-8). Le premier est livré ici.
+
+**CDC-1 — les journaux.** Le cahier des charges autorise **CA — Caisse** ; YADA n'en avait pas. Le logiciel le **disait lui-même en v653** : « le dossier n'ayant qu'un journal de trésorerie, les règlements — **espèces comprises** — y sont portés (**BQ**), la caisse se distinguant par son **compte** (530) et non par son journal ». Ce compromis est levé.
+
+**Ce n'est pas un code de journal de plus — ce sont trois conséquences comptables :**
+
+| | Règle | Ce qu'elle change |
+| --- | --- | --- |
+| 1 | **Les espèces vont au journal CA** | un règlement **ESP** (compte `53x`) est porté en **CAISSE** ; **VIR / PRLV / CB / CHQ** restent en **BANQUE** |
+| 2 | **Le rapprochement bancaire ne voit pas la caisse** | on ne rapproche pas une caisse contre un relevé, **on la compte** → le journal CA est de type **`Caisse`** et non `Trésorerie`, et `comptesBanque()` (qui ne retient que `Trésorerie`) **ne le voit pas** |
+| 3 | **Une caisse ne peut pas être créditrice** | on ne sort pas d'un coffre plus d'espèces qu'il n'en contient → **nouveau contrôle CRITIQUE** |
+
+**Le retrait d'espèces reste en BANQUE — et c'est voulu.** Une écriture qui bouge **la caisse ET la banque** (`530` + `512`) est un **transfert** : le relevé bancaire la porte, donc elle doit rester rapprochable. La règle de routage est donc « **caisse seule → CA ; dès qu'une ligne de banque apparaît → BQ** », et non « présence d'un 53x ». Vérifié : vente en espèces → **CA**, prélèvement → **BQ**, **retrait d'espèces → BQ**.
+
+**Les écritures déjà saisies sont reclassées.** Toute écriture de trésorerie qui ne bouge **que** la caisse passe de BQ à CA — **aucun montant, aucun compte, aucun équilibre n'est touché**, seul le champ `journal` change. Migration **dossier actif + tout le portefeuille**, au démarrage (+ second passage à 2 s pour les dossiers restaurés depuis IndexedDB), à chaque `chargerDossier`, et à chaque `save` (la mise à jour est persistée par **ce** save, pas par un second). **Idempotent** : deux passages supplémentaires laissent les écritures **strictement identiques** (égalité JSON).
+
+**Comment — nouvel addon `yada-addon-caisse` (100% ADDITIF) + 8 éditions chirurgicales :** `window.journalTreso(lignes)` (la ligne de trésorerie décide du journal), `ensureCA(dossier)` (journal inséré **juste après BQ**, l'ordre de la chaîne comptable), `reclasse(ecritures)`, `caisseAnomalies()` (soldes `53x` créditeurs, à-nouveaux compris), et une **enveloppe de `window.ctlAnalyse`** qui ajoute la famille `caisseCred` **sans réécrire le module Contrôles**. Éditions : `journauxDefaut` (+CA), `sgJournaux` (Consultation), `journauxDoc` **et** `centralisateurDoc` (Éditions), `EC_JOURNAUX` (saisie d'une opération), `JRN` du **module Journal vivant** (`#yada-jr`), le `poster` de **Règlements & échéances** (v653 : `journal:'BQ'` en dur → `journalTreso(lignes)`), et le module **Contrôles** (carte + décompte critique + famille au registre des contrôles en continu).
+
+**Validé :** `node --check` (**324 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014) + balises (3/5/3) + **filet d'équilibre** ✅ + trois sondes Playwright :
+
+| Mesure | Résultat |
+| --- | --- |
+| Journal **CA** créé | `{code:'CA', libelle:'CAISSE', type:'Caisse', compte:'530000000'}` · ordre **HA · VT · BQ · CA · ODP · ODC · ODTVA · OD** |
+| **Rapprochement** — comptes proposés | **`512000000` seul** — la caisse n'y est pas |
+| Reclassement — vente en espèces (BQ) | → **CA** |
+| Reclassement — prélèvement (512) | **reste BQ** |
+| Reclassement — **retrait d'espèces** (530 **et** 512) | **reste BQ** — c'est un transfert, le relevé le porte |
+| Routage `journalTreso` | espèces **CA** · banque **BQ** · retrait **BQ** |
+| **Règlement client ESP** (module v653) | journal **CA** · `530000000` **D 600** / `411HABI00` **C 600** |
+| **Règlement client VIR** | journal **BQ** |
+| Contrôle — caisse saine | **0 anomalie** |
+| Contrôle — sortie de 500 sur un solde de 320 | **1 anomalie CRITIQUE** · solde **−180,00** · compte `530000000` · remontée par `ctlAnalyse` **et** la carte du module |
+| Écritures déséquilibrées | **0** |
+| **Idempotence** — deux migrations de plus | écritures **identiques** (JSON) |
+| Consultation · Éditions · Journal (`#yada-jr`) | **CA listé** · badge « Caisse » rendu |
+| Routage des modules · pageerror · console.error | **34 / 34** · **0** · **0** |
+
+**Une correction annulée en route — la leçon de la v640 resservait.** J'ai d'abord ajouté CA aux onglets **et** au sous-titre de `pageJournal`… dans **une définition morte** : le fichier en contient **quatre** (`function pageJournal` ligne 4950, une enveloppe, une réassignation ligne 9099, puis le **dernier override `window.pageJournal` du module Registre `#yada-jr`**) — seule la dernière vit. La sonde l'a montré (`jrSel('CA')` absent du rendu alors que mon édition était bien là). **Les deux éditions mortes ont été retirées** : corriger ce qui n'est jamais appelé n'est pas une amélioration. La définition vivante, elle, porte CA — vérifié sur le rendu, pas sur le source.
+
+**La suite du cahier des charges :** **CDC-3** — la **2065** (déclaration d'IS), dernier maillon d'une chaîne fiscale déjà construite (résultat fiscal v647 + calcul d'IS v654) ; puis **CDC-5** — la révision à deux étages **Révisé · Supervisé · Validé** ; puis les journaux **SIT** (situation intermédiaire) et **CHE** (chevauchement), les formats **QIF / MT940 / CFONB**, le **FEC provisoire**, et la **gestion cabinet** (temps, coût, marge, encours).
+
+---
+
+## 🟢 MAJ précédente — PROVISIONS & IMPÔT : les deux charges que l'exercice supporte sans les décaisser — v654
+**Quoi :** **étapes 15, 18 et 20 du parcours** (v651). Le dossier savait dire ce qu'il **a gagné** (v643) et ce qu'il **doit au fisc** (v647) ; il ne savait écrire ni la **provision** pour un risque connu, ni la **provision d'impôt**, ni **vider le compte d'attente 471** — or aucun exercice ne se clôture sur un 471 qui traîne. Nouveau module **« Provisions & impôt »** (rubrique **Traitements**).
+
+| Situation | Débit | Crédit |
+| --- | --- | --- |
+| **Provision** pour un risque connu | **6815** Dotation aux provisions | **151** Provisions pour risques |
+| **Reprise** — le risque a disparu | **151** Provisions pour risques | **7815** Reprise sur provisions |
+| **Charge d'impôt** sur le résultat fiscal | **695** Impôts sur les bénéfices | **444** État — impôts sur les bénéfices |
+| **Paiement** de l'impôt | **444** État — impôts sur les bénéfices | **512** Banque |
+| **Apurement** d'une attente (sens débiteur) | compte définitif | **471** Compte d'attente |
+
+**La nature du risque décide des trois comptes**, pas l'utilisateur : litige → `1511`, garanties clients → `1512`, **perte de change → `1515` avec une dotation FINANCIÈRE `6865`** (et non `6815`), grosses réparations → `1572`, autre charge → `158`, **risque exceptionnel → dotation `6875`**. Une dotation d'exploitation, une dotation financière et une dotation exceptionnelle ne se lisent pas au même étage du compte de résultat : les confondre fausse les soldes intermédiaires de gestion.
+
+**Corrigé avant la livraison — l'impôt dérivait à chaque régénération.** L'IS est une charge **non déductible** : la comptabiliser diminue le résultat comptable, donc la base de l'impôt suivant. En cliquant trois fois « Régénérer », on obtenait **9 625 → 7 218,75 → 7 820,31** — trois montants, tous faux sauf le premier. La base retenue est désormais le **résultat AVANT impôt** : on **remet la charge `695` déjà comptabilisée** et on **retire la réintégration d'IS que la liasse aurait déjà portée** (repère **WJ** du 2058-A) pour ne pas la compter deux fois. Mesuré : **11 250 quatre fois de suite**, et **le même 11 250 que la liasse ait réintégré l'IS ou non** — la formule est stable dans les deux configurations. La ligne de neutralisation est **écrite à l'écran**, jamais cachée.
+
+**Le barème n'est pas dupliqué.** L'imputation des déficits (plafond **art. 209 I** : 1 000 000 € + 50 % au-delà) et les taux (**15 % jusqu'à 42 500 €** puis **25 %**) restent ceux de la liasse : `fiscal()` a été refactorée autour d'un **`impotSur(base)`** unique, exposé par **`window.liImpotSur`** — le 2058-A et l'écriture passent par le même calcul, donc **aucune divergence n'est possible**. Le résultat fiscal lui-même est **lu** par `window.liFiscal`, jamais recalculé.
+
+**Le 471 s'apure ligne par ligne.** Chaque opération en attente est listée (date, journal, libellé, sens, reste) avec le **compte de reclassement** à choisir ; YADA contre-passe l'attente et impute l'opération. **Le piège du double comptage de la v653 est évité d'emblée** : la contre-passation porte elle-même une ligne `471` — écartée de la liste (`apureDe`), sinon une pièce fantôme apparaîtrait et doublerait ce qui reste à apurer. Vérifié : après un apurement **partiel de 500 sur 1 200**, la liste affiche toujours **2 lignes** (les deux d'origine), pas 3.
+
+**Les refus, chacun motivé en clair** — et, à chaque fois, le **dossier reste strictement inchangé** (égalité JSON stricte des écritures) : montant **nul**, **reprise sans dotation** (« on ne reprend pas une provision qui n'existe pas »), **reprise supérieure à la dotation**, **paiement sans charge au bilan**, **paiement supérieur au restant dû**, **apurement sans compte** (« on ne devine pas la nature d'une opération »), **apurement du 471 par le 471**, **apurement supérieur au reste**, **date hors exercice** — **9 refus sur 9**. Une **seule porte d'écriture**, `poster(libelle,date,lignes,journal)` : elle vérifie l'**équilibre** et l'**appartenance à l'exercice** **avant** d'appeler `posterOD` — aucun chemin ne contourne le contrôle.
+
+**Onze contrôles, tous mesurés sur le dossier** — et ils **réagissent**. Le registre est confronté à la comptabilité : gonfler une provision de 8 000 à 12 000 **sans régénérer** fait basculer deux contrôles (« bilan 8 000,00 € · registre 12 000,00 € »). Poster une charge **après** avoir calculé l'impôt fait basculer « Charge d'impôt conforme » — et régénérer le remet au vert. Reclasser 400 € du 471 en frais bancaires change le résultat, donc l'impôt : **8 650** au lieu de 8 750, et le contrôle le dit jusqu'à la régénération.
+
+**Comment — nouvel addon `yada-addon-provisions` (100% ADDITIF) + 8 éditions chirurgicales :** clé `provisions:(typeof pageProvisions==='function'?pageProvisions:repli)` au **dispatch de `render()`**, `'provisions'` ajouté **après `'echeancier'`** dans la rubrique **Traitements** de la barre v641, **refactorisation de `fiscal()` autour d'`impotSur`** + exposition de **`liFiscal`** et **`liImpotSur`**, et **trois étapes du parcours re-routées** — 15 (`mod:'provisions'` **tant que le 471 n'est pas soldé**), 18 (`mod:'provisions'`), 20 (`mod:'provisions'` **quand la liasse est prête mais l'IS non comptabilisé**, sinon `'liasse'`). **Points techniques :** (1) les seize comptes nécessaires sont **ajoutés au plan s'ils manquent** ; (2) libellés stables `PROVISION <id> <exercice>`, `REPRISE PROVISION <id>`, `PROVISION IMPÔT`, `APUREMENT 471` → **régénérer remplace** (détection par `indexOf(...)>=0`, `posterOD` préfixant le libellé du numéro de pièce) ; (3) les **paiements d'impôt s'accumulent** (marqués `impotPaiement`) au lieu d'être remplacés — un acompte n'efface pas le précédent ; (4) journaux : dotations, reprises, charge d'impôt et apurements en **OD**, **paiement en BQ** (c'est un mouvement de trésorerie) ; (5) rendu **Registre N&B** scopé `#yada-pv`, sortie **`pvFermer()`** pour que le filet v614 la reconnaisse — **invariant v626 : exactement 1 sortie « Fermer »**, vérifié : le filet **ne greffe pas**. `sw.js` yada-v249, badge v654, `version.json` 654.
+
+**Validé :** `node --check` (**323 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014 statiques · 42/42 pour `pv-mod`) + balises (3/5/3) + **filet d'équilibre** ✅ + six sondes Playwright sur des dossiers montés pour couvrir **chaque branche** :
+
+| Mesure | Résultat |
+| --- | --- |
+| **Dotation** litige 8 000 | `681500000` **8 000 D** / `151100000` **8 000 C** — équilibrée · régénérer 3× → **1 écriture** |
+| **Reprise** 3 000 | `151100000` **3 000 D** / `781500000` **3 000 C** |
+| **Dotation financière** (perte de change) | **`686500000`** / `151500000` — pas `6815` |
+| **IS régénéré 4 fois** | **11 250 · 11 250 · 11 250 · 11 250** — la dérive (9 625 → 7 218,75 → 7 820,31) est cassée |
+| **IS avec réintégration WJ** de la liasse | **11 250** — identique · **1 seule écriture** |
+| **Déficit reportable 30 000** | base 62 000 − 30 000 = 32 000 → IS **4 800** (tout au taux réduit) |
+| **Charge d'impôt** | `695000000` **D** / `444000000` **C** · paiement `444` **D** / `512000000` **C** au journal **BQ** |
+| **Paiements** 5 000 puis le solde | dette 444 **7 820,31 → 2 820,31 → 0,00** · **2 paiements** conservés |
+| **471** — 2 lignes (1 200 D, 900 C) | apurement partiel 500 → **toujours 2 lignes** (aucune pièce fantôme) · écriture `606100000` 500 D / `471000000` 500 C |
+| **471 soldé** | 0 ligne · solde **0,00 €** |
+| **Refus** — 9 cas | dossier **strictement inchangé** (JSON) — **9 / 9** |
+| **Contrôles** | **11 / 11** sur un dossier sain · **11 / 11** sur un dossier vide · le seul « à revoir » d'un dossier en retard est **réel** (471 à 400 €) |
+| **Contrôles réactifs** | charge postée après calcul → « à revoir » · régénérer → vert (IS **9 500**) · registre gonflé 8 000 → 12 000 → **2 contrôles** basculent avec les deux chiffres |
+| **Lecture seule à l'ouverture** | deux rendus → écritures **identiques** (JSON) |
+| **Parcours** — étapes 15 · 18 · 20 | **`pcAller('provisions')`** pour les trois · 15 « compte d'attente 471 non soldé : 400,00 € » · 20 « résultat fiscal préparé — provision d'impôt non comptabilisée » |
+| Rubrique **Traitements** | « … » · « Règlements & échéances » · « **Provisions & impôt** » · « Automatismes » · … — **clic réel → `data-page=provisions`** |
+| Sorties « Fermer » · filet v614 · boutons · vides · sans action · en-têtes vides · gras · italique · souligné · débordement | **1** · **ne greffe pas** · 12 · **0** · **0** · **0** · **0** · **0** · **0** · **0** |
+| Écritures déséquilibrées · pageerror · console.error | **0** · **0** · **0** |
+
+**La suite du cahier des charges :** **v655** — le dossier produit désormais provisions et impôt ; restent les **engagements hors bilan** et le **suivi des acomptes d'IS** (comptes `444` par échéance), à confronter à la liasse.
+
+---
+
+## 🟢 MAJ précédente — RÈGLEMENTS & ÉCHÉANCES : une facture comptabilisée n'est pas une facture réglée — v653
+**Quoi :** **étapes 11 et 12 du parcours** (v651). Le dossier savait enregistrer une facture ; il ne savait pas dire **ce qui reste dû, depuis combien de temps, et à qui**. Nouveau module **« Règlements & échéances »** (rubrique **Traitements**) : il lit les comptes de tiers, ne retient que **ce qui n'est pas lettré** — donc ce qui reste réellement dû — le ventile par ancienneté, puis **règle**, avec le **mode de paiement** qui décide du compte de trésorerie.
+
+| Mode de paiement | Compte mouvementé |
+| --- | --- |
+| **Espèces** | **530** Caisse |
+| **Carte bancaire · Virement · Prélèvement · Chèque** | **512** Banque |
+
+| Sens | Écriture |
+| --- | --- |
+| **Encaissement client** | **512** ou **530** Débit / **411** Crédit |
+| **Paiement fournisseur** | **401** Débit / **512** ou **530** Crédit |
+
+**La balance âgée compte les jours depuis l'ÉCHÉANCE, pas depuis la facture.** Une pièce à 30 jours émise il y a 35 jours n'a **que 5 jours de retard** — la compter à 35 surestime le retard de toute la durée des conditions de paiement. Cinq colonnes : **Non échu · 0-30 j · 31-60 j · 61-90 j · plus de 90 jours**, plus une colonne **Acomptes** pour les règlements non affectés. L'échéance est **lue sur la pièce** quand elle en porte une ; sinon elle est **déduite des conditions de paiement** — et le mot **« déduite »** est écrit à côté de la date, jamais caché. Les conditions se règlent **par dossier** et **par tiers**.
+
+**Corrigé au passage — l'ancienneté du parcours partait de la mauvaise date.** L'étape 12 (v651) comptait les jours **depuis l'écriture**. Elle compte désormais **depuis l'échéance**, gagne une tranche **« Non échu »** et **pointe sur le nouveau module** (elle renvoyait sur le Suivi des règlements, qui lit `db.reglements` — vide sur un dossier alimenté par FEC).
+
+**Corrigé par la sonde — un règlement partiel était déduit deux fois.** Le restant d'une pièce déduit déjà les règlements qui lui sont imputés ; la **ligne de tiers** de ce règlement était **en plus** comptée en acompte. Sur une facture de 600 réglée 250, le total du tiers tombait à **100** au lieu de **350**. Les écritures portant `reglementDe` sont désormais écartées de la lecture — vérifié : après le règlement partiel, **balance âgée 2 350,00 € = solde non lettré du 411**. Un acompte **réellement non affecté** (style FEC) reste, lui, visible dans sa colonne et déduit du total.
+
+**Trois refus, chacun motivé en clair** — et, à chaque fois, le **dossier reste strictement inchangé** (égalité JSON stricte des écritures) : montant **nul** (« rien à régler »), montant **supérieur au restant dû** de la pièce, **date hors exercice**. Une **seule porte d'écriture**, `poster(libelle,date,lignes)` : elle vérifie l'**équilibre** et l'**appartenance à l'exercice** **avant** d'appeler `posterOD` — aucun chemin ne contourne le contrôle.
+
+**Le lettrage suit le règlement, et le dit.** Un règlement qui **solde** la pièce la **lettre** avec tous ses règlements (via `lzLettrer`, qui exige Σ débit = Σ crédit) ; un règlement **partiel** ne la lettre pas et l'écrit : « reste 350,00 € : le lettrage attend le solde ». Une pièce lettrée **disparaît** du module, parce qu'elle est soldée.
+
+**La liste de relance refuse pour de vrai.** Les clients échus, du plus ancien au plus récent. Sans **adresse e-mail**, ou **moins de quinze jours** après la précédente, la relance est **refusée** — et le motif est écrit. Un premier jet affichait le motif dans la liste mais **acceptait quand même** l'action forcée : la garde est désormais dans `echRelancer` (second appel le même jour → **rang inchangé**). Aucune écriture comptable n'est créée : seul `db.relances` est écrit.
+
+**Comment — nouvel addon `yada-addon-echeancier` (100% ADDITIF) + 3 éditions chirurgicales :** clé `echeancier:(typeof pageEcheancier==='function'?pageEcheancier:repli)` au **dispatch de `render()`**, `'echeancier'` ajouté **après `'constitution'`** dans la rubrique **Traitements** de la barre v641, et l'**étape 12 du parcours** reprise (échéance + module). **Points techniques :** (1) `lignesTiers(type)` lit **toutes** les écritures, pas seulement l'exercice — une créance ouverte peut précéder l'exercice ; le **règlement**, lui, doit y être ; (2) l'imputation est portée par l'écriture (`reglementDe:'<id>|<index>'`, `reglementMontant`, `reglementMode`) → le **restant par pièce** est exact et un règlement ne peut pas dépasser sa pièce ; (3) le dossier n'ayant **qu'un journal de trésorerie**, les règlements — espèces comprises — y sont portés (**BQ**), la caisse se distinguant par son **compte** (`530`) et non par son journal ; (4) rattachement du tiers par **compte auxiliaire**, sinon par le **collectif** via la facture ou le mouvement de banque, sinon « (tiers non identifié) » — et un contrôle le signale ; (5) rendu **Registre N&B** scopé `#yada-ech`, sortie **`echFermer()`** pour que le filet v614 la reconnaisse — **invariant v626 : exactement 1 sortie « Fermer »**. `sw.js` yada-v248, badge v653, `version.json` 653.
+
+**Validé :** `node --check` (**322 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014 statiques · 52/52 pour `ech-mod`) + balises (3/5/3) + **filet d'équilibre** ✅ + quatre sondes Playwright sur des dossiers montés pour couvrir **chaque branche** :
+
+| Mesure | Résultat |
+| --- | --- |
+| **Balance âgée** — 6 pièces posées sur les 5 tranches | Non échu **360** · 0-30 **2 400** · 31-60 **600** · 61-90 **0** · +90 **1 200** (clients) · 61-90 **960** · non échu **600** (fournisseurs) |
+| **Bouclage** clients · fournisseurs | **4 560,00 = 4 560,00** · **1 560,00 = 1 560,00** (solde non lettré) |
+| Pièce **déjà lettrée** | **absente** du module |
+| **Virement** 1 200 (intégral) | `512000000` **1 200 D** / `411HABI00` **1 200 C** — équilibrée, **lettrée** |
+| **Chèque** 250 sur 600 (partiel) | écriture postée, **non lettrée**, restant **350,00 €**, aucune ligne fantôme |
+| **Espèces** 350 (solde) | **`530000000`** **350 D** / `411HABI00` 350 C — **caisse, pas banque** — **lettrée** |
+| **Prélèvement** fournisseur 960 | `401GASO00` **960 D** / `512000000` **960 C** — **lettrée** |
+| **Refus** — montant nul · > restant dû (99 999) · date 2099 | dossier **strictement inchangé** (JSON) — **3 / 3** |
+| **Correctif du double comptage** | après partiel : balance **2 350,00 €** = solde non lettré **2 350,00 €** |
+| **Acompte non affecté** (FEC, 400) | colonne **Acomptes − 400,00 €** · total **2 400 → 2 000** |
+| **Échéance lue sur la pièce** (30/09/2026) | reprise telle quelle, **sans** la mention « déduite » · contrôle **tenu** |
+| **Échéance déduite** des conditions | mention **« déduite »** affichée · contrôle le dit (**6 sur 6**) |
+| **Conditions par tiers** (60 jours) | échéance **14/04 → 14/05/2026** · persistée |
+| **Relance** — client avec e-mail | enregistrée, **rang 1** |
+| **Relance** — sans e-mail · **moins de 15 jours** | **refusées** — `db.relances` vide · **rang inchangé** |
+| **Contrôles** | **10 / 10** sur un dossier sain · les 2 « à revoir » d'un dossier en retard sont **réels** (1 200 € à plus de 90 jours, 6 échéances déduites) |
+| **Lecture seule à l'ouverture** | deux rendus → écritures **identiques** (JSON) |
+| **Dossier vide** | KPI à **0,00 €** · « **RIEN À RELANCER** » · **10 / 10** |
+| **Étape 12 du parcours** | tranche **« Non échu »** ajoutée · ancienneté depuis l'échéance · `pcAller('echeancier')` route réellement |
+| Rubrique **Traitements** | « Parcours » · « Constitution » · « **Règlements & échéances** » · « Automatismes » · … — **clic réel → `data-page=echeancier`** |
+| Sorties « Fermer » · boutons · vides · retour · gras · italique · souligné · débordement | **1** · 6 · **0** · **0** · **0** · **0** · **0** · **0** |
+| Écritures déséquilibrées · pageerror · console.error | **0** · **0** · **0** |
+
+**La suite du cahier des charges :** **v654** provisions (`6815`/`151`) et **provision d'impôt** (`695`/`444`, puis `444`/`512`) tirée du résultat fiscal de la liasse v647, plus l'apurement du compte d'attente `471`.
+
+---
+
+## 🟢 MAJ précédente — CONSTITUTION DE SOCIÉTÉ : la naissance de la société s'écrit — v652
+**Quoi :** **étape 2 du parcours** (v651) — la seule des 22 qui ne renvoyait vers aucun module. Le cahier des charges donne les écritures à la lettre ; elles sont désormais produites :
+
+| Situation | Débit | Crédit |
+| --- | --- | --- |
+| Apport en numéraire, **capital libéré** | **512** Banque | **101** Capital social |
+| Capital **appelé, NON libéré** | **4562** Associés capital appelé non versé | **101** Capital social |
+| **Lors du versement** | **512** Banque | **4562** Associés capital appelé non versé |
+| **Frais de constitution** | **201** Frais d'établissement **+ 44562** TVA | **401** Fournisseur |
+
+Trois cartes — **capital**, **versements**, **frais** — et une quatrième qui n'existe que pour dire non : **« Contrôles — aucune validation sans contrôle »**, **10 points** mesurés sur le dossier.
+
+**Le module ne croit pas ce qu'on lui saisit — il lit le dossier.** Les quatre KPI (capital crédité au `101`, reste à verser au `4562`, frais portés au `201`, écritures générées) sont **agrégés sur les écritures**, jamais sur le formulaire, et un contrôle **confronte les deux** (« saisi 20 000,00 € · comptabilisé 20 000,00 € »). Les **à-nouveaux sont exclus** de l'agrégation : un report de capital de l'exercice précédent ne peut pas se faire passer pour une souscription — vérifié (à-nouveau de 5 000 posé sur le `101` : le KPI reste à 10 000).
+
+**Quatre refus, chacun motivé en clair** — et, à chaque fois, **le dossier reste strictement inchangé** (égalité JSON stricte des écritures) :
+
+| Ce qui est refusé | Motif écrit |
+| --- | --- |
+| Écriture déséquilibrée | « écriture déséquilibrée (X ≠ Y) » — aucune écriture du module ne peut naître non soldée |
+| **Versement > capital souscrit** (99 999 sur 20 000) | « les versements dépassent le capital souscrit » |
+| **Date hors exercice** (2099) | « date 01/01/2099 hors exercice (01/01/2026 → 31/12/2026) » |
+| Capital nul, versement en mode « libéré intégralement » | « rien à comptabiliser » / « aucun versement à constater » |
+
+**Le module dit aussi quand il n'a rien à faire.** En libération **intégrale**, la carte des versements affiche **SANS OBJET** et refuse de générer : le capital est déjà entré en banque, il n'y a pas de créance sur les associés à solder. Et si l'on **change d'avis après coup** (partiel → intégral alors que des versements existent), le module **ne cache pas l'incohérence** : le contrôle « Capital libéré en banque » passe à **à revoir**, avec le détail — « débits 512 : 4 000,00 € · capital 10 000,00 € ».
+
+**Deux finesses comptables :** (1) les frais de constitution sont des **frais d'établissement** (compte `201`), pas une charge de l'exercice — leur TVA suit donc l'**immobilisation** (`44562`, et non `44566`) ; décocher « TVA déductible » la fait **rejoindre le coût** (`201` débité du TTC, plus de ligne de TVA) — vérifié : 1 200 + 240 → `201` 1 440 ; (2) la dette va sur le **compte auxiliaire du fournisseur** quand il est choisi (`401AVOC00`), sur le **collectif** `401000000` sinon — même règle que partout ailleurs dans YADA.
+
+**Comment — nouvel addon `yada-addon-constitution` (100% ADDITIF) + 2 éditions chirurgicales :** clé `constitution:(typeof pageConstitution==='function'?pageConstitution:repli)` au **dispatch de `render()`** et `'constitution'` ajouté **juste après `'parcours'`** dans la rubrique **Traitements** de la barre v641. **Points techniques :** (1) **une seule porte d'écriture**, `poster(cle,date,lignes)` — elle vérifie l'équilibre **et** l'appartenance à l'exercice **avant** d'appeler `posterOD`, si bien qu'aucun chemin ne peut contourner le contrôle ; (2) libellés stables `CONSTITUTION CAPITAL|VERSEMENT|FRAIS <exercice>` → **régénérer remplace** (la détection utilise `indexOf(...)>=0`, `posterOD` préfixant le libellé du numéro de pièce) ; (3) les six comptes nécessaires sont **ajoutés au plan s'ils manquent** — le `445620000` n'y était posé que par l'addon Immobilisations ; (4) rendu **Registre N&B** scopé `#yada-cst`, sortie **`cstFermer()`** pour que le filet v614 la reconnaisse — **invariant v626 : exactement 1 sortie « Fermer »**. `sw.js` yada-v247, badge v652, `version.json` 652.
+
+**Validé :** `node --check` (**321 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014 statiques · 37/37 pour `cst-mod`) + balises (3/5/3) + **filet d'équilibre** ✅ + deux sondes Playwright sur un dossier monté pour couvrir **chaque branche** :
+
+| Mesure | Résultat |
+| --- | --- |
+| **Capital libéré intégralement** (10 000) | `512000000` **10 000,00 D** · `101000000` **10 000,00 C** — équilibrée ✓ |
+| Régénérer 3 fois | **1 écriture** — idempotent |
+| Versements en mode intégral | **SANS OBJET** · génération forcée → **0 écriture** |
+| **Capital appelé non versé** (20 000) | `456200000` **20 000,00 D** · `101000000` **20 000,00 C** · reste à verser **20 000,00** |
+| **Versements** 5 000 puis 15 000 | **2 écritures** `512 D` / `4562 C` · reste à verser → **0,00** ✓ · régénérer → toujours **2** |
+| **Refus** — versement de 99 999 | dossier **strictement inchangé** (JSON) |
+| **Refus** — versement daté 2099 | dossier **strictement inchangé** (JSON) |
+| **Refus** — capital nul | dossier **strictement inchangé** (JSON) |
+| **Frais** 1 200 @20 % (avocat) + 60 @0 % (greffe) | `201` 1 200 + `44562` 240 / **`401AVOC00`** 1 440 · `201` 60 / `401000000` 60 — équilibrée ✓ |
+| **TVA non déductible** | `201` **1 440,00** / `401AVOC00` 1 440 — la taxe rejoint le coût |
+| **Contrôles** | **10 / 10 tenus** |
+| Bascule partiel → intégral avec versements | **7 / 8 tenus** — « Capital libéré en banque · à revoir · débits 512 : 4 000,00 € · capital 10 000,00 € » |
+| **À-nouveaux** | bandeau affiché · **exclus du KPI** (AN de 5 000 sur le `101` → capital crédité **inchangé**) |
+| **Lecture seule à l'ouverture** | deux rendus → écritures **identiques** (JSON) |
+| **Étape 2 du parcours** | « **terminé** · capital souscrit : 20 000,00 € · intégralement versé » |
+| **`pcAller('constitution')`** | route réellement sur `constitution` — **le point mort de la v651 est comblé** |
+| Rubrique **Traitements** | « Parcours comptable guidé » · « **Constitution de société** » · « Automatismes » · … — **routage réel ✓** |
+| Sorties « Fermer » · boutons · vides · retour · gras · italique · souligné · débordement | **1** · 15 · **0** · **0** · **0** · **0** · **0** · **0** |
+| Écritures déséquilibrées · pageerror · console.error | **0** · **0** · **0** |
+
+**La suite du cahier des charges :** **v653** factures non rapprochées — conditions et **modes de paiement** (espèces, carte bancaire, virement, prélèvement, chèque), caisse `530`, balance âgée **0-30 / 31-60 / 61-90 / 90+** et liste de relance · **v654** provisions (`6815`/`151`) et **provision d'impôt** (`695`/`444`, puis `444`/`512`) tirée du résultat fiscal de la liasse v647.
+
+---
+
+## 🟢 MAJ précédente — PARCOURS COMPTABLE GUIDÉ : les 22 étapes, dans l'ordre, verrouillées — v651
+**Quoi :** cahier des charges reçu — un **moteur comptable** qui suit un **ordre obligatoire** de 22 étapes, avec des contrôles permanents et une **règle absolue : aucune écriture validée sans contrôle**. Les modules existaient (banque, rapprochement, achats, ventes, TVA, paie, immobilisations, révision, liasse, clôture) mais **rien ne les ordonnait ni ne les verrouillait** : on pouvait valider une banque en écart, lettrer avant d'avoir comptabilisé, clôturer sans réviser. Nouveau module **« Parcours comptable guidé »** (rubrique **Traitements**, en tête) : les **22 étapes**, chacune **MESURÉE sur le dossier** (jamais déclarée), **verrouillée par ses prérequis**, avec **une seule action à faire maintenant** et le bouton qui ouvre le module qui fait le travail.
+
+| # | Étape | Ce qui est mesuré |
+| --- | --- | --- |
+| 1 | Paramétrage dossier | dénomination · SIREN · exercice · SIRET · APE · TVA intracom. · régime |
+| 2 | Constitution société | crédit du `101` · reste à verser au `4562` · *sans objet si l'exercice porte des à-nouveaux* |
+| 3-4 | Import banque · écritures | lignes de relevé mémorisées · écritures **BQ** · lignes sans écriture · solde du `471` |
+| **5-6** | **Rapprochement · VALIDATION** | **écart par compte et par mois** — la validation reste **fermée** tant qu'un écart subsiste |
+| 7-10 | Fournisseurs · Clients · Achats · Ventes | dépôts reçus et en attente · écritures **ACH**/**VTE** · TVA déductible et collectée |
+| 11-12 | Lettrage · Échéances | lignes `401`/`411` **non lettrées** · balance âgée **0-30 / 31-60 / 61-90 / 90+** |
+| 13-15 | TVA · Paie · OD | CA3 déposées et OD passées par mois clos · bulletins, OD de paie et de charges, soldes `421`/`431` · compte d'attente `471` |
+| 16-18 | Immobilisations · Amortissements · Provisions | fiches vs comptes `2xx` mouvementés · **dotation attendue (plans) vs `6811` passée** · `15x` et dotations `6815` |
+| 19-22 | Révision · Déclarations · Clôture · Liasse | cycles visés (v646) · charge d'impôt `695`/`444` · OD de résultat et à-nouveaux · bilan et résultat |
+
+**Le verrou, c'est l'étape 6.** Le cahier des charges est explicite : *valider les écritures bancaires **après** rapprochement **sans écart***. Le parcours le tient pour de vrai — `pcValiderBanque()` **recalcule l'écart au moment du clic** et **refuse** s'il n'est pas nul, même si l'on force l'appel. Et l'**ordre est un verrou, pas une suggestion** : une étape dont un prérequis n'est pas franchi affiche « en attente de l'étape N », **perd ses boutons** et ne peut pas être ouverte. Le **lettrage (11) attend la banque validée (6) ET les achats (9) ET les ventes (10)** — on ne rapproche pas des factures contre une banque qui n'est pas sûre.
+
+**Deux contrôles qui criaient au loup, corrigés avant la livraison :**
+1. **« Bilan équilibré » comparait `ta` à `tp`** — or `bilanNorm` (v643) **ne range que les comptes de bilan** : le **résultat de l'exercice** et les **résultats antérieurs non affectés** sont ajoutés au passif **à l'affichage**. Sur un dossier pourtant juste (actif 10 700 = passif 10 200 + résultat 500), le contrôle annonçait un déséquilibre. Il refait désormais le total du passif **exactement comme le bilan imprimé**, et affiche la décomposition.
+2. **« FEC conforme » exigeait neuf chiffres** — un **compte auxiliaire** est un préfixe collectif suivi de lettres (`401FOU0000`, `401GASO00`) : le contrôle rejetait des comptes parfaitement valides. Motif corrigé en `[1-8]` + huit caractères alphanumériques.
+
+**Constaté et corrigé — deux étapes pointaient dans le vide.** Les étapes **Import clients** et **Comptabilisation ventes** renvoyaient vers le module `facturation`, **absent de `window.YADA_OK` depuis la table rase v535** : le routeur le renvoie silencieusement sur la Consultation. Elles pointent désormais sur la **Consultation** (journal VTE, clic droit pour éditer — v253), et **`pcAller` ne redirige plus en silence** : un module non enregistré est annoncé.
+
+**Comment — nouvel addon `yada-addon-parcours` (100% ADDITIF) + 2 éditions chirurgicales :** clé `parcours:(typeof pageParcours==='function'?pageParcours:repli)` au **dispatch de `render()`** et `'parcours'` ajouté **en tête** de la rubrique **Traitements** de la barre v641. **Points techniques :** (1) **lecture seule stricte** sur la comptabilité — vérifié par égalité JSON des écritures avant/après ; le seul écrit est `db.parametres.parcours.valide` (la validation de banque, horodatée) ; (2) l'écart de rapprochement est lu par **`rapStats(releveDe(compte,mois))`** sur **chaque couple compte 512 × mois réellement mouvementé** — un mois sans relevé créé compte comme non rapproché ; (3) la dotation attendue vient de **`immoRowAnnee`** (les plans, v645), confrontée au `6811` réellement passé ; (4) le **résultat est recalculé indépendamment** (agrégation propre des classes 6 et 7, hors à-nouveaux et OD de résultat) et confronté à `etnCR()` — deux chemins de calcul qui doivent s'accorder ; (5) trois onglets : **les 22 étapes**, **contrôles finaux** (21 points du cahier des charges), **règles appliquées** (règle absolue, 11 contrôles permanents, dictionnaire comptable). Rendu **Registre N&B** scopé `#yada-pc`. La sortie s'appelle **`pcFermer()`** pour que le filet v614 la reconnaisse — **invariant v626 : exactement 1 sortie « Fermer »**. `sw.js` yada-v246, badge v651, `version.json` 651.
+
+**Validé :** `node --check` (**320 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014) + balises (3/5/3) + **filet d'équilibre** ✅ + sonde Playwright sur un dossier d'essai monté pour que **chaque étape ait un état voulu**, joué **deux fois** — rapprochement en écart, puis sans écart :
+
+| Mesure | Rapprochement **en écart** | Rapprochement **sans écart** |
+| --- | --- | --- |
+| Étapes rendues · ordre | **22** · 1→22 conforme | **22** · conforme |
+| 5 — Rapprochement | à faire · 0/1 mois · **écart 1 600,00 €** | **terminé** · 1/1 mois · écart 0 |
+| 6 — Validation banque | **en attente de l'étape 5** · « validation refusée » · **0 bouton** | à faire · « la validation est ouverte » · **2 boutons** |
+| **Validation forcée** (`pcValiderBanque()` appelé malgré l'écart) | **refusée** — rien n'est écrit | acceptée · `{date, mois:1, ecart:0}` |
+| 11 — Lettrage | **bloqué** (en attente de l'étape 6) | **débloqué** après validation |
+| Prochaine action | « Étape 5 — Rapprochement bancaire » | « Étape 11 — Lettrage tiers — 2 400,00 € à rapprocher » |
+| Répartition des étapes | — | 11 terminées · 4 à faire · **3 bloquées** · 4 sans objet |
+| Contrôles finaux | — | **18 / 21 tenus** (les 3 restants sont réels : 411 non lettrés, OD de TVA non passée, CA3 non déposée) |
+| Bilan équilibré (après correctif) | — | **tenu** — actif 10 700 = passif 10 200 + résultat 500 + report 0 |
+| Résultat cohérent (deux calculs) | — | **tenu** — compte de résultat 500,00 € · recalcul 500,00 € |
+| **Lecture seule stricte** | écritures **identiques** (JSON) · **0 écriture créée** |
+| Routage des modules cités | **11 testés · tous OK** (après correctif `facturation`) |
+| Sorties « Fermer » · boutons vides · gras · italique · souligné · débordement | **1** · **0** · **0** · **0** · **0** · **0** |
+| Écritures déséquilibrées · pageerror · console.error | **0** · **0** · **0** |
+
+**Ce que le parcours a révélé sur le dossier de démarrage** (19 écritures) : **8 étapes franchies sur 21**, **8 en attente d'une étape antérieure**, **13 contrôles finaux tenus sur 21** — et la première chose à faire est le **paramétrage du dossier**. C'est exactement le rôle demandé : dire, sans complaisance, ce qui importe maintenant.
+
+**La suite du cahier des charges, par étape sans module aujourd'hui :** **v652** constitution de société (`512`/`101`, `4562`/`101` puis versement, frais `201`+`44562`/`401`) · **v653** factures non rapprochées — conditions et **modes de paiement** (espèces, carte bancaire, virement, prélèvement, chèque), caisse `530`, balance âgée et liste de relance · **v654** provisions (`6815`/`151`) et **provision d'impôt** (`695`/`444`, puis `444`/`512`) tirée du résultat fiscal de la liasse v647.
+
+---
+
+## 🟢 MAJ précédente — TABLEAU DE FLUX DE TRÉSORERIE : où est passé l'argent — v650
+**Quoi :** le **bilan dit le PATRIMOINE**, le **compte de résultat la PERFORMANCE**, l'**annexe les RÈGLES** (v649). **Aucun des trois ne dit OÙ EST PASSÉ L'ARGENT** — et c'est la question que pose tout dirigeant qui lit un bénéfice sur un compte à sec. Un résultat **n'est pas** de la trésorerie : l'amortissement est une charge qu'on ne décaisse pas, le stock et les créances immobilisent un argent que le résultat ne voit pas, et **rembourser un emprunt vide la banque sans toucher au résultat**. Nouveau module **« Tableau de flux de trésorerie »** (rubrique **États**), **méthode indirecte**, avec comparatif **N-1** :
+
+| Flux | Contenu |
+| --- | --- |
+| **I · ACTIVITÉ** | résultat net **+** dotations **−** reprises **−** résultat de cession **−** quote-part de subventions = **marge brute d'autofinancement**, puis variation des **stocks** et du **besoin en fonds de roulement** |
+| **II · INVESTISSEMENT** | − acquisitions d'immobilisations · + **prix de cession** (compte 775) · variation des dettes sur immobilisations (404, 405) |
+| **III · FINANCEMENT** | + augmentation de capital · + subventions reçues · + émission d'emprunts · − remboursements · − **dividendes versés** · comptes courants d'associés |
+| **Contrôle** | variation **expliquée** (A+B+C) confrontée à la variation **réellement lue** sur les comptes 50 à 58 |
+
+**Le tableau repose sur une identité, pas sur une opinion.** En partie double, la somme de tous les comptes est nulle à tout instant, donc `Σ(classes 1 à 5) = −Σ(classes 6 et 7) = résultat`, d'où sur l'exercice :
+
+> **Δ TRÉSORERIE = RÉSULTAT − Δ(tous les autres comptes de bilan)**
+
+Le tableau n'est que la **lecture de cette identité**, regroupée par nature — il **doit** donc boucler. Un second onglet, **« Contrôle & partition »**, l'**expose** : les comptes de bilan sont répartis en **7 familles qui se partagent les classes 1 à 5 sans recouvrement**, chacune avec son solde d'ouverture, de clôture, sa variation et son **effet trésorerie** ; la dernière ligne, **« comptes de bilan hors classement », doit rester vide** — si elle ne l'est pas, un compte échappe au tableau et l'écart se lit plus haut. Le pied refait le calcul : **Σ des effets + résultat = variation lue**.
+
+**Corrigés avant la sonde, par le calcul à la main — deux pièges d'identité :**
+1. **L'OD de résultat est écartée des mouvements.** Elle vire les classes 6 et 7 sur le `12x`. Passée **dans** l'exercice, elle fait absorber le résultat par le `12x` — que la **première ligne du tableau compte déjà** : le tableau se dédoublerait, d'un écart exactement égal au résultat. Écartée (comme le fait `etnCR`), le tableau donne **le même résultat que l'OD soit passée ou non** — vérifié par sonde.
+2. **Le dividende n'est pas une variation, c'est un décaissement.** *Décidé*, il ne fait que déplacer des capitaux propres vers le `457` — **aucune trésorerie ne bouge**. *Versé*, il sort de la banque. On lit donc les **débits du 457** (les paiements), jamais son solde. Un premier jet prenait `−Δ(45)` : un dividende décidé **et** versé dans la même année donnait `Δ457 = 0` → la sortie de 1 500 € devenait **invisible**, et le tableau ne bouclait plus. Sonde : un dividende **décidé mais non versé** laisse la ligne à **—** et le tableau boucle.
+
+**Comment — nouvel addon `yada-addon-flux` (100% ADDITIF) + 2 éditions chirurgicales :** clé `flux:(typeof pageFlux==='function'?pageFlux:repli)` au **dispatch de `render()`** et `'flux'` ajouté à la rubrique **États** de la barre v641. **Points techniques :** (1) **lecture seule stricte** — vérifié par égalité JSON des écritures avant/après ; **le module n'écrit rien du tout**, pas même un paramètre ; (2) `mvt(test,d0,d1)` calcule **ouverture / augmentations / diminutions / clôture** du **solde débiteur signé**, en versant les à-nouveaux à l'ouverture (même lecture qu'en v649) et en écartant l'OD de résultat ; (3) la contribution d'une famille à la trésorerie est **`−Δ`** — un actif qui grossit consomme de l'argent, une dette qui grossit en fournit ; (4) le **résultat net** vient de **`etnCR()`** (v643), donc la première ligne du tableau **est** celle du compte de résultat ; (5) la colonne **N-1** rejoue le calcul sur l'exercice précédent (`addAnnees(−1)`) ; (6) une passerelle **« Du résultat à la trésorerie »** conclut en une phrase, dans le sens réellement constaté. Rendu **Registre N&B** scopé `#yada-fx`. La sortie s'appelle **`fxFermer()`** pour que le filet v614 la reconnaisse — **invariant v626 : exactement 1 sortie « Fermer »**. `sw.js` yada-v245, badge v650, `version.json` 650.
+
+**Validé :** `node --check` (**319 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014) + balises (3/5/3) + **filet d'équilibre** ✅ + sonde Playwright sur un dossier dont **chaque ligne du tableau a été calculée à la main avant d'être mesurée** (à-nouveaux, vente, encaissement, achat, paiement, acquisition à crédit puis payée, cession, dotation, emprunt nouveau, remboursement avec intérêts, augmentation de capital, dividende décidé puis versé, variation de stock) :
+
+| Mesure | Attendu (à la main) | Obtenu |
+| --- | --- | --- |
+| Résultat net | 13 000 − 7 100 = **5 900,00** | **5 900,00** ✓ |
+| Marge brute d'autofinancement | 5 900 + 1 800 − 1 500 = **6 200,00** | **6 200,00** ✓ |
+| **Flux de l'ACTIVITÉ (A)** | 6 200 − 500 (stocks) − 2 000 (BFR) = **3 700,00** | **3 700,00** ✓ |
+| **Flux d'INVESTISSEMENT (B)** | −6 000 + 3 000 + 2 000 = **−1 000,00** | **−1 000,00** ✓ |
+| **Flux de FINANCEMENT (C)** | 5 000 + 10 000 − 2 000 − 1 500 = **11 500,00** | **11 500,00** ✓ |
+| **Variation expliquée (A+B+C)** | **14 200,00** | **14 200,00** ✓ |
+| **Variation réellement lue** (comptes 512) | 8 000 → 22 200 = **14 200,00** | **14 200,00** — **écart 0, bouclage conforme ✓** |
+| **Partition** — Σ des effets + résultat | 8 300 + 5 900 = **14 200,00** | **= variation lue ✓** |
+| Ligne « comptes de bilan hors classement » | **vide** | **vide** ✓ |
+| **OD de résultat passée dans l'exercice** | boucle, chiffres **identiques** au cas sans OD | **identiques** ✓ (sans le correctif : écart −6 000) |
+| **Dividende décidé mais non versé** | ligne à **—**, aucune sortie | **—** · boucle ✓ |
+| Passerelle « Du résultat à la trésorerie » | +8 300 d'écart, expliqué | rendue |
+| **Lecture seule stricte** | écritures **identiques** (JSON) · **0 écriture créée** · **0 paramètre écrit** |
+| Impression | **1 `.doc-page`** « TABLEAU DE FLUX DE TRÉSORERIE » |
+| Rubrique **États** de la barre | « Éditions comptables » · « Annexe des comptes annuels » · « **Tableau de flux de trésorerie** » — **routage réel ✓** |
+| Sorties « Fermer » · boutons vides · gras · débordement | **1** · **0** · **0** · **0** |
+| Écritures déséquilibrées · pageerror · console.error | **0** · **0** · **0** |
+
+**Les quatre états de synthèse sont désormais produits :** **bilan** · **compte de résultat + SIG** (v643) · **annexe** (v649) · **tableau de flux de trésorerie** (v650) — plus la **liasse fiscale** (v647) qui en tire le résultat fiscal.
+
+---
+
+## 🟢 MAJ précédente — ANNEXE DES COMPTES ANNUELS : la troisième pièce obligatoire, enfin produite — v649
+**Quoi :** le **bilan dit COMBIEN**, le **compte de résultat dit COMMENT** — mais **aucun des deux ne dit SELON QUELLES RÈGLES ni PAR QUELS MOUVEMENTS**. C'est le rôle de l'**annexe**, et elle est la **troisième composante obligatoire des comptes annuels** (art. L123-12 du Code de commerce) : sans elle, les comptes sont **incomplets**. YADA produisait le bilan (v643) et la liasse (v647), jamais d'annexe. Nouveau module **« Annexe des comptes annuels »** (rubrique **États**), **6 volets** :
+
+| Volet | Ce qu'il produit |
+| --- | --- |
+| **Régime & règles** | le **régime d'annexe applicable** (micro · petite · complète), calculé sur les 3 seuils, puis les **règles et méthodes comptables** (5 paragraphes pré-remplis PCG, modifiables) + les **événements postérieurs à la clôture** |
+| **Immobilisations & amortissements** | ouverture · augmentations · diminutions · clôture, en **valeurs brutes** ET en **amortissements**, avec le **contrôle de concordance avec le bilan** et le détail compte par compte |
+| **Provisions & dépréciations** | provisions réglementées (14x) · risques et charges (15x) · dépréciations des immobilisations (29x), des stocks (39x), des tiers (49x), des VMP (59x) |
+| **Créances & dettes** | **état par échéance** — à 1 an au plus / à plus d'un an |
+| **Comptes de régularisation** | factures non parvenues, factures à établir, charges à payer, CCA/PCA, intérêts courus — **les comptes du cut-off de la v644** |
+| **Capital, effectif & engagements** | composition du capital (+ valeur nominale), **effectif moyen calculé sur les bulletins de paie**, engagements hors bilan |
+
+**Trois points où cette annexe est honnête plutôt que décorative :**
+1. **L'annexe ne RECALCULE pas le bilan — elle le DÉCOMPOSE.** Un **contrôle de concordance** le prouve à l'écran : immobilisations brutes et amortissements de l'annexe à la clôture **doivent** égaler ceux du bilan v643, sinon un compte échappe au classement et l'écart est affiché. Vérifié par sonde : **conforme ✓**.
+2. **L'à-nouveau n'est PAS un mouvement de l'exercice.** Il est daté *dans* l'exercice mais il **est** le solde d'ouverture : le compter en « augmentation » **doublerait l'actif**. Il rejoint donc l'ouverture, avec le solde antérieur. Sonde : à-nouveau de 10 000 → **ouverture 10 000, augmentations 5 000** (la seule acquisition réelle).
+3. **Une seule échéance est RÉELLEMENT connue : celle de l'emprunt.** Son tableau d'amortissement dit, échéance par échéance, ce qui sera remboursé et quand — la ventilation 1 an / plus d'un an est donc **calculée**. Pour tous les autres postes, « à 1 an au plus » est une **CONVENTION** tirée de leur nature — elle est **écrite à l'écran**, pas cachée.
+
+**Corrigé par la sonde — le côté décide de la rubrique (règle v643, qui manquait ici).** Le premier jet sommait chaque famille de comptes **en net** : la famille 44x, dont le solde est créditeur (TVA collectée 4 000 − déductible 1 200), sortait en **« Autres créances : −2 800 € »** — une créance négative à l'actif, **et comptée deux fois** (en moins à l'actif, en plus au passif). Un compte de classe 4 peut être **débiteur ou créditeur** : l'état est désormais calculé **compte par compte**, chaque côté ne retenant que les comptes qui vont dans ce sens → **créances 1 200 €** (TVA déductible) et **dettes 4 000 €** (TVA collectée), chacune une seule fois.
+
+**Le régime d'annexe est calculé, pas demandé.** Une **micro-entreprise est DISPENSÉE d'annexe** (art. L123-16-1), une **petite entreprise** peut la présenter en **forme abrégée** (art. L123-16). YADA a les trois critères au dossier — total du bilan, chiffre d'affaires net, effectif moyen — il les **teste un par un** et affiche le verdict avec le détail (valeur · seuil · dépassé ou non, et « 2 seuils sur 3 pour sortir du régime »). Les **seuils du décret n° 2024-152** sont **écrits à l'écran** pour rester vérifiables, et si un critère n'est pas calculable, le module le dit.
+
+**Comment — nouvel addon `yada-addon-annexe` (100% ADDITIF) + 2 éditions chirurgicales :** clé `annexe:(typeof pageAnnexe==='function'?pageAnnexe:repli)` au **dispatch de `render()`** et `'annexe'` ajouté à la rubrique **États** de la barre v641. **Points techniques :** (1) le module est en **lecture seule stricte** sur la comptabilité — vérifié par égalité JSON des écritures avant/après ; le seul écrit est `db.parametres.annexe[exercice]` (règles, engagements, événements, effectif saisi, nombre de parts) ; (2) `mvt(test,sens)` et `detail(test,sens)` calculent **ouverture / augmentations / diminutions / clôture** directement sur `db.ecritures`, en versant les à-nouveaux à l'ouverture — donc les tableaux **tiennent au bilan par construction** ; (3) la concordance est mesurée contre **`etnBilan()`** (v643) sur les repères **AB · AD · AF** ; (4) la ventilation des emprunts lit **`empEcheancier()`** et compare chaque échéance à la clôture + 12 mois ; (5) l'**effectif moyen** est la moyenne du nombre de salariés distincts par mois, lue sur les **bulletins de paie** de l'exercice, et reste **surchargeable à la main** ; (6) l'**impression** sort l'annexe entière en `.doc-page`, **sans aucun champ de saisie** (textareas, champs et boutons retirés du tirage). Rendu **Registre N&B** scopé `#yada-anx`. La sortie s'appelle **`anxFermer()`** pour que le filet v614 la reconnaisse — **invariant v626 : exactement 1 sortie « Fermer »**. `sw.js` yada-v244, badge v649, `version.json` 649.
+
+**Validé :** `node --check` (**318 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014) + balises (3/5/3) + **filet d'équilibre** ✅ + sonde Playwright sur un dossier portant **un piège par volet** :
+
+| Mesure | Résultat |
+| --- | --- |
+| Module rendu · volets | ✓ · **6** |
+| **À-nouveau de 10 000 €** (le piège) | ouverture **10 000,00** · augmentations **5 000,00** — jamais compté en mouvement |
+| Immobilisations brutes | 10 000 + 5 000 − 2 500 = **12 500,00** |
+| Amortissements | 2 000 + 1 800 (dotation) − 1 000 (sortie sur cession) = **2 800,00** |
+| **Concordance avec le bilan v643** | **conforme ✓** — brut 12 500 = 12 500 · amort. 2 800 = 2 800 |
+| Provisions pour risques (15x) | 0 → dotation **500,00** → clôture **500,00** |
+| **Créances / dettes — le correctif** | « Autres créances » **−2 800 → +1 200** (TVA déductible) · « Dettes fiscales » **4 000** (TVA collectée) — **plus de double comptage** |
+| **Emprunt** (30 000 € sur 60 mois) | CRD **21 467,05** = **5 905,46** à 1 an au plus + **15 561,59** à plus d'un an, **lu sur le tableau d'amortissement** |
+| Comptes de régularisation (cut-off v644) | FNP **1 200,00** au passif · CCA **600,00** à l'actif |
+| Capital · effectif moyen | 101 → **8 000,00** · **2 salarié(s)**, moyenne des bulletins de l'exercice |
+| **Régime** — bascule testée | **Micro-entreprise** → (CA 1,2 M€ + bilan 912 k€) → **Petite entreprise — annexe ABRÉGÉE** → retour **Micro** |
+| Impression | **1 `.doc-page`** « ANNEXE DES COMPTES ANNUELS » · **11 sections** · **0 champ de saisie** dans le tirage |
+| **Lecture seule stricte** | écritures **identiques** avant / après (JSON), **0 écriture créée** |
+| Rubrique **États** de la barre | « Éditions comptables » · « **Annexe des comptes annuels** » — **routage réel ✓** |
+| Sorties « Fermer » · boutons vides · gras · débordement | **1** · **0** · **0** · **0** |
+| Écritures déséquilibrées · pageerror · console.error | **0** · **0** · **0** |
+
+**Les comptes annuels sont désormais complets :** bilan (v643) · compte de résultat + SIG (v643) · **annexe (v649)** — plus la liasse fiscale (v647) qui en tire le résultat fiscal.
+
+---
+
+## 🟢 MAJ précédente — ANALYTIQUE PAR AFFAIRE : la rentabilité chantier par chantier — v648
+**Quoi :** le dossier charge un **plan comptable BTP** — on y trouve `704 TRAVAUX`, `611 SOUS-TRAITANCE`, `605 MATÉRIEL DE TRAVAUX`, `621 PERSONNEL INTÉRIMAIRE`. Mais **un plan comptable dit la NATURE d'une charge, jamais l'affaire à laquelle elle appartient** — et ce n'est pas davantage lisible sur le tiers : le même fournisseur de béton livre trois chantiers. La rentabilité par affaire ne peut donc venir que d'une information **portée par la LIGNE d'écriture**. Nouveau module **« Analytique par affaire »** (rubrique **Analyse**) qui l'ajoute — `l.axe` sur la ligne, **sans toucher un seul montant, compte ou équilibre**.
+
+| Onglet | Ce qu'il fait |
+| --- | --- |
+| **Rentabilité par affaire** | produits · charges · **marge directe** · taux · frais généraux imputés · **résultat** · budget de charges · **consommé %**, puis le détail **par nature** (sous-traitance · fournitures · matériel · intérim · personnel · autres) |
+| **Ventilation des écritures** | toutes les lignes de classe 6 et 7, filtrables (non affectées · affectées · charges · produits), **affectation ligne à ligne ou en lot**, paginée par 120 |
+| **Chantiers & projets** | création des axes : code, nom, type (chantier · projet · affaire · véhicule · agence), **budget de charges**, ouvert/clos, charges engagées et reste |
+| **Règles d'affectation** | « quand le libellé contient X » ou « quand le compte commence par Y » → affecter à tel chantier |
+
+**Trois points où cette analytique est honnête plutôt que jolie :**
+1. **Imputer des frais généraux est une CONVENTION, pas une écriture.** Le loyer du siège n'appartient à aucun chantier. L'option « imputer les frais généraux au prorata des produits » existe, mais la **marge directe reste affichée à côté** du résultat imputé — l'une ne se cache jamais derrière l'autre. Et les frais généraux non affectés ont leur **propre ligne**, toujours visible.
+2. **Une règle ne réécrit jamais la main.** Les règles ne s'appliquent qu'aux lignes **non encore affectées** — une affectation manuelle survit à tous les passages (vérifié par sonde). Et un critère de **moins de 3 caractères** (ou une racine de compte d'un seul chiffre) est **ignoré** : une règle « contient A » affecterait « Travaux B », qui contient un A.
+3. **L'analytique répartit le résultat, elle ne le change pas.** Le total du tableau est le **résultat de l'exercice** : Σ produits − Σ charges, frais généraux compris. Les **à-nouveaux** et l'**OD de résultat** sont exclus du périmètre — ce ne sont pas de l'activité.
+
+**Comment — nouvel addon `yada-addon-axes` (100% ADDITIF) + 2 éditions chirurgicales :** clé `axes:(typeof pageAxes==='function'?pageAxes:repli)` au **dispatch de `render()`** et `'axes'` ajouté à la rubrique **Analyse** de la barre v641. **Points techniques :** (1) l'axe est un **champ ajouté à la ligne** (`l.axe`), donc **aucune écriture n'est créée ni modifiée dans ses montants** — vérifié par égalité JSON stricte des couples compte/débit/crédit avant et après suppression d'un axe ; supprimer un axe **remet ses lignes en non affecté**, il ne détruit rien ; (2) les axes, règles et l'option d'imputation vivent dans `db.parametres.analytique` ; (3) la liste de ventilation est **paginée par 120 lignes** (même parade qu'en v640 pour le journal) ; (4) **export CSV** (séparateur `;`, décimale virgule, BOM UTF-8) et **impression** en `.doc-page` ; (5) la sortie s'appelle **`axFermer()`** pour que le filet v614 la reconnaisse — **invariant v626 : exactement 1 sortie « Fermer »**. Rendu **Registre N&B** scopé `#yada-ax`. `sw.js` yada-v243, badge v648, `version.json` 648.
+
+**Validé :** `node --check` (**317 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014) + balises (3/5/3) + **filet d'équilibre** ✅ + sonde Playwright sur un dossier BTP d'essai (2 chantiers, frais généraux de siège, un à-nouveau piège) :
+
+| Mesure | Résultat |
+| --- | --- |
+| Module rendu · onglets | ✓ · **4** |
+| **Chantier A** (travaux 40 000 · s/t 12 000 · matériaux 8 000) | marge **20 000,00** · **50 %** · budget 18 000 → **consommé 111,1 %** |
+| **Chantier B** (travaux 25 000 · matériaux 20 000) | marge **5 000,00** · **20 %** · budget 15 000 → **consommé 133,3 %** — le chantier qui dérape se voit |
+| Frais généraux non affectés | **9 000,00** (loyer du siège + assurance), sur leur propre ligne |
+| **TOTAL** | 65 000 − 49 000 = **16 000,00** = le **résultat de l'exercice** |
+| **Imputation au prorata** des produits | A **5 538,46** (40/65) · B **3 461,54** (25/65) — somme **9 000,00**, résultats 14 461,54 + 1 538,46 = **16 000,00** |
+| **À-nouveau de 99 999 €** | **jamais affiché**, jamais compté |
+| Règle « contient A » / « contient B » (1 caractère) | **ignorée** — 0 ligne affectée, message « critère trop court » |
+| 5 règles précises | **5 lignes affectées** |
+| **Affectation manuelle** + nouveau passage des règles | **non écrasée** |
+| Affectation **en lot** (cases à cocher) | 3 → **4 lignes** sur le chantier A |
+| **Suppression d'un axe** | lignes remises en non affecté · **montants strictement identiques** · **0 écriture modifiée** · 0 déséquilibrée |
+| Impression · export CSV | `.doc-page` « Rentabilité par affaire · exercice 2026 » · CSV |
+| Rubrique **Analyse** de la barre | « Tableau de bord » · « **Analytique par affaire** » · « Analytique & rentabilité » · … — **routage réel ✓** |
+| Sorties « Fermer » · boutons vides · gras · débordement | **1** · **0** · **0** · **0** |
+| pageerror · console.error | **0** · **0** |
+
+**Le programme de la v641 est terminé.** Les dix rubriques de la barre sont servies : Saisie · **Traitements** (Inventaire & cut-off, amortissement dégressif) · **Déclarations** (TVA sur les encaissements, Liasse fiscale) · **États** (Bilan, Compte de résultat, SIG) · **Révision** (Dossier de révision par cycles) · **Analyse** (Analytique par affaire).
+
+---
+
+## 🟢 MAJ précédente — LIASSE FISCALE 2050-2059 : le résultat FISCAL, enfin distinct du résultat comptable — v647
+**Quoi :** le bilan et le compte de résultat (v643) disent ce que l'entreprise **a gagné**. La liasse dit ce qu'elle **doit** — et ce sont **deux chiffres différents** : une amende, la TVS, l'IS lui-même ne sont pas déductibles. Tant que YADA n'avait pas cette passerelle, **Pilotage calculait l'IS sur le résultat comptable**, donc sur une base fausse. Nouveau module **« Liasse fiscale »** (rubrique **Déclarations**), **6 formulaires** :
+
+| Formulaire | Contenu |
+| --- | --- |
+| **2050** | Bilan **ACTIF** — repères AA · AB · AD · AF · **BJ** · BL · BV · BX · BZ · CF · CH · **CJ** · CL · **CO**, colonnes **Brut · Amortissements & dépréciations · Net · Net N-1** |
+| **2051** | Bilan **PASSIF** — DA → DK · **DL** (capitaux propres) · DP · **DR** · DU → EB · **EC** (dettes) · ED · **EE** |
+| **2052** | Compte de résultat — **exploitation** (FA · FD · FG · **FJ** chiffre d'affaires · FM → FQ · **FR** · FS → GE · **GF** · **GG**), avec N-1 |
+| **2053** | Compte de résultat — **financier** (GJ → **GP**, GQ/GR → **GU**, **GV**, **GW**), **exceptionnel** (HA → **HD**, HE → **HH**, **HI**), puis HJ · HK · **HL** · **HM** · **HN** |
+| **2058-A** | **Détermination du résultat fiscal** : WA → réintégrations (**WL**) − déductions (**XA**) = **XF**, imputation des déficits (**XL**) = **XN**, puis le **calcul de l'IS** |
+| **2059-A** | **Plus et moins-values** de cession de l'exercice (prix · VNC · +/− value) |
+
+**Les 2050 à 2053 ne se recalculent pas — ils se lisent.** Ils sont **entièrement dérivés** des états normalisés de la v643 (`etnBilan`/`etnCR`) : aucun second calcul, donc **aucune divergence possible** entre le bilan des Éditions et celui de la liasse. Le module remet seulement les rubriques dans l'ordre du CERFA et y ajoute les **totaux** (BJ · CJ · CO / DL · DR · EC · EE). Deux repères de la v643 sont **renommés au passage** pour coller au formulaire : le résultat de l'exercice est **DI** (et non DL, qui est le **total** des capitaux propres) et les écarts de conversion passif sont **ED** (et non EC, qui est le **total** des dettes).
+
+**Corrigé au passage — le compte 12x ne porte PAS le résultat de l'exercice.** Tant que la clôture n'est pas passée, le `12x` porte les **résultats ANTÉRIEURS que l'assemblée n'a pas affectés** ; le résultat de l'exercice, lui, est celui du compte de résultat. La v643 les intervertissait à l'affichage. Désormais **DI = résultat de l'exercice** (toujours `etnCR().net`, qui exclut l'OD de résultat) et le `12x` résiduel rejoint **DH**, nommé (« dont N € de résultats antérieurs non affectés »). **Le total des capitaux propres est identique dans les deux cas de figure** (clôture passée ou non) — seule l'imputation est corrigée, et le bilan reste équilibré par construction.
+
+**Le 2058-A est le seul endroit où l'humain tranche — et YADA propose ce qu'il sait LIRE.** Trois réintégrations sont relevées dans le dossier, avec leur **motif écrit en clair** : **amendes et pénalités (671200)** — jamais déductibles (art. 39-2 du CGI) ·  **TVS (635140)** — non déductible pour une société à l'IS · **impôt sur les sociétés (695/698)** — une charge ne se déduit pas de sa propre base. Un bouton **« Reprendre ces réintégrations »** les reporte (**idempotent** : re-cliquer ne duplique rien, il met le montant à jour). Le reste — amortissements excédentaires sur véhicules de tourisme, provisions non déductibles, déductions — **se saisit à la main** : le logiciel ne devine pas ce qu'il ne sait pas.
+
+**L'imputation des déficits est plafonnée pour de vrai** : **1 000 000 € majorés de 50 % de la fraction du bénéfice qui dépasse ce montant** (art. 209 I du CGI). Puis l'**IS** : **15 % jusqu'à 42 500 €** de bénéfice (case « taux réduit PME », avec le rappel de ses conditions) puis **25 %**.
+
+**Comment — nouvel addon `yada-addon-liasse` (100% ADDITIF) + 2 éditions chirurgicales :** clé `liasse:(typeof pageLiasse==='function'?pageLiasse:repli)` au **dispatch de `render()`** et `'liasse'` ajouté à la rubrique **Déclarations** de la barre v641. **Points techniques :** (1) les lignes du compte de résultat sont bâties **compte par compte** sur l'agrégat `etnCR().acc` — chaque repère porte ses préfixes PCG, et **une même charge n'est jamais comptée deux fois** (les différences négatives de change 666 sont dans GR, pas dans une ligne GS distincte) ; (2) le module est en **lecture seule** sur la comptabilité — le seul écrit est `db.parametres.liasse[exercice]` (réintégrations, déductions, stock de déficits, régime PME) ; (3) chaque formulaire s'imprime seul, et **« Imprimer la liasse complète »** sort les 6 en `.doc-page`, chacun avec son nom (l'en-tête est écrit par le module, `docEnteteCourte` ignorant son titre) ; (4) la sortie s'appelle **`liFermer()`** pour que le filet v614 la reconnaisse — **invariant v626 : exactement 1 sortie « Fermer »**. Rendu **Registre N&B** scopé `#yada-li`. `sw.js` yada-v242, badge v647, `version.json` 647.
+
+**Validé :** `node --check` (**316 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014) + balises (3/5/3) + **filet d'équilibre** ✅ + sonde Playwright sur un dossier à deux exercices (2025 clôturé, 2026 avec ventes, achats, paie, immobilisation, amende, TVS, IS et une cession) :
+
+| Mesure | Résultat |
+| --- | --- |
+| Module rendu · formulaires | ✓ · **6** |
+| **2050** — actif | brut **78 900,00** · amort. **2 000,00** · **net 76 900,00** · colonne **N-1 remplie** (32 600,00) |
+| **2051** — passif | **TOTAL GÉNÉRAL 76 900,00** = actif net → **bilan équilibré ✓** |
+| **DH / DI** (correctif) | DH **7 000,00** « dont 7 000,00 € de résultats antérieurs non affectés » · DI **−500,00** = résultat 2026 — **n'étaient pas au bon endroit avant** |
+| **2052** | CA net **30 000,00** (FA 20 000 + FG 10 000) · charges **28 800,00** · **résultat d'exploitation 1 200,00** |
+| **2053** | résultat courant **1 200,00** · exceptionnel **−500,00** (amende) · IS **1 200,00** · **HN −500,00** = le plug du bilan |
+| **2058-A** — propositions lues | **3** : amende **500,00** · TVS **800,00** · IS **1 200,00**, chacune avec son motif |
+| Reprise · **idempotence** | 3 lignes · **3 lignes** après un second clic |
+| Chaîne fiscale | −500 comptable **+ 2 500** réintégrations **− 1 000** déduction = **1 000** fiscal avant imputation |
+| Déficits (stock 3 000) | imputé **1 000** → **résultat fiscal 0** · reportable **2 000** |
+| **Plafond art. 209 I** (bénéfice 2 002 500, stock 5 000 000) | imputé **1 501 250** = 1 000 000 + 50 % × 1 002 500 → fiscal **501 250** |
+| **IS** sur 501 250 (PME) | **121 062,50** = 42 500 × 15 % + 458 750 × 25 % |
+| **2059-A** | cession du 30/09/2026 : prix **3 000,00** − VNC **2 400,00** = **+600,00** |
+| Impression | **6 pages** `.doc-page`, chacune avec son nom de formulaire |
+| **Lecture seule stricte** | écritures **identiques** avant / après, **0 écriture créée** |
+| Rubrique **Déclarations** de la barre | « Module TVA » · « **Liasse fiscale** » — **routage réel ✓** |
+| Sorties « Fermer » · boutons vides · gras · débordement | **1** · **0** · **0** · **0** |
+| Écritures déséquilibrées · pageerror · console.error | **0** · **0** · **0** |
+
+---
+
+## 🟢 MAJ précédente — DOSSIER DE RÉVISION PAR CYCLES : chaque solde rapproché d'une pièce extérieure — v646
+**Quoi :** YADA savait enregistrer, déclarer et clôturer — mais **rien ne disait si un solde était JUSTIFIÉ**. Or une comptabilité n'est pas juste parce qu'elle est équilibrée : elle l'est quand **chaque solde du bilan est rapproché d'une pièce extérieure**. Nouveau module **« Dossier de révision »** (rubrique **Révision**) : **6 cycles**, chacun avec son **solde comptable**, son **justificatif**, l'**écart**, un **commentaire** et un **visa** — et surtout son **contrôle de bouclage calculé sur le dossier**.
+
+| Cycle | Comptes | Contrôle de bouclage |
+| --- | --- | --- |
+| **Trésorerie** | 51x · 53x · 54x | solde comptable ↔ **dernier relevé de rapprochement** (justificatifs inclus) |
+| **Tiers — clients & fournisseurs** | 40x · 41x | **balance âgée ↔ créances et dettes NON LETTRÉES** |
+| **TVA** | 445x | **TVA déclarée ↔ comptabilisée ↔ chiffre d'affaires**, mois par mois |
+| **Immobilisations** | 20x · 21x · 28x | brut / amortissements / **VNC ↔ fichier des immobilisations** |
+| **Paie & organismes sociaux** | 42x · 43x | **compte 641 ↔ journal de paie** (ou bulletins) |
+| **Capitaux & emprunts** | 10x → 16x | **16x ↔ capital restant dû du tableau d'amortissement** |
+
+**Le contrôle prime sur la signature.** Un cycle n'est **justifié** que si son solde est rapproché d'une pièce **et** visé ; mais **un contrôle de bouclage en défaut pose une ANOMALIE quel que soit le visa** — c'est le dossier qui tranche, pas la signature. Trois états seulement : **justifié · à justifier · anomalie**.
+
+**Ce que le logiciel calcule, et ce qu'il refuse de calculer.** Là où la pièce existe déjà dans le dossier, un bouton **« Reprendre le justificatif calculé »** la reporte : Σ des soldes de relevés (trésorerie), Σ des lignes non lettrées (tiers), Σ des VNC du fichier (immobilisations), solde justifié par les CA3 déposées (TVA). Là où la justification est un **flux** et non un solde — **paie** (641 ↔ bruts) et **capitaux** (16x ↔ tableau) — **aucun montant n'est proposé** : le réviseur saisit la DSN ou l'état des capitaux. Le logiciel ne signe rien à la place de l'humain.
+
+**Deux points où la révision se joue vraiment :**
+1. **Un compte de trésorerie sans rapprochement n'est justifié par rien.** Le contrôle ne se contente pas de comparer ce qui est rapproché : les comptes **sans aucun relevé** n'entrent pas dans le justificatif, donc leur solde **apparaît en écart** — et le cycle tombe en anomalie. De même, un dernier relevé **antérieur à la clôture** est signalé nommément.
+2. **Le lettrage est un contrôle, pas un confort.** Le solde d'un compte de tiers doit être **exactement** la somme de ses lignes non lettrées — donc la somme des lignes **lettrées doit être nulle**. Le contrôle liste les **lettres qui ne s'équilibrent pas** : tant qu'il en reste une, la balance âgée ne peut pas rejoindre le solde du compte.
+
+**Le dossier s'imprime** (« Imprimer le dossier de révision ») : tableau des 6 cycles (solde · justificatif · écart · statut · bouclage · visa) puis le **détail de chaque contrôle** et le commentaire du réviseur, en `.doc-page`.
+
+**Comment — nouvel addon `yada-addon-revision` (100% ADDITIF) + 3 éditions chirurgicales :** clé `revision:(typeof pageRevision==='function'?pageRevision:repli)` au **dispatch de `render()`**, `'revision'` ajouté **en tête** de la rubrique **Révision** de la barre v641, et — correctif de la v644 — la sortie du module **Inventaire** renommée `invFermer()`. **Points techniques :** (1) les six contrôles sont **purement lecture** — vérifié par égalité JSON stricte des écritures avant/après ; le seul écrit est `db.parametres.revision[exercice]` (justificatif, commentaire, visa) ; (2) chaque contrôle sait dire **« non applicable »** (`ok:null`) quand la donnée extérieure n'existe pas dans le dossier, au lieu de conclure à tort ; (3) les soldes sont affichés **dans le sens naturel du poste** (créditeur positif pour TVA, paie, capitaux) et le justificatif repris suit la même convention ; (4) la **sortie s'appelle `revFermer()`** pour que le filet de sortie v614 la reconnaisse et n'en greffe pas une seconde — **invariant v626 : exactement 1 sortie « Fermer »** (le même défaut existait dans l'Inventaire depuis la v644, il est corrigé ici). Rendu **Registre N&B** scopé `#yada-rev`. `sw.js` yada-v241, badge v646, `version.json` 646.
+
+**Validé :** `node --check` (**315 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014) + balises (3/5/3) + **filet d'équilibre** ✅ + sonde Playwright sur un dossier d'essai construit avec **un défaut volontaire par cycle**, puis corrigé :
+
+| Cycle | Défaut posé | Ce que le contrôle a dit | Après correction |
+| --- | --- | --- | --- |
+| **Trésorerie** | 2ᵉ banque (512200000) **sans aucun relevé**, relevé BNP à 5 000 pour 6 600 comptabilisés | **EN DÉFAUT** — « aucun rapprochement » + écart **1 600,00** | **BOUCLÉ** |
+| **Tiers** | facture 600 réglée 400, **tout lettré « B »** | **EN DÉFAUT** — « **411BBB000 · lettre B** : 200,00 — lettre non équilibrée » | **BOUCLÉ** |
+| **TVA** | **aucune CA3 déposée** | **EN DÉFAUT** — « 2 mois taxable(s) sans CA3 déposée : mai 2026, juin 2026 » | **BOUCLÉ** |
+| **Immobilisations** | acquisition comptabilisée, **dotation non passée** | **EN DÉFAUT** — amortissements **0,00 comptable ↔ 2 000,00 fichier**, VNC 10 000 ↔ 8 000 | **BOUCLÉ** |
+| **Paie** | 641 = 24 000, journal de paie = **20 000** | **EN DÉFAUT** — écart **4 000,00** | **BOUCLÉ** |
+| **Capitaux & emprunts** | tableau d'amortissement **sans aucune écriture** | **EN DÉFAUT** — « le bilan porte des emprunts qu'aucun tableau ne justifie » puis écart **5 500,00** (11 échéances non comptabilisées) | **BOUCLÉ** |
+
+| Mesure | Résultat |
+| --- | --- |
+| Module rendu · cycles | ✓ · **6** |
+| Contrôles en défaut au départ · après correction | **6 / 6** · **0 / 6** |
+| Cycles justifiés après reprise des justificatifs **et** visa | **6 / 6** |
+| Visa | « Visé par Sarah Durand le 24/09/2026 », retirable |
+| **Lecture seule stricte** | écritures **identiques** avant / après (JSON), **0 écriture créée** |
+| État persisté (`db.parametres.revision`) | **oui** |
+| Dossier imprimé | titre + **27 lignes**, statuts repris (5 justifiés · 1 anomalie au moment du tirage) |
+| Rubrique **Révision** de la barre | « **Dossier de révision** » · « Contrôles de cohérence » — **routage réel ✓** |
+| Sorties « Fermer » · boutons vides · gras · italique · débordement | **1** · **0** · **0** · **0** · **0** |
+| Écritures déséquilibrées · pageerror · console.error | **0** · **0** · **0** |
+
+---
+
+## 🟢 MAJ précédente — AMORTISSEMENT DÉGRESSIF : la bascule vers le linéaire est enfin APPLIQUÉE — v645
+**Quoi :** dans `immoPlan` (ligne 7433), la bascule du dégressif vers le linéaire était **calculée puis jamais appliquée** — `dot = deg` dans tous les cas, les variables `lin` et `restAns` n'étant utilisées nulle part. Le plan d'amortissement était donc **faux sur les dernières annuités** (dotations qui continuent de décroître au lieu de se stabiliser), et c'est **obligatoire** au sens de l'article 39 A du CGI : dès que l'annuité dégressive tombe **sous** l'annuité linéaire calculée sur la **durée restante**, on bascule — et la bascule est définitive, puisque le linéaire reste ensuite supérieur.
+
+**Le correctif :** `lin` est désormais calculé sur la **durée restante du plan** (`VNC × jours de la période / jours restants`) — et non sur les mois de l'année en cours, ce que faisait `imAnnee_remainingMonths` — puis `dot = max(deg, lin)`. La dernière annuité solde exactement la base (`base − cumul`), donc la somme des dotations tombe au centime.
+
+**Comment — 1 édition chirurgicale** de la branche `if(im.type==='degressif')` de `immoPlan`. La valeur résiduelle était déjà gérée par `immoBase` (`montantHT − valResiduelle`) ; elle est vérifiée ici. Le linéaire n'est pas touché. `sw.js` yada-v240, badge v645, `version.json` 645.
+
+**Validé :** `node --check` (**314 scripts inline, 0 erreur**) + **filet d'équilibre** ✅ + sonde Playwright sur le **cas d'école** (10 000 €, 5 ans, mise en service au 01/01 → coefficient 1,75, **taux 35 %**) :
+
+| Exercice | Dotation | Cumul | VNC |
+| --- | --- | --- | --- |
+| 2026 | **3 500,00** (10 000 × 35 %) | 3 500,00 | 6 500,00 |
+| 2027 | **2 275,00** (6 500 × 35 %) | 5 775,00 | 4 225,00 |
+| 2028 | **1 478,75** (4 225 × 35 %) | 7 253,75 | 2 746,25 |
+| 2029 | **1 373,12** — **bascule** (dégressif 961,19 < linéaire 1 373,12 sur 2 ans restants) | 8 626,87 | 1 373,13 |
+| 2030 | **1 373,13** | **10 000,00** | **0,00** |
+
+| Mesure | Résultat |
+| --- | --- |
+| Somme des dotations | **10 000,00** — exactement la base |
+| Deux dernières annuités **égales** (donc linéaire) | **oui** (avant : décroissance jusqu'au bout) |
+| Valeur résiduelle 1 000 € | somme des dotations **9 000,00**, **VNC finale 1 000,00** |
+| Plan **linéaire** (non touché) | 5 × **2 000,00** |
+| pageerror | **0** |
+
+---
+
+## 🟢 MAJ précédente — INVENTAIRE & CUT-OFF : le résultat devient un RÉSULTAT D'EXERCICE — v644
+**Quoi :** sans travaux d'inventaire, un résultat n'est qu'un **résultat de trésorerie déguisé** : une charge engagée mais non facturée n'y figure pas, un produit acquis non facturé non plus, une assurance payée d'avance y pèse en entier, et tout ce qui a été acheté est passé en charge — même ce qui dort encore en magasin. Le fichier ne contenait **aucune** de ces écritures (0 occurrence de FNP, CCA, PCA, variation de stock ou provision fonctionnelle ; le `418` n'existait que comme libellé de plan). Nouveau module **« Inventaire & cut-off »** (rubrique **Traitements**) : **8 travaux**, chacun avec sa saisie, l'**aperçu de son écriture en direct** et son bouton de génération.
+
+| Travail | Écriture | Extourne |
+| --- | --- | --- |
+| **Variation de stock** | annulation du stock initial puis constatation du stock final, `3x ↔ 603x` (achats stockés) ou `713x` (production stockée) | non |
+| **Factures non parvenues (FNP)** | `6x` + `44586` → **`408`** | **oui** |
+| **Factures à établir (FAE)** | **`418`** → `7x` + `44587` | **oui** |
+| **Charges constatées d'avance (CCA)** | **`486`** → `6x` | **oui** |
+| **Produits constatés d'avance (PCA)** | `7x` → **`487`** | **oui** |
+| **Charges à payer (sociales & fiscales)** | `6x` → `428` / `438` / `448` | **oui** |
+| **Intérêts courus** | `661` → `1688` | **oui** |
+| **Dépréciation des créances clients** | `68174` → `491` | non |
+
+**L'extourne n'est pas une option.** Les six travaux de **rattachement** génèrent, en plus de l'écriture datée de la clôture, leur **extourne au premier jour de l'exercice suivant** — strictement inversée, vérifiée par sonde. Un cut-off qui ne s'extourne pas **double la charge l'année d'après** : c'est l'erreur classique, elle est ici impossible. La variation de stock et la dépréciation, elles, ne s'extournent pas (le stock final devient le stock initial, la dépréciation se reprend sur décision).
+
+**Deux travaux se proposent tout seuls, à partir du dossier :** « **Reprendre les comptes de stock** » relève tous les comptes de classe 3 mouvementés et reporte leur solde en **stock initial** (il ne reste qu'à saisir le final) ; « **Reprendre les créances échues** » relève les règlements clients **échus et non soldés** et propose la dépréciation sur le **HT**. Le logiciel ne décide de rien : il présente ce qu'il sait, l'humain tranche le montant.
+
+**Comment — nouvel addon `yada-addon-inventaire` (100% ADDITIF) + 2 éditions chirurgicales :** clé `inventaire:(typeof pageInventaire==='function'?pageInventaire:repli)` au **dispatch de `render()`** (même patron gardé que `controles`/`recurrentes`), et `'inventaire'` ajouté à la rubrique **Traitements** de la barre v641. **Points techniques :** (1) les **17 comptes de cut-off manquants** (408, 44586, 418, 486, 487, 1688, 68174, 491, 603x, 713x, 428, 438, 448…) sont **ajoutés au plan** s'ils n'y sont pas — le module ne peut pas écrire sur un compte qui n'existe pas ; (2) chaque travail écrit **une seule écriture** au libellé stable `INVENTAIRE <CLÉ> <exercice>` → **régénérer remplace**, jamais de doublon (vérifié) ; (3) la génération est **refusée si l'écriture ne s'équilibre pas** — aucune écriture déséquilibrée ne peut naître du module ; (4) l'**effet sur le résultat** est affiché en KPI, calculé sur les seules écritures d'inventaire (extournes exclues). Rendu **Registre N&B** scopé `#yada-inv`. `sw.js` yada-v239, badge v644, `version.json` 644.
+
+**Validé :** `node --check` (**314 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014) + balises (3/5/3) + **filet d'équilibre** ✅ + sonde Playwright sur un dossier d'essai (achat 10 000 passé en charge, stock initial 3 000) :
+
+| Mesure | Résultat |
+| --- | --- |
+| Module rendu · travaux · boutons vides | ✓ · **8** · **0** |
+| **Stock** — reprise automatique | `370000000` repris à **3 000,00** |
+| **Stock** — écriture (final saisi à 4 200) | `603700000 3 000 D · 370 3 000 C` puis `370 4 200 D · 603700000 4 200 C` — **équilibrée** |
+| **FNP** (1 000 HT + 200 TVA) | `606 1 000 D · 44586 200 D · **408 1 200 C**`, datée du **31/12/2026** |
+| **FNP — extourne** | générée au **01/01/2027**, **strictement inversée** |
+| **CCA** (600) | `486 600 D · 616 600 C` |
+| **Idempotence** — régénérer FNP | **2 écritures** (l'écriture + son extourne), pas 4 |
+| **Effet sur le résultat** | charges **9 200** = 10 000 − 1 200 (variation de stock) + 1 000 (FNP) − 600 (CCA) — le cut-off **fait bouger le résultat**, exactement du montant attendu |
+| Écritures déséquilibrées · pageerror · console.error | **0** · **0** · **0** |
+| Rubrique **Traitements** de la barre | « **Inventaire & cut-off** » présent |
+
+---
+
+## 🟢 MAJ précédente — BILAN & COMPTE DE RÉSULTAT NORMALISÉS (+ SIG, + comparatif N-1) — v643
+**Quoi :** les états produits jusqu'ici n'étaient pas des états — c'étaient des **balances de clôture regroupées par sens de solde**. Conséquence concrète : les **amortissements (28x)** et les **dépréciations (29x/39x/49x)**, créditeurs, se retrouvaient **AU PASSIF** au lieu d'être déduits de l'actif → **l'actif était gonflé** et le « TOTAL ACTIF » affiché n'était pas l'actif net. Il n'y avait ni rubriques, ni colonnes Brut / Amortissements / Net, ni exercice précédent, ni soldes intermédiaires de gestion.
+
+**Trois états ajoutés** (les anciens ne sont pas touchés) :
+
+| État | Ce qu'il apporte |
+| --- | --- |
+| **Bilan** | Rubriques PCG (immobilisations incorporelles / corporelles / financières · stocks · créances clients · autres créances · disponibilités — capitaux propres · provisions · dettes), colonnes **Brut · Amortissements & dépréciations · Net**, et **Net N-1** |
+| **Compte de résultat** | Par nature (produits et charges d'exploitation, financiers, exceptionnels), **avec N-1**, puis le détail compte par compte |
+| **Soldes intermédiaires de gestion** | Marge commerciale · Production de l'exercice · **Valeur ajoutée** · **EBE** · Résultat d'exploitation · financier · courant · exceptionnel · **Résultat net**, avec N-1 |
+
+**Deux points où la comptabilité se joue vraiment :**
+1. **Le côté décide de la rubrique.** Un compte de classe 4 (et 51) peut être débiteur **ou** créditeur : un `401` débiteur est une **créance**, un `512` créditeur est un **concours bancaire**, une `44571` créditrice est une **dette fiscale** — alors qu'un `44566` débiteur est une **créance**. Les rubriques d'actif ne sont donc testées que sur un **solde débiteur**, celles de passif sur un **solde créditeur**. Un premier jet qui classait par simple préfixe envoyait la TVA collectée à l'actif en négatif.
+2. **Le bilan est équilibré PAR CONSTRUCTION — sans plug silencieux.** Chaque compte de bilan tombe dans **exactement une** rubrique (ce qui ne tombe nulle part reste visible en « autres »), donc la somme est préservée. Ce qui reste entre l'actif et le passif, ce sont les **résultats des exercices antérieurs que la clôture n'a pas encore affectés** : ils sont **nommés** (« Report à nouveau — résultats antérieurs non affectés ») au lieu de laisser un écart. Et le **résultat de l'exercice n'est ajouté que s'il n'a pas déjà été comptabilisé en `12x`** (clôture passée) — sinon il serait compté deux fois.
+
+**Comment — nouvel addon `yada-addon-etats-normalises` (100% ADDITIF) :** agrégation propre `soldesEtn(classes, d0, d1, exclure)` (indépendante de celle des anciens états), `etnBilan(fin)` et `etnCR(d0,d1)` exposés, rendu en `.doc-page` imprimable (même habillage que les autres éditions, repris par le filet v234), carte **« États de synthèse normalisés »** greffée sur `pageEditions` (rubrique **États** de la barre v641) avec 4 KPI et 3 boutons. L'exercice N-1 est déduit par `addAnnees(±1)`. `sw.js` yada-v238, badge v643, `version.json` 643.
+
+**Validé :** `node --check` (**313 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014) + balises (3/5/3) + **filet d'équilibre** ✅ + sonde Playwright sur un dossier construit à la main (exercice 2025 puis 2026, immobilisation amortie, vente, achat, paie) :
+
+| Mesure | Résultat |
+| --- | --- |
+| **Immobilisations corporelles** | Brut **10 000,00** · Amort. **3 000,00** · **Net 7 000,00** — l'amortissement est **déduit de l'actif** |
+| Amortissements figurant **au passif** | **0** (c'était le défaut) |
+| Total actif net · Total passif | **54 600,00** = **54 600,00** — **bilan équilibré ✓** |
+| Colonne **Net N-1** | remplie (actif N-1 **22 000,00**) |
+| Résultats antérieurs non affectés | **10 000,00**, **nommés** au passif (= résultat 2025) |
+| Résultat de l'exercice | **4 000,00** au passif, **non redoublé** avec un éventuel `12x` |
+| **SIG** (vérifiés à la main) | Production **20 000** − conso **8 000** = **VA 12 000** ; − personnel **5 000** = **EBE 7 000** ; − dotations **3 000** = **résultat d'exploitation 4 000** = résultat net |
+| Carte des Éditions | 3 boutons, **0 bouton vide** |
+| pageerror · console.error | **0** · **0** |
+
+---
+
+## 🟢 MAJ précédente — TVA SUR LES ENCAISSEMENTS : l'exigibilité devient RÉELLE — v642
+**Quoi :** le réglage **« Sur les encaissements / Sur les débits »** n'était qu'une **mention imprimée sur la facture** : l'écriture créditait `445710000` dès la facturation. Autrement dit, quel que soit le réglage, YADA déclarait la TVA **sur les débits** — donc, pour un **prestataire de services** au régime des encaissements, la CA3 réclamait la TVA **avant son encaissement**, tous les mois. C'était le défaut le plus lourd du logiciel : un **risque fiscal**, pas un défaut d'affichage.
+
+**Comment la TVA devient exigible, maintenant :**
+1. **À la facturation** — sous le régime des **encaissements**, la TVA d'une vente est portée **en attente** sur **`445800000` « TVA à régulariser »**. Le compte d'attente n'étant ni un `4457x` ni un `4456x`, **la CA3 ne la voit pas** : rien n'est déclaré tant que rien n'est encaissé (aucune modification du calcul CA3 n'a été nécessaire).
+2. **À l'encaissement** — un **10ᵉ automatisme**, **« Exigibilité de la TVA (encaissements) »**, constate la part **réellement encaissée** de chaque facture et bascule la TVA correspondante **`445800000` (débit) → `4457x` (crédit)** par une OD au journal **ODTVA**. Elle devient alors exigible et **entre dans la CA3 du mois du règlement**.
+
+**La part encaissée est lue, jamais devinée :** `reglement.regle / facture.ttc` quand le suivi des règlements existe (donc **les encaissements partiels basculent au prorata**), sinon le **lettrage** du compte de tiers fait foi (lettré = soldé). L'automatisme est **idempotent** : il compare le cumul exigible à ce qu'il a déjà basculé (`ecriture.tvaExig`) et ne poste que le **delta**.
+
+**Le régime par défaut reste « sur les débits ».** Aucun dossier existant ne change de comportement tant que l'exigibilité n'est pas **explicitement** réglée sur les encaissements — vérifié par sonde. Le choix se fait dans la carte **« Exigibilité de la TVA »** du module TVA (rubrique **Déclarations**), qui affiche aussi la **TVA en attente**, la **TVA devenue exigible**, et **facture par facture** ce qui reste à encaisser.
+
+**Comment — nouvel addon `yada-addon-tva-exigibilite` (100% ADDITIF, aucune édition chirurgicale)**, injecté **avant** l'addon des contrôles pour que celui-ci **reste en dernier** du registre (invariant v636). **Points techniques :** (1) l'interception se fait sur **`genEcriture`** (enveloppe du binding global) et non sur `posterFacture` — donc **tous les chemins de facturation** en bénéficient (saisie, fenêtre A4, dépôt comptabilisé, récurrences) ; (2) le compte de TVA **d'origine est mémorisé** sur l'écriture (`tvaAtt:[{cpt,montant}]`) → la bascule recrédite **le bon compte par taux** (20 / 10 / 5,5 %), jamais un compte générique ; (3) les OD de bascule sont **équilibrées par construction** (débit attente = crédit collectée) ; (4) **aucune facture d'achat n'est touchée** (la TVA déductible sur services suit ses propres règles et n'entre pas dans ce lot). `sw.js` yada-v237, badge v642, `version.json` 642.
+
+**Validé :** `node --check` (**312 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014) + balises (3/5/3) + **filet d'équilibre** ✅ + sonde Playwright sur un dossier d'essai (facture 2 000 HT / 400 TVA) :
+
+| Mesure | Résultat |
+| --- | --- |
+| Régime **par défaut** | **« débits »** — TVA sur `445710000`, CA3 = 200,00 € : **comportement inchangé** |
+| Facturation sous **encaissements** | `411CLIE00 2 400 D · **445800000 400 C** · 706 2 000 C` — **écriture équilibrée** |
+| **CA3 du mois de facturation** | **0,00 €** — la TVA non encaissée n'est plus déclarée |
+| Simulation tant que rien n'est encaissé | **0 action**, dossier **strictement inchangé** (JSON identique) |
+| **Encaissement partiel (50 %)** | **1 facture basculée**, CA3 du mois de paiement = **200,00 €** (la moitié), mois de facturation toujours 0 |
+| Second passage (idempotence) | **0 action** |
+| **Solde du reste** | CA3 = **200,00 €**, **solde `445800000` = 0,00 €** — le compte d'attente est apuré |
+| Troisième passage | **0 action** |
+| Registre des automatismes | **10**, contrôles **toujours en dernier** |
+| Écritures déséquilibrées · pageerror · console.error | **0** · **0** · **0** |
+| Carte « Exigibilité de la TVA » | rendue dans le module TVA, **2 boutons**, **0 bouton vide** |
+
+---
+
+## 🟢 MAJ précédente — LA BANDE DU HAUT DEVIENT LE POSTE DE COMMANDE (10 rubriques métier) — v641
+**Quoi :** demande — *« je veux que la bande du haut soit l'acteur majeur des paramètres »*, chaque module placé dans une rubrique. La barre de menus de la Consultation (Fichier · Exercice · Journal · Compte · Balances · Paramètres · Utilitaires · Navigation · **Modules** · Aide) est restructurée en **10 rubriques métier** qui suivent la chaîne comptable :
+
+| Rubrique | Ce qu'elle reprend | Modules qu'elle liste |
+| --- | --- | --- |
+| **Fichier** | Fichier + **Exercice** | — |
+| **Consultation** | Journal · Compte · Balances · Navigation | — |
+| **Saisie** | — | Journal comptable · Fournisseurs · Écritures récurrentes · Import bancaire · Charges & Paie |
+| **Traitements** | Utilitaires | Automatismes · Rapprochement bancaire · Banque · Immobilisations |
+| **Déclarations** | — | Module TVA |
+| **États** | — | Éditions comptables |
+| **Révision** | — | Contrôles de cohérence |
+| **Analyse** | — | Tableau de bord · Analytique & rentabilité · Suivi des règlements · Pilotage · Salarié |
+| **Paramètres** | Réglages de la consultation | Plan comptable · Tiers · Paramétrage · Informations société · Sociétés · Coffre-fort · Import/Export FEC |
+| **Aide** | Aide (inchangée, toujours en dernier) | — |
+
+**Le menu plat « Modules » disparaît** : ses 24 entrées rejoignent leur rubrique. Les rubriques nouvelles (Déclarations, États, Révision) n'ont aujourd'hui qu'un module chacune — **elles se remplissent aux étapes suivantes** (Liasse fiscale, Bilan/CR normalisés, Dossier de révision), ce qui est précisément leur raison d'être : la barre est **la structure d'accueil** du programme comptable à venir.
+
+**Comment — nouvel addon `yada-addon-barre-commande` (100% ADDITIF) + 1 édition chirurgicale :** les menus natifs ne sont **pas réécrits** — leurs boutons sont **DÉPLACÉS** dans la nouvelle rubrique (`appendChild` du nœud existant → les `onclick` en ligne voyagent avec eux, **même parade qu'en v623** pour la barre de filtre de l'éditeur), puis le `<span class="mi">` natif est retiré. Les rubriques sont donc **pilotées par les mêmes handlers qu'avant** (`exSuivant`, `fileExportFEC`, `sgSetJrn`…) — aucune logique dupliquée. Les ids des rubriques sont poussés dans **`SG_MENUS`** → elles se ferment avec les autres (`closeMenus`, clic extérieur). L'édition chirurgicale est une **ligne gardée** dans l'ancien `ensureMenu` (`if(window.YADA_BARRE) return;`) qui empêche la reconstruction du menu plat par son intervalle de 900 ms. **Points techniques :** (1) **idempotent** — la barre est marquée `data-yb="1"` ; `pageCompta` la reconstruisant à chaque rendu, le marqueur disparaît et la rubrique se rebâtit, sans jamais se dédoubler ; (2) **0 bouton vide** (invariant v629/v630) — un module absent de `window.YADA_OK` **n'est pas affiché**, et une rubrique qui se retrouverait vide **n'entre pas dans la barre** ; (3) en-têtes de rubrique `.yb-grp` aux **jetons Registre** (mono 10 px, gris `#8b8b90`), déroulants bornés à `82vh`. `sw.js` yada-v236, badge v641, `version.json` 641.
+
+**Validé :** `node --check` (**311 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014) + balises (3/5/3) + **filet d'équilibre** ✅ + sonde Playwright :
+
+| Mesure | Résultat |
+| --- | --- |
+| Barre rendue | **10 rubriques** — Fichier · Consultation · Saisie · Traitements · Déclarations · États · Révision · Analyse · Paramètres · Aide |
+| Ancien menu plat « Modules » | **retiré** |
+| Boutons des déroulants · **boutons vides** | **79** · **0** |
+| Menus natifs repris (Fichier = Fichier + Exercice) | **21 boutons**, « Exercice suivant… » présent |
+| Navigation réelle depuis la barre | **6/6** (tva · editions · controles · automatismes · journal · dash) |
+| Débordement de barre à 1440 / 1280 / 1024 / 900 px | **aucun** (`scrollWidth = clientWidth`, document sans défilement horizontal) |
+| pageerror · console.error | **0** · **0** |
+
+**Le programme qui suit** (chaque étape rejoint sa rubrique) : **v642** TVA sur les encaissements (Déclarations) · **v643** Bilan & Compte de résultat normalisés + SIG + N-1 (États) · **v644** Inventaire & cut-off (Traitements) · **v645** amortissement dégressif — bascule linéaire (Traitements) · **v646** Dossier de révision par cycles (Révision) · **v647** Liasse fiscale 2050-2059 (Déclarations) · **v648** Analytique par axes / chantiers (Analyse).
+
+---
+
+## 🟢 MAJ précédente — ÉTAPE 8 : LE JOURNAL REDEVIENT OUVRABLE (11 s → 0,1 s) — v640
+**Quoi :** profil de **tous les modules** sur un dossier réel. Le **Journal comptable** met **11,2 s** à s'afficher sur 15 000 écritures (1,5 s dès 2 000) — de très loin le module le plus lourd, et l'un des plus ouverts. Il s'affiche désormais en **106 ms**.
+
+| Dossier | Avant | Après |
+| --- | --- | --- |
+| 60 écritures | 62 ms | **62 ms** — identique, aucun contrôle en plus |
+| 2 000 écritures | ≈ 1 500 ms | **99 ms** |
+| **15 000 écritures** | **≈ 14 000 ms** | **106 ms** — **×130** |
+
+**Correctif : la pagination du journal.** Le module construisait **45 002 lignes de tableau** d'un seul tenant (11,9 Mo de HTML). Seules **100 écritures** sont désormais rendues à la fois, avec un pied de navigation « Écritures 1 à 100 sur 15 000 · page 1 sur 150 · ‹ Précédent / Suivant › » **au-dessus et au-dessous** du tableau. **Seuil : 100 écritures** — en deçà, c'est-à-dire la quasi-totalité des journaux d'un dossier courant, la page est rendue **exactement comme avant**, sans le moindre contrôle supplémentaire (vérifié : 60 écritures → 180 lignes, **0 pager**).
+
+**Ce qui n'est PAS borné :** les **totaux du pied** portent sur le **journal entier** (déplacés hors de la boucle d'affichage), le **sous-titre** annonce le nombre total d'écritures, et les **compteurs du rail** restent complets. Mesuré : totaux **identiques page 1 et page 2**, et égaux au total attendu du journal (1 800 000,00 €). La page revient à **1** dès qu'on change de journal ou de recherche.
+
+**Comment :** édition chirurgicale de `bodyRows` et de `pageJournal` (module Registre), plus `window.jrPage(n)` et un style `.jr-pag` aux jetons noir & blanc du module — **aucun nouveau fichier, aucune couleur nouvelle, 0 bouton vide**.
+
+**Validé :** `node --check` (**310 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014) + balises (3/5/3) + **filet d'équilibre** ✅ + sonde Playwright (rendus 60 / 2 000 / 15 000 écritures, totaux page 1 = page 2 = journal, retour page 1 au changement de journal et de recherche, **0 bouton vide**, **routage 25/25**, **0 pageerror**, **0 console.error**). `sw.js` yada-v235, badge v640, `version.json` 640.
+
+**Leçon de méthode — deux pièges de sonde coup sur coup, et deux corrections abandonnées.**
+1. **J'ai d'abord optimisé du code mort.** Le fichier contient **trois** définitions de `pageJournal` ; j'ai lu la première (ligne 9081, avec ses onglets) et paginé celle-là. Le module réellement affiché est le **quatrième override** (`#yada-jr`, reconstruction Registre v598) — ma pagination n'était jamais exécutée. **Dans un fichier à 310 scripts qui se surchargent, on identifie la définition VIVANTE avant de lire le code** (ici : le DOM rendu portait `#yada-jr`, pas `.ecr`).
+2. **J'ai ensuite accusé la mauvaise fonction.** Une mesure à un coup donnait « Journal 13,4 s, et 7,7 s en neutralisant `jrnFactureLien` » — j'en ai conclu que ce helper coûtait 5,7 s en recherches linéaires. En comptant les appels : **0 appel**. L'écart venait du **ramasse-miettes** ; répétée, la mesure donne 14 / 22 / 28 s. **Une mesure à un coup sur un rendu lourd ne prouve rien : il faut répéter, et compter les appels avant d'attribuer un coût.** L'index écrit pour ce helper — pourtant prouvé équivalent sur ses quatre branches — a été **retiré** : corriger ce qui n'est pas appelé n'est pas une amélioration.
+3. Le vrai coût, mesuré ensuite : construction du HTML **1,4 s**, injection DOM **0,5 s**, et **le reste dans les filets génériques post-rendu** (alignement des en-têtes v631, contraste v632) qui balayent chaque cellule. Rien à optimiser en eux : c'est le **volume du DOM** qu'il fallait réduire — et la pagination les allège d'autant.
+
+---
+
+## 🟢 MAJ précédente — ÉTAPE 7 : LA VITESSE (le lettrage cesse de relire le dossier une fois par tiers) — v639
+**Quoi :** *« automatiser **et rapidement** »* — la seconde moitié de la demande, mesurée. Profil d'un passage, automatisme par automatisme, sur trois tailles de dossier : **le lettrage pèse 90 % du coût**, et il croît **en carré** — 500 écritures : 42 ms · 2 000 : 45 ms · 6 000 : **370 ms**. Sur un dossier réel de **15 000 écritures**, une simple simulation prenait **2,58 secondes**. Elle en prend désormais **12**.
+
+**La cause n'était pas le lettrage, mais `auxLignes(t)`** — la fonction qui reconstitue les lignes d'un tiers, que le lettrage appelle **une fois par tiers** : elle **recopie et retrie la TOTALITÉ des écritures à chaque appel** (`db.ecritures.slice().sort(...)`), relit toutes les lignes, et pour chaque ligne portée sur le **collectif** 401/411 refait un `db.factures.find(...)` **et** un `db.banque.find(...)`. Coût = **tiers × écritures** (× factures). 300 tiers × 15 000 écritures = 4,5 millions d'unités.
+
+**Correctif : un seul passage, mis en cache.** Les lignes sont rangées **par compte** (en ordre de date puis d'index de ligne) et le tiers de chaque écriture est résolu une bonne fois (facture d'abord, mouvement de banque ensuite — l'ordre d'origine). `auxLignes(t)` n'est plus qu'une **lecture de deux seaux + une fusion linéaire** qui restitue l'ordre d'origine.
+
+**Ce que l'index NE met PAS en cache : les valeurs.** Il ne garde que la **structure** — quelle ligne appartient à quel compte, dans quel ordre, et à quel tiers l'écriture est rattachée — et conserve des **références aux lignes réelles** ; débit, crédit et surtout **`lettre` sont relus à chaque appel**. Un lettrage posé au milieu d'un passage est donc vu **immédiatement**, exactement comme avant (mesuré). L'index est invalidé par l'**empreinte du dossier** (nombres d'écritures / factures / mouvements / tiers + dossier actif), par tout **enregistrement**, par un **changement de dossier**, et de toute façon **au bout de 4 s**. En cas d'imprévu, `auxLignes` **retombe sur l'implémentation d'origine** (`try/catch`, conservée sous `window.auxLignesOriginal`) : aucune régression possible.
+
+**Profitent du correctif, sans les toucher :** le **lettrage automatique**, les **balances fournisseurs / clients** (qui bouclent elles aussi sur tous les tiers), le **compte auxiliaire** et le **grand-livre** — y compris la liste des tiers mouvementés de la Consultation, qui appelait `auxLignes` sur chaque tiers juste pour tester si elle était vide.
+
+**Comment — nouvel addon `yada-addon-auxindex` (100% ADDITIF, aucune édition chirurgicale).** `sw.js` yada-v234, badge v639, `version.json` 639.
+
+**Validé :** `node --check` (**310 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS statiques (2014/2014) + balises `</head>`/`</body>`/`</html>` inchangées (3/5/3) + **filet d'équilibre** (vente 1200=1200, achat 600=600 ✅) + sondes Playwright.
+
+**Équivalence stricte — le point qui compte.** Sur un dossier construit pour couvrir **toutes les branches** de la fonction, comparaison **JSON caractère par caractère** entre l'implémentation d'origine et l'indexée, **tiers par tiers** :
+
+| Cas de figure | Résultat |
+| --- | --- |
+| Fournisseur à compte auxiliaire (lignes sur l'aux, style FEC) | **identique** |
+| Client **sans** compte auxiliaire, lignes sur le collectif 411 rattachées par **facture** | **identique** |
+| Client à aux **et** ligne au collectif rattachée par **mouvement de banque** | **identique** |
+| Cas limite : compte auxiliaire **confondu** avec le collectif (`401`) | **identique** (la branche auxiliaire l'emporte, comme le `return` d'origine) |
+| Tiers sans aucune ligne | **identique** |
+| Écriture au collectif **non rattachée** (ni facture ni banque) | **ignorée** des deux côtés |
+| Écritures saisies **dans le désordre de date** | **même ordre** rendu |
+| **Total** | **5 / 5 tiers, égalité JSON stricte** |
+
+| Mesure | Résultat |
+| --- | --- |
+| Lettre posée **sans enregistrement** | **vue immédiatement** (l'index ne cache que la structure) |
+| Écriture ajoutée puis enregistrée | **2 → 3 lignes**, et toujours équivalent |
+| **Balances fournisseurs / clients** (origine vs index) | **rendu identique** |
+| Simulation du lettrage | **pure** — 3 appels : 1/1/1, dossier **inchangé**, **0 lettre posée** ; passage réel → 2 lettres, puis simulation 0 |
+| Routage · grand-livre · compteur v638 | **25/25** · rendu OK · indicateur **4** = module **4** |
+| Écritures déséquilibrées · pageerror · console.error | **0** · **0** · **0** |
+
+**Gain mesuré (simulation du lettrage) :**
+
+| Dossier | Avant | Après | Gain |
+| --- | --- | --- | --- |
+| 500 écritures · 20 tiers | 10 ms | **1 ms** | ×10 |
+| 2 000 écritures · 40 tiers | 44 ms | **1 ms** | ×44 |
+| 6 000 écritures · 120 tiers | 464 ms | **7 ms** | **×66** |
+| **15 000 écritures · 300 tiers** | **2 580 ms** | **12 ms** | **×215** |
+
+Passage complet des **9 automatismes** sur 15 000 écritures : **119 ms** (contre ≈ 2,7 s). Le comportement en carré est cassé.
+
+**Leçon de méthode :** on ne devine pas où passe le temps, **on le mesure automatisme par automatisme et sur plusieurs tailles** — c'est la pente (500 → 2 000 → 6 000) qui a désigné un carré, et le carré qui a désigné `auxLignes`, pas le lettrage qu'on aurait spontanément accusé. Et l'on ne remplace une fonction utilisée par quatre modules **qu'en prouvant l'égalité de sa sortie**, cas limites compris, avec un repli sur l'original en cas d'imprévu.
+
+---
+
+## 🟢 MAJ précédente — ÉTAPE 6 : CE QUI ATTEND SE VOIT (le compteur quitte son module) — v638
+**Quoi :** les cinq étapes ont donné **neuf automatismes**. Il leur manquait la moitié qui compte : **un automatisme qui attend qu'on vienne ouvrir son module n'automatise rien**. Le **compteur d'actions en attente** voyage désormais jusqu'à l'endroit où l'on travaille — la **Consultation** :
+- **barre du bas** (`.sg-status`) : un bouton **« N actions en attente »** qui **ouvre le module** au clic, et **« Automatismes à jour »** quand il n'y a rien (jamais de bouton vide — invariant v629/v630) ; son info-bulle détaille la répartition (« Lettrage : 1 · Imputation : 2 · OD de TVA : 1 ») ;
+- **menu « Modules »** : le même nombre, en **pastille** derrière l'entrée Automatismes — retirée dès que le compte retombe à zéro.
+
+**Une seule source de vérité :** `window.auEnAttente(force)` somme les `run(true)` des automatismes **actifs** — les mêmes simulations que le module, toutes **strictement en lecture seule** (chacune est gardée par son drapeau `sim`). Mesuré : l'indicateur et le KPI du module affichent **le même nombre** (1 010 sur un dossier de 2 000 écritures). Un automatisme **suspendu n'est pas compté** (4 → 3 en suspendant le lettrage).
+
+**Le calcul n'est JAMAIS sur le chemin du rendu.** Sur un dossier de **2 000 écritures**, une passe de simulation coûte **≈ 575 ms** — neuf automatismes qui relisent chacun le dossier. Posée telle quelle après chaque rendu, elle **figerait l'écran**. Deux parades : (1) le calcul est **planifié en temps mort** (`requestIdleCallback`, repli `setTimeout`) et le rendu ne peint que **depuis le cache**, donc gratuitement ; (2) le rafraîchissement **se repose à proportion de son coût** — `repos = coût × 12`, borné à **[1,2 s · 60 s]** : un dossier léger se rafraîchit en 1,2 s, un dossier de 2 000 écritures attend **≈ 7 s**, un dossier très lourd se limite tout seul à une passe par minute. Le compteur n'est marqué périmé **qu'après un enregistrement** (enveloppe de `save`, remise à zéro sur `chargerDossier`) et n'est peint **que si la Consultation est à l'écran**. Mesuré : **rendu 8-9 ms** même juste après un enregistrement.
+
+**Comment — nouvel addon `yada-addon-attente` (100% ADDITIF, aucune édition chirurgicale) :** `window.auEnAttente(force)` (contrat **synchrone** : `force` renvoie une valeur fraîche, sinon le cache — le module et tout appelant gardent la main) + `window.auOuvrirModule()` ; peinture idempotente de `#sg-auatt` (inséré avant `.sp` dans `.sg-status`, même patron que `sg-accinfo` en v296) et de la pastille `.au-mbadge` (l'entrée du menu est repérée par `data-lbl`, de sorte que la reconstruction du menu — qui ne compare que `data-n` — ne la dédouble jamais). **Aucune écriture n'est créée, modifiée ni supprimée** : vérifié par égalité JSON stricte du dossier avant / après trois appels. Rendu **Registre N&B** (jetons existants, aucune couleur nouvelle), **poids 400** (invariant v627). `sw.js` yada-v233, badge v638, `version.json` 638.
+
+**Validé :** `node --check` (**309 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS statiques (2014/2014) + balises `</head>`/`</body>`/`</html>` inchangées (3/5/3) + **filet d'équilibre** (`YADA_CHROME=… node tests/equilibre-ecritures.mjs` : vente 1200=1200, achat 600=600 ✅) + **deux sondes Playwright** :
+
+| Mesure | Résultat |
+| --- | --- |
+| Compteur sur dossier d'essai | **4** — lettrage 1 · imputation 2 · OD de TVA 1 |
+| **Lecture seule stricte** | JSON du dossier **identique** après 3 appels |
+| Indicateur de la barre du bas | « **4 actions en attente** », cliquable, poids **400**, non italique, non souligné |
+| Pastille du menu « Modules » | **4**, poids **400** |
+| Automatisme **suspendu** | **4 → 3** (non compté) |
+| Après « Lancer tout » | **0 en attente**, lettre **A** posée |
+| Libellé à zéro | « **Automatismes à jour** », pastille **retirée** |
+| Clic sur l'indicateur | ouvre le module (`#yada-au` rendu) |
+| **Dossier de 2 000 écritures** — coût d'une passe | **575 ms** |
+| **Rendu** (avant / après enregistrement) | **8 ms** / **9 ms** — jamais bloqué |
+| 50 appels au cache | **0 ms** |
+| Repos proportionnel | dossier lourd : **pas** de recalcul dans la seconde · rafraîchi **après ≈ 7 s** |
+| Cohérence indicateur ↔ KPI du module | **1 010** = **1 010** |
+| Écritures déséquilibrées · routage · débordement | **0** · **25/25** · **0** |
+| **0 pageerror**, **0 console.error** | ✓ |
+
+**Leçon de méthode (suite de la série) :** la première version posait le calcul en `setTimeout(…,0)` après le rendu — fonctionnellement juste, **575 ms de gel** sur un dossier réel. Une sonde qui ne mesure que le **résultat** valide une fonctionnalité qui rend le logiciel désagréable ; il faut aussi mesurer **ce qu'elle coûte au moment où elle s'exécute**. D'où le **temps mort** et le **repos proportionnel au coût** — un rafraîchissement qui se limite tout seul à mesure que le dossier grossit.
+
+---
+
+## 🟢 MAJ précédente — ÉTAPE 5 de l'automatisation : TRAITEMENTS PÉRIODIQUES (OD de TVA · dotations · relances · clôture) — v637
+**Quoi :** fin de *« Développement de tout le système étape par étape pour automatiser et rapidement »*. **Étape 5 : les quatre traitements qui reviennent à date fixe** — et que personne n'aime refaire à la main — s'inscrivent dans le module **Automatismes**, qui compte désormais **9 automatismes** :
+
+| Automatisme | Période | Ce qu'il fait | Ce qu'il refuse de faire |
+| --- | --- | --- | --- |
+| **OD de TVA des mois clos** | mois clos de l'exercice | Génère l'écriture de TVA (journal **OD TVA**) de chaque mois **clos** : solde la **collectée** (4457x) et la **déductible** (4456x), porte le solde en **TVA à décaisser** (44551) ou en **crédit à reporter** (44567). | Le **mois en cours** (il peut encore recevoir des factures), les mois **Néant**, les mois **déjà soldés**, le régime de **franchise en base**. |
+| **Dotations d'amortissement** | 31/12 de l'exercice | Pose la dotation de l'exercice de **chaque immobilisation**, d'après son **plan d'amortissement** (681x au débit / 28x au crédit). | L'exercice **tant qu'il court**, une immobilisation **cédée** (la sortie a déjà soldé les amortissements), une dotation **nulle**, une dotation **déjà générée**. |
+| **Relances des clients échus** | factures échues | Relance les clients dont une facture est **échue et non réglée**, et mémorise la relance (date + rang). | Une facture **non encore échue**, une relance **répétée avant 15 jours**, un client **sans adresse e-mail** (on ne relance pas dans le vide). |
+| **Clôture de l'exercice** | fin d'exercice | Solde les **classes 6 et 7** dans le résultat (**OD de résultat**, 120/129), puis reporte les **à-nouveaux** sur l'exercice suivant (classes 1 à 5). | Un exercice **en cours**, un exercice **déjà clôturé**, un **report déséquilibré** — et les deux gardes ci-dessous. |
+
+**La clôture ne s'ouvre qu'à trois conditions, toutes lues dans les données.** C'est l'acte comptable le plus lourd du logiciel : il ne se déclenche que si (1) l'exercice est **terminé** (date de fin dépassée), (2) le dossier ne porte **aucune anomalie critique** — écriture déséquilibrée, ligne sans compte, débit **et** crédit sur une même ligne, telles que les relève l'**étape 4** : *on ne clôture pas un exercice qui ne tient pas* —, et (3) **chaque mois taxable a sa CA3 déposée**, la déclaration de chaque mois faisant foi que l'exercice a été passé en revue. Les trois étapes se tiennent ainsi : la TVA se déclare, les contrôles constatent, la clôture s'autorise. À défaut, le motif du refus est écrit en clair dans la carte et dans le journal.
+
+**Le fil commun des cinq étapes :** un automatisme n'agit que sur ce qui est **acquis**. Un mois clos, un exercice terminé, une facture échue. Ce qui court encore est laissé de côté jusqu'à son terme — comme l'étape 1 refusait un lettrage non strictement équilibré et l'étape 2 refusait de deviner un compte.
+
+**Comment — nouvel addon `yada-addon-periodiques` (100% ADDITIF, aucune édition chirurgicale) :** quatre `push` sur **`window.YADA_AUTOS`** (registre ouvert en v634), injectés **avant** l'addon des contrôles pour que celui-ci **reste en dernier** du registre (invariant v636 : il audite l'état d'après-passage). **Points techniques :** (1) les écritures sont posées par **`posterODTVA`** et **`posterOD`** avec **exactement les mêmes libellés** que les boutons des modules TVA, Immobilisations et Éditions (`OD TVA CA3 MM/AAAA`, `DOTATION IMMO <n°> <an>`, `OD RÉSULTAT <an>`, `À-NOUVEAUX <an>`) — donc **les anti-doublons existants s'appliquent tels quels** (`odTvaDejaPostee`, `imDotFaite`, `t1ResultatPoste`, `t1ANPoste`) et le passage est **idempotent** ; (2) les fonctions à bouton (`tvaGenererOD`, `imGenererDotation`, `relancerClient`, `t1GenererResultat`/`t1GenererAN`) ne sont **pas réutilisées en boucle** — elles appellent `save()` + `render()` + `toast()` à chaque élément : les lignes sont reconstruites à l'identique et on **enregistre une seule fois** en fin de passage (même parade qu'en v633 avec `lzLettrer`) ; (3) les **à-nouveaux sont lus APRÈS** l'OD de résultat, donc résultat compris, et **refusés si le report ne s'équilibre pas** ; (4) la relance n'écrit que `db.relances[tiers]` (date + rang) — **aucune écriture comptable**. Carte **« Traitements périodiques — état de l'exercice »** greffée sous le module Automatismes : les 4 traitements avec leur période, ce qui les attend et **le motif du refus en clair**, puis le détail des mois de TVA, des dotations et des clients échus (avec, pour chacun, `à relancer` ou la raison de l'écart). Rendu **Registre N&B** (classes `au-*`, aucun nouveau CSS). `sw.js` yada-v232, badge v637, `version.json` 637.
+
+**Validé :** `node --check` (**308 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS statiques (2014/2014) + balises `</head>`/`</body>`/`</html>` inchangées (3/5/3) + **filet d'équilibre** (`YADA_CHROME=… node tests/equilibre-ecritures.mjs` : vente 1200=1200, achat 600=600 ✅) + **rendu Playwright sur deux dossiers d'essai** — un **exercice en cours** (2026) et un **exercice clos** (2025) :
+
+| Mesure | Résultat |
+| --- | --- |
+| Registre | **9 automatismes**, contrôles **en dernier** |
+| **Exercice en cours** — OD de TVA | **1** mois clos généré (mars) · **mois en cours refusé** |
+| **Exercice en cours** — dotations · clôture | **refusées** — « Exercice en cours jusqu'au 31/12/2026 » |
+| **Exercice en cours** — relances | **1 sur 4** — écartés : e-mail absent · relancé il y a 3 j · échéance future |
+| Second passage (idempotence) | **0 action** (TVA · relances) |
+| **Exercice clos** — dotations | **1** (1 200,00 €) · **immobilisation cédée exclue** |
+| **Exercice clos** — clôture refusée (CA3) | « 1 mois sans CA3 déposée (févr. 2025) » |
+| **Exercice clos** — clôture refusée (critique) | « 1 anomalie critique au dossier — on ne clôture pas un exercice qui ne tient pas » |
+| **Exercice clos** — clôture exécutée | **OD RÉSULTAT 2025** + **À-NOUVEAUX 2026**, les deux **équilibrées** |
+| Écritures déséquilibrées après passage | **0** |
+| « **Lancer tout** » | ordre respecté, contrôles **une seule fois** et **en dernier** |
+| **Second passage** global | **0 action**, **0 écriture créée** |
+
++ **routage 25/25** + module Automatismes : **9 automatismes** + journal + 4 cartes (règles d'imputation · relevés mémorisés · **traitements périodiques** · contrôles), **1 sortie « Fermer »**, **0 en-tête vide**, **0 bouton vide**, **0 gras**, **0 débordement** + **0 pageerror**, **0 console.error**. Badge → **v637**.
+
+**Les cinq étapes sont livrées.** Le dossier se lettre, apprend ses imputations, se pointe contre le relevé, s'audite et passe ses traitements périodiques — d'un seul bouton, chacun refusant ce qui n'est pas acquis.
+
+---
+
+## 🟢 MAJ précédente — ÉTAPE 4 de l'automatisation : CONTRÔLES DE COHÉRENCE EN CONTINU (le dossier s'audite tout seul après chaque passage) — v636
+**Quoi :** suite de *« Développement de tout le système étape par étape pour automatiser et rapidement »*. **Étape 4 : le contrôle ne s'ouvre plus, il tourne.** Le module **Contrôles de cohérence** (v610) existait déjà, mais il fallait **aller le voir** : il ne disait rien tant qu'on ne l'ouvrait pas, et il redisait la même chose à chaque ouverture. Il est désormais inscrit comme **cinquième automatisme** et **passe tout le dossier au crible après chaque passage**, en remontant ses anomalies dans le **journal des passages**.
+
+**Ce qu'il compte : ce qui est NOUVEAU.** Le module Contrôles est en **lecture seule** — il ne corrige rien, par construction. L'action d'un contrôle n'est donc pas une correction mais un **signalement** ; et un journal qui répéterait « 7 anomalies » à chaque passage ne dirait rien. L'automatisme ne compte donc que les anomalies **apparues depuis le dernier contrôle** : le journal dit **ce qui a changé**, pas ce qui traîne depuis le début. Une anomalie **corrigée est oubliée** ; si elle **revient**, elle est **re-signalée** — et comme l'empreinte porte le **détail** (donc les montants), une écriture corrigée puis re-déséquilibrée d'un **autre** montant compte bien pour une anomalie neuve.
+
+**Les 7 contrôles, inchangés (module v610) :**
+
+| Gravité | Contrôle |
+| --- | --- |
+| **CRITIQUE** | écritures déséquilibrées (Débit ≠ Crédit) · lignes sans compte valide · débit **et** crédit sur une même ligne |
+| **AVERTISSEMENT** | écritures hors exercice · doublons de pièce probables · écritures sans libellé |
+| **À VÉRIFIER** | comptes de tiers au solde inversé (fournisseur débiteur / client créditeur) |
+
+**Quand il tourne.** (1) **« Lancer tous les automatismes actifs »** : le contrôle est inscrit **en dernier** dans le registre, il audite donc l'état **d'après-passage** — et une seule fois. (2) **« Exécuter maintenant »** sur **un autre** automatisme : le contrôle enchaîne aussitôt, et signale par une notification s'il a trouvé du neuf. (3) **« Exécuter maintenant »** sur le contrôle lui-même. Comme tout automatisme, il se **suspend** d'un interrupteur.
+
+**Comment — nouvel addon `yada-addon-controles-continu` (100% ADDITIF) + 1 édition chirurgicale :** dans `yada-addon-controles`, une ligne gardée expose l'audit — `window.ctlAnalyse=function(){ return analyse(); }` — la fonction vivant jusque-là dans une IIFE. L'addon s'inscrit dans **`window.YADA_AUTOS`** (registre ouvert en v634) et greffe sous le module Automatismes une carte **« Contrôles de cohérence — état du dossier »** : les 7 familles avec leur gravité, le **nombre d'anomalies** et le **nombre de nouvelles**, puis la **liste nominative** des anomalies apparues depuis le dernier passage (contrôle · date · journal · pièce/compte · libellé · détail), l'horodatage du dernier contrôle et un bouton **« Ouvrir le détail des contrôles »**. **Points techniques :** (1) **aucune écriture n'est créée, modifiée ni supprimée** — le seul écrit est le registre des anomalies déjà vues (`db.parametres.controlesContinu.vues`) ; (2) l'empreinte d'une anomalie est `famille + identifiant (écriture ou compte) + détail`, d'où la re-détection d'une anomalie de même nature mais de montant différent ; (3) le registre est **purgé** de ce qui a disparu à chaque passage, donc il ne gonfle pas et une anomalie revenue est bien re-signalée ; (4) le déclenchement « après chaque passage » passe par une **enveloppe de `auLancer`** (et **pas** de `auLancerTout`, qui parcourt déjà le registre — sinon le contrôle tournerait deux fois). Rendu **Registre N&B** (classes `au-*`, aucun nouveau CSS). `sw.js` yada-v231, badge v636, `version.json` 636.
+
+**Validé :** `node --check` (**307 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS statiques équilibrées + balises `</head>`/`</body>`/`</html>` inchangées (3/5/3) + **filet d'équilibre** (`YADA_CHROME=… node tests/equilibre-ecritures.mjs` : vente 1200=1200, achat 600=600 ✅) + **rendu Playwright** sur un dossier d'essai portant **une anomalie de chacune des 7 familles** :
+
+| Mesure | Résultat |
+| --- | --- |
+| Familles détectées | **7 / 7** (1 par famille) |
+| Simulation · passage réel | **7** · **7** (identiques) |
+| **Second passage** (idempotence) | **0 action** — « Aucune anomalie nouvelle — 7 déjà signalées » |
+| Anomalie **corrigée** | **oubliée** (registre 7 → 6), 0 action |
+| Anomalie **revenue** (autre montant) | **re-signalée** (1) |
+| « Exécuter maintenant » sur le **lettrage** | contrôle enchaîné → **2 passages** au journal |
+| « **Lancer tout** » | contrôle **une seule fois**, **en dernier** du registre |
+| Écritures créées ou modifiées par le passage | **0** (JSON identique avant / après) |
+
++ **routage 25/25** + module Automatismes : **5 automatismes** + journal + 3 cartes (règles d'imputation · relevés mémorisés · contrôles), **1 sortie « Fermer »**, **0 en-tête vide**, **0 bouton vide**, **0 bouton sans action**, **0 gras**, **0 débordement** + **0 pageerror**, **0 console.error**. Badge → **v636**.
+
+**Reste des étapes :** **5.** traitements périodiques (OD de TVA, dotations en lot, relances, clôture).
+
+---
+
+## 🟢 MAJ précédente — ÉTAPE 3 de l'automatisation : RAPPROCHEMENT BANCAIRE automatique (pointage relevé ↔ écritures) — v635
+**Quoi :** suite de *« Développement de tout le système étape par étape pour automatiser et rapidement »*. **Étape 3 : le relevé se pointe tout seul contre les écritures.** Deux choses manquaient pour cela : (1) le **relevé n'existait nulle part** — l'Import bancaire (v611) lisait le fichier OFX/CSV dans une variable volatile puis l'oubliait ; (2) le module **Rapprochement bancaire** ne savait pointer qu'à la main, case par case, ou tout d'un coup (« Tout rapprocher », qui coche **aussi les écritures absentes du relevé** — donc faux).
+
+**1. Le relevé est désormais MÉMORISÉ.** Au dépôt d'un fichier dans l'Import bancaire, ses lignes sont retenues dans **`db.parametres.relevesLignes`** (`{compte, date, lib, montant, fitid, src, ecritureId}`). Le message de lecture le dit : « Fichier OFX lu : 2 opération(s). **Relevé mémorisé : 2 ligne(s).** » La mémorisation est **idempotente** — re-déposer le même fichier ajoute **0 ligne** (dédoublonnage par **FITID**, sinon par compte + date + montant + libellé normalisé).
+
+**2. Le pointage.** L'automatisme apparie chaque ligne de relevé non pointée avec l'écriture qui **bouge le même compte 512** (n'importe quel journal — les frais bancaires passés en OD comptent) du **même montant à ±0,01 €**, dans une **fenêtre de ±5 jours**. Une écriture déjà revendiquée par une autre ligne n'est jamais reprise. Le signe est cohérent de bout en bout : un **encaissement** du relevé (montant positif) correspond à un **512 au débit**.
+
+| Cas | Décision |
+| --- | --- |
+| **Un seul candidat** | apparié |
+| **Plusieurs candidats, un strictement plus proche en date** | apparié sur le plus proche |
+| **Plusieurs candidats à égalité de date** | **ambigu → laissé à la main** |
+| **Aucun candidat** (montant absent, ou hors des ±5 jours) | **laissé à la main** |
+
+**3. Ce que ça donne dans le module Rapprochement.** Chaque appariement **coche la case** du relevé de rapprochement correspondant (`rel.rap` du couple compte + mois), **s'il existe et n'est pas verrouillé**. Le pointage manuel ligne à ligne devient donc automatique, **sans jamais dépointer** (l'automatisme n'ajoute jamais que des coches) et sans jamais toucher un montant ni un solde. Un mois dont le relevé n'a pas encore été créé est signalé dans le journal (« N mois sans relevé de rapprochement créé ») : créer le relevé reste un acte humain, puisqu'il déclare le **solde bancaire**.
+
+**Comment — nouvel addon `yada-addon-rapprochement` (100% ADDITIF) + 1 édition chirurgicale :** dans `ibFile` (Import bancaire), après la lecture du fichier, une ligne gardée `window.rbMemoriserReleve(ST.ops,'',ST.format)` — **sans effet si l'addon est absent**. L'addon expose `rbMemoriserReleve` / `rbPointer` / `rbOublierReleve`, s'inscrit dans **`window.YADA_AUTOS`** (registre global ouvert en v634 — une ligne de plus, le module Automatismes n'est pas touché) et greffe sous celui-ci une carte **« Relevés mémorisés & pointage »** : par période, le nombre de lignes, de pointées, de restantes, l'état du relevé de rapprochement, et la **liste des lignes restant à pointer** (celles pour lesquelles le logiciel refuse de trancher). Un bouton **« Oublier »** retire les lignes d'un mois **sans toucher aux écritures ni aux pointages déjà faits**. **Points techniques :** (1) le pointage est **idempotent** — une ligne déjà appariée est sautée, et si l'écriture appariée a **disparu** la ligne redevient à pointer ; (2) **aucune écriture n'est créée ni modifiée** — seul le champ `ecritureId` de la ligne de relevé et le tableau `rel.rap` sont écrits ; (3) le compte 512 retenu est celui du **journal de trésorerie** du dossier (repli `512000000`), et le mouvement est filtré sur **ce** 512 quand plusieurs banques existent. Rendu **Registre N&B** (classes `au-*` du module Automatismes, aucun nouveau CSS). `sw.js` yada-v230, badge v635, `version.json` 635.
+
+**Validé :** `node --check` (**306 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014) + balises `</head>`/`</body>`/`</html>` inchangées (3/5/3) + **filet d'équilibre** (`YADA_CHROME=… node tests/equilibre-ecritures.mjs` : vente 1200=1200, achat 600=600 ✅) + **rendu Playwright** sur dossier d'essai (6 écritures de banque, relevé de 6 lignes) :
+
+| Mesure | Résultat |
+| --- | --- |
+| Lignes mémorisées · **re-dépôt du même fichier** | **6** · **0** (idempotent) |
+| `PRLV SEPA ORANGE SA` −120,50 (écriture le même jour) | **pointée** |
+| `FRAIS TENUE DE COMPTE` −18,90 (écriture à **2 jours**) | **pointée** |
+| `VIR DUPONT SARL` +1 200 (encaissement, 512 au débit) | **pointée** |
+| `PRLV LOYER` −850 (**deux** écritures de 850 le même jour) | **non pointée** — ambiguë |
+| `ACHAT INCONNU XYZ` −42,30 (aucune écriture) | **non pointée** |
+| `PRLV HORS FENETRE` −77 (écriture à **32 jours**) | **non pointée** |
+| Cases cochées dans le relevé de rapprochement | **3** (e1 · e2 · e3) |
+| **Second passage** (idempotence) | **0 action** |
+| Écritures créées ou modifiées · déséquilibrées | **0** · **0** |
+| **Import bancaire réel** (OFX déposé) | « Relevé mémorisé : 2 ligne(s) » |
+
++ **routage 25/25** + module Automatismes : **4 automatismes** + journal + table des règles + carte des relevés, **1 sortie « Fermer »**, **0 en-tête vide**, **0 bouton vide**, **0 gras**, **0 débordement** + **0 pageerror**, **0 console.error**. Badge → **v635**.
+
+**Reste des étapes :** **4.** contrôles de cohérence en continu ; **5.** traitements périodiques (OD de TVA, dotations en lot, relances, clôture).
+
+---
+
+## 🟢 MAJ précédente — ÉTAPE 2 de l'automatisation : moteur d'IMPUTATION QUI APPREND (libellé → compte) — v634
+**Quoi :** suite de *« Développement de tout le système étape par étape pour automatiser et rapidement »*. **Étape 2 : le logiciel retient quel compte a été retenu pour quel libellé, et le repropose.** Deux mémoires, toutes deux construites **à partir des écritures du dossier** — donc d'un **FEC importé** comme d'une saisie :
+
+| Mémoire | Lue sur | Ce qu'elle retient |
+| --- | --- | --- |
+| **banque** | écritures du journal **BQ** | le libellé → la **contrepartie du 512** (le compte en face de la banque) |
+| **nature** | écritures **ACH / VTE** | le libellé → le compte de **charge (6)** ou de **produit (7)** |
+
+**Ce qui en sort, tout de suite :** l'**Import bancaire** (v611) consulte la mémoire **avant** ses mots-clés intégrés. Une opération dont le libellé a déjà été imputé arrive **pré-imputée sur le compte retenu la dernière fois** ; une opération inconnue tombe comme avant sur le **471 compte d'attente**. Et une **correction faite à la main** dans l'Import bancaire devient une **règle manuelle** : elle **prime** sur l'apprentissage et **survit à un réapprentissage** — on corrige une fois, c'est retenu.
+
+**Comment un libellé devient une clé.** Un relevé écrit « PRLV SEPA ORANGE SA REF 4451 » : presque tout est du transport. On retire les **mots de transport** (VIR, PRLV, SEPA, CB, PAIEMENT, ÉCHÉANCE, FACTURE, RÉF…), les **formes juridiques** (SARL, SAS, SCI, STE…), les **mots de liaison**, les **nombres** et les **références** (`F2026-001`, `X12345`). Il reste **ORANGE** — le nom du tiers ou de la prestation, c'est-à-dire la seule chose qui dit la nature de l'opération. Mesuré : `PRLV SEPA ORANGE SA REF 4451` → **[ORANGE]** · `VIR LOYER SCI DUPONT` → **[LOYER, DUPONT]** · `F2026-001 · GASOIL SA` → **[GASOIL]** · `VIR 12345` → **[]** (rien de signifiant, aucune règle créée).
+
+**Comment une clé retrouve un compte.** Dans l'ordre : **règle manuelle** → **clé exacte** → **clé apprise entièrement contenue dans le libellé** (la plus spécifique gagne). En deçà, **le moteur ne propose rien** et laisse le compte d'attente du module appelant prendre le relais — il ne devine jamais. Une clé d'un seul mot court (< 5 lettres) est **refusée** comme trop faible. Quand un même libellé a reçu plusieurs comptes au fil du temps, c'est le **plus fréquent** qui gagne : la mémoire se corrige d'elle-même.
+
+**Comment — nouvel addon `yada-addon-imputation` (100% ADDITIF) + 3 éditions chirurgicales :**
+1. **`suggere(op)`** de l'Import bancaire reçoit une **étape 0** : `window.impProposer(op.lib)` — garde `try/catch`, **sans effet si l'addon est absent** ; les mots-clés intégrés et le 471 restent en repli.
+2. **`ibSetCompte(i,v)`** appelle `window.impRetenir(ST.ops[i].lib, v, 'banque')` — une ligne, gardée : c'est le point où la correction devient une règle.
+3. **Le registre `AUTOS`** du module Automatismes (v633) devient le **global `window.YADA_AUTOS`** : chaque étape suivante s'y inscrit d'un `push`, **sans toucher au module** — la promesse « une ligne de plus dans le même module » est désormais tenue par la structure.
+
+**Points techniques :** (1) l'apprentissage **reconstruit** la mémoire depuis les écritures plutôt que de l'incrémenter — donc il est **idempotent** et une écriture corrigée est **reprise** au passage suivant ; les règles manuelles vivent dans une branche séparée (`manuel`) que la reconstruction ne touche pas ; (2) les **à-nouveaux** et l'**OD de résultat** sont exclus de la lecture (leur libellé ne dit rien d'une nature) ; (3) la contrepartie bancaire retenue est la ligne **non-512 au plus fort mouvement** (une écriture de banque multi-lignes ne produit donc qu'une observation, la principale) ; (4) **aucune écriture n'est créée ni modifiée par cette étape** — le moteur ne fait que proposer. `sw.js` yada-v229, badge v634, `version.json` 634.
+
+**Validé :** `node --check` (**305 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014) + balises `</head>`/`</body>`/`</html>` inchangées (3/5/3) + **filet d'équilibre** (`YADA_CHROME=… node tests/equilibre-ecritures.mjs` : vente 1200=1200, achat 600=600 ✅) + **rendu Playwright sur dossier d'essai** (6 écritures de banque, 1 achat, 1 à-nouveau) :
+
+| Mesure | Résultat |
+| --- | --- |
+| Règles apprises | **3** en banque (ORANGE · LOYER DUPONT · URSSAF PICARDIE) + **1** en nature (GASOIL) |
+| À-nouveaux absorbés | **0** (exclus) |
+| `PRLV SEPA ORANGE SA REF 9999` (libellé neuf, clé connue) | **626000000** · 3 observations · « libellé connu » |
+| `VIRT LOYER SCI DUPONT MARS` (libellé plus long) | **613200000** · « libellé proche » |
+| `CB GASOIL SA STATION` (bascule sur la mémoire *nature*) | **606000000** |
+| `ACHAT INCONNU XYZ` | **rien** → le module garde son 471 |
+| **Second apprentissage** (idempotence) | **0 action** |
+| Correction manuelle ORANGE → 627 | prime **et** survit au réapprentissage ✓ |
+| **Import bancaire réel** (OFX, opération connue / inconnue) | pré-imputée **606400000** / **471000000** |
+| Écritures créées ou modifiées par l'étape | **0** · 0 déséquilibrée |
+
++ **routage 25/25** + module Automatismes : **3 automatismes** + journal + table des règles, **1 sortie « Fermer »**, **0 en-tête vide**, **0 bouton vide**, **0 gras**, **0 débordement** + **0 pageerror**, **0 console.error**. Badge → **v634**.
+
+**Reste des étapes :** **3.** rapprochement bancaire automatique (pointage relevé ↔ écritures par montant et fenêtre de dates) ; **4.** contrôles de cohérence en continu ; **5.** traitements périodiques (OD de TVA, dotations en lot, relances, clôture).
+
+---
+
+## 🟢 MAJ précédente — ÉTAPE 1 de l'automatisation : module AUTOMATISMES (lettrage automatique + échéances récurrentes échues) — v633
+**Quoi :** demande — *« Développement de tout le système étape par étape pour automatiser et rapidement »*. **Étape 1 : le socle.** Un nouveau module **« Automatismes »** rassemble en une page les traitements répétitifs du dossier : chaque automatisme s'y déclare avec **ce qui l'attend** (compteur d'actions en attente, calculé en direct), un **interrupteur** (actif / suspendu), son **dernier passage**, son **compteur d'actions depuis l'origine**, et un bouton **« Exécuter maintenant »**. Un bouton unique **« Lancer tous les automatismes actifs »** fait passer tout le dossier d'un clic. Un **journal des passages** (40 derniers) garde l'horodatage, le nombre d'actions et le détail.
+
+**Deux automatismes livrés à cette étape :**
+
+| Automatisme | Ce qu'il fait | Ce qu'il refuse de faire |
+| --- | --- | --- |
+| **Lettrage des comptes de tiers** | Rapproche facture ↔ règlement sur les comptes fournisseurs et clients : **(a) paire exacte** (même montant, appariée au **plus proche en date**), **(b) lot** (un règlement qui solde **exactement** plusieurs pièces). Lettres A→Z puis AA… par compte. | **Tout ensemble non strictement équilibré.** Aucune combinaison au jugé, aucun arrondi de complaisance : un rapprochement ambigu reste à la main. |
+| **Échéances récurrentes échues** | Poste les écritures des **modèles récurrents** dont la **date d'échéance est atteinte** (loyer, abonnement, redevance), sur tout l'exercice, tous modèles confondus. | Les échéances **futures** (aucune anticipation), les modèles **suspendus**, les modèles **déséquilibrés**, et toute échéance **déjà générée**. |
+
+**Pourquoi ces deux-là en premier :** ce sont les deux seuls traitements du logiciel où la décision comptable est **entièrement déterminée** par les données — un lettrage équilibré est vrai ou faux, une échéance due est due ou non. Ils n'exigent aucun arbitrage, donc ils peuvent tourner seuls sans surveillance. Les traitements qui demandent un jugement (imputation d'un libellé bancaire, pointage d'un relevé) viennent aux étapes suivantes, avec un mécanisme d'apprentissage et une validation humaine.
+
+**Comment — nouvel addon `yada-addon-automatismes` (100% ADDITIF, injecté en DERNIER) + 1 édition chirurgicale :** `window.YADA_OK.push('automatismes')` + `window.YADA_LBL.automatismes='Automatismes'` → le module apparaît **automatiquement dans le menu « Modules »** ; clé `automatismes:(typeof pageAutomatismes==='function'?pageAutomatismes:repli)` ajoutée au **dispatch de `render()`** (même patron gardé que `controles`/`recurrentes`). État persistant dans **`db.parametres.automatismes`** (`{actifs,passages,totaux}`). **Points techniques :** (1) le lettrage lit les lignes via **`auxLignes(t)`** (qui rattache aussi les lignes portées sur le **collectif** 401/411 via la facture) puis écrit **uniquement le champ `lettre`** de la ligne réelle — **aucun montant n'est touché**, donc aucune écriture ne peut se déséquilibrer ; (2) les lettres sont allouées **une fois par compte** par un allocateur local, au lieu d'appeler `lzProchaineLettre` (qui rebalaye toutes les écritures) une fois par lot — et `lzLettrer` n'est **pas** réutilisé car il appelle `save()`+`toast()` à chaque lot ; on enregistre **une seule fois** en fin de passage ; (3) la génération récurrente passe par **`window.rcGenerer(per, true)`** (drapeau silencieux du module Écritures récurrentes) après avoir pointé `window.__rcSel` sur le modèle, puis **restaure** la sélection — l'anti-doublon `recId`+`recPer` et la garde d'équilibre du module s'appliquent donc tels quels ; (4) l'échéancier est **recalculé** dans l'addon (la fonction `echeances` vit dans une IIFE, elle n'est pas globale) à l'identique : exercice, bornes début/fin, périodicité mensuelle / trimestrielle / annuelle. Rendu éditorial **« Registre » N&B** scopé `#yada-au`, **1 seule sortie « Fermer »** (invariant v626), **0 gras** (v627), **0 en-tête vide** et montants à droite (v630/v631). `sw.js` yada-v228, badge v633, `version.json` 633.
+
+**Validé :** `node --check` (**304 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014) + balises `</head>`/`</body>`/`</html>` inchangées (3/5/3) + **filet d'équilibre** (`YADA_CHROME=… node tests/equilibre-ecritures.mjs` : vente 1200=1200, achat 600=600 ✅) + **rendu Playwright sur dossier d'essai** :
+
+| Mesure | Résultat |
+| --- | --- |
+| Lettrage — paire exacte (facture 1 200 ↔ encaissement 1 200) | lettre **A**, 2 lignes |
+| Lettrage — lot (encaissement 600 soldant 360 + 240) | lettre **B**, 3 lignes |
+| Facture fournisseur **non réglée** | **non lettrée** (laissée à la main) |
+| Échéances récurrentes générées (modèle jan→mars, jour 5) | **3** (janvier · février · mars) |
+| Écritures **déséquilibrées** après passage | **0** |
+| **Second passage** (idempotence) | **0 action**, 9 écritures inchangées |
+| Suspendre un automatisme | pastille **SUSPENDU**, exclu du passage global |
+
++ **routage 25/25** (24 modules + Consultation, `body[data-page]` = module demandé à chaque étape) + **module Automatismes** : 4 KPI, **exactly 1 sortie « Fermer »**, **0 en-tête vide**, **0 bouton vide**, **0 gras**, **0 débordement** + **0 pageerror**, **0 console.error**. Badge → **v633**.
+
+**Les étapes suivantes (annoncées, non engagées) :** **2.** moteur d'**imputation qui apprend** le compte retenu par libellé et par tiers, et pré-impute l'import bancaire, le FEC et la saisie ; **3.** **rapprochement bancaire automatique** (pointage relevé ↔ écritures par montant et fenêtre de dates) ; **4.** **contrôles de cohérence en continu** (le module Contrôles tourne après chaque passage et remonte ses anomalies dans le journal) ; **5.** **traitements périodiques** (OD de TVA, dotations d'amortissement en lot, relances clients, clôture). Chaque étape s'ajoutera comme une ligne de plus dans ce même module, sans rien déplacer.
+
+---
+
+## 🟢 MAJ précédente — Dernières couleurs de l'ancienne version retirées + filet de LISIBILITÉ + légende regroupée — v632
+**Quoi :** poursuite de la demande — *« Tout doit être aligné et symétrique »*. Balayage des 23 modules sur un dossier réellement peuplé (**5 846 éléments · 70 074 propriétés**), qui relève **quatre défauts visibles** que les v630/v631 ne mesuraient pas :
+
+| Défaut | Avant | Après |
+| --- | --- | --- |
+| **Bleu de l'ancienne version** (éléments chromatiques hors vert/rouge comptable) | **19** | **0** |
+| **Texte illisible** (contraste < 3:1 sur du texte rendu) | **3** | **0** |
+| **Montant débordant de sa case** (barre latérale TVA) | **1** | **0** |
+| **Colonnes de hauteur inégale** (mises en page à 2 colonnes) | 3 / 16 | **1 / 16** (documentée) |
+
+**1. Le bleu survivait sur TROIS modules.** Pilotage, Salarié et Fournisseurs sont les seuls à utiliser encore les **primitives génériques** `.card` / `.kpi` / `.btn` — les vingt autres ont leurs propres classes (`.rc-btn`, `.rg-btn`, `.fe-btn`…), d'où leur immunité. Sur ces trois-là restaient : la **barre d'accent bleue** `#2f8fff` devant chaque titre de carte (3), le **filet dégradé + soulignement + halo + reflet balayant bleus** des boutons (15), et un **fond bleu nuit** `#0d1c30` sur la colonne figée de la grille « état d'avancement » (1). Tout repasse aux jetons Registre N&B. **Conservés volontairement** : le **vert/rouge comptable** (`td.cre` / `td.deb`, sens comptable) et la **légende de statut** de l'état d'avancement (vert « à jour » / ambre « en retard ») — couleur fonctionnelle. Chroma final : **5**, tous documentés.
+
+**Pourquoi le bleu était là :** `yada-addon-registre-unify` (v609) porte bien son nom pour les tables, mais pour les cartes et boutons il pose encore la palette **BLEUE** de la refonte v529/v530 (`#0f1626`, `rgba(47,143,255,.28)`, `#2f8fff`) — pas les jetons N&B annoncés. La reconstruction module par module l'a masquée partout sauf là où les primitives génériques subsistent.
+
+**2. Un bouton illisible est un bouton vide.** Le contrôle de contraste ajouté au balayage relève **3 feuilles de texte sous 3:1** — le **fournisseur sélectionné** dans l'explorateur : nom, compte et montant en **blanc sur la pastille inversée blanche** (contraste **1,1:1** — invisible). La règle du module (`#yada-four .four-li.on .four-li-nm`, (1,3,0)) existait bien, mais la couche globale qui repeint tous les `span` en blanc l'écrasait. **C'est le quatrième module touché par ce même piège** (v612, v615, v616, puis celui-ci) — d'où un **filet générique** plutôt qu'une règle de plus : après chaque rendu, toute feuille de texte dont le contraste avec son fond effectif tombe sous 3:1 reçoit l'encre opposée (`#0a0a0b` sur fond clair, `#f5f5f6` sur fond sombre) en style en ligne `!important`. **Idempotent** (une fois l'encre posée le contraste remonte, plus rien n'est écrit), **feuilles seulement** (mesurer la couleur d'un conteneur dont les enfants portent leur propre encre donne un faux résultat), **éditions imprimables exclues**.
+
+**3. Un montant débordait de sa case.** Dans la barre latérale TVA, `.tvas-kv` posait `flex:0 0 auto` sur le **libellé** et `min-width:0` sur la **valeur** : libellé long ⇒ montant comprimé. Mesuré sur « Crédit à reporter (445670000) » : case de **28 px** pour un montant qui en demande **38** → 10 px hors de la case. La logique est inversée — dans une ligne clé/valeur c'est le **libellé** qui cède. Le montant reçoit `flex:0 0 auto` + `white-space:nowrap` : il ne se comprime plus et ne déborde plus jamais, quel que soit le libellé.
+
+**4. Légende « état d'avancement » : les paires ne se groupaient pas.** Mesuré : pastille → **son** libellé = **10 px**, libellé → pastille **suivante** = **7-8 px**. L'espace intérieur à la paire était donc PLUS GRAND que celui qui sépare les paires → l'œil rattachait chaque libellé à la mauvaise pastille. Cause : `.ea-leg{gap:8px}` s'applique entre des éléments de flex **anonymes** (chaque texte nu en est un), plus `margin-right:2px` sur la pastille. Chaque paire est désormais un vrai groupe : **6 px à l'intérieur, 18 px entre les groupes** (mesuré 17/18).
+
+**5. Colonnes à hauteur égale.** Sur les **16 mises en page à 2 colonnes** des 23 modules, **13 ont déjà des colonnes de hauteur strictement égale** ; les 3 exceptions sont exactement celles qui posent `align-items:start`. **Écritures récurrentes** passe en `stretch` (118/111 → 118/118). **Non touchées, et pourquoi :** la **TVA** garde `start` parce que sa barre latérale est `position:sticky` — l'étirer la ferait tenir toute la hauteur et **tuerait le suivi au défilement** (écart 12 px, invisible) ; le **Suivi des règlements** garde `start` parce que sa colonne gauche est une **pile de pastilles sans panneau** — l'étirer ne change rien à l'écran (aucun fond ni filet à prolonger).
+
+**Comment — nouvel addon `yada-addon-registre-nb-final` (100% ADDITIF, injecté en DERNIER) + 3 éditions chirurgicales :** l'addon repeint `.card` / `.kpi` / `.btn` / `.ea-fix` aux jetons Registre et porte le filet de lisibilité ; les éditions corrigent la légende (markup + CSS), `.rc-body` (`stretch`) et `.tvas-kv` (flex inversé). **Point technique :** `registre-unify-mod` pose déjà `html body[data-theme="noir"]:not(#_yz) #main .btn` à **(2,2,2)** — à spécificité **égale** il l'emportait par l'ordre source, et le bouton principal se retrouvait en **encre noire sur fond sombre** (contraste 1,1:1). D'où le sélecteur `.btn.btn` — une classe de plus, **(2,3,2)** — qui tranche sans surenchère d'`!important`. `sw.js` yada-v227, badge v632, `version.json` 632.
+
+**Validé :** `node --check` (**303 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014) + balises `</head>`/`</body>`/`</html>` inchangées (3/5/3) + **filet d'équilibre** (`YADA_CHROME=… node tests/equilibre-ecritures.mjs` : vente 1200=1200, achat 600=600 ✅) + **balayage des 23 modules sur dossier peuplé** (couverture publiée : **5 849 éléments · 22 tables · 182 colonnes · 1 141 boutons**) : `pagesRoutedOk` **23/23** + **23/23 modules avec exactement 1 sortie « Fermer »** (invariant v626) + **0 gras**, **0 italique**, soulignés = les seuls liens (invariant v627) + **0 en-tête vide**, **0 en-tête désaligné** (invariants v630/v631) + **0 bouton vide**, **0 bouton sans action**, **0 montant mal aligné**, **0 débordement**, **0 texte sous 3:1** + **chroma 19 → 0** (résiduel 5 : 3 vert/rouge comptable + 2 légende de statut) + **0 pageerror**, **0 console.error**. Badge → **v632**.
+
+**Leçon de méthode (suite de la v631) :** la première passe du contrôle de contraste relevait **13** défauts ; **10 étaient des faux positifs** — elle lisait la couleur du **conteneur** (`.rg-trow`, `.tvas-m`) alors que le texte visible vit dans des enfants qui redéfinissent leur encre. Corrigée pour ne mesurer que les **feuilles de texte**, elle en relève **3**, tous réels. Une sonde doit mesurer ce que l'œil voit, pas ce que le DOM déclare au niveau du dessus.
+
+---
+
+## 🟢 MAJ précédente — Les EN-TÊTES suivent leur colonne : 30 noms de colonne réalignés + 5ᵉ en-tête vide nommé — v631
+**Quoi :** poursuite de la demande — *« Tout doit être aligné et symétrique »*. La v630 vérifiait que les **montants** étaient alignés à droite ; elle ne vérifiait **jamais que le NOM de la colonne suivait**. Mesuré sur un dossier réellement peuplé : **30 écarts sur 70 colonnes**, dont **29 fois le même défaut** — une colonne de montants alignée à droite dont l'en-tête flotte à gauche. Sur **9 modules** : Sociétés, Journal, TVA, Charges & Paie, Banque, Analytique, Suivi des règlements, Tableau de bord, Consultation. Les noms concernés sont exactement les colonnes d'argent : **Débit · Crédit · Montant · CA · Charges · Résultat · Marge · Part · Collectée · Déductible · À payer · Crédit reporté · Dépensé · CA facturé · Fact. fourn. · Fact. client · Docs manq.** Après : **0 écart**, à couverture identique (16 tables, 70 colonnes).
+
+**Pourquoi le `class="r"` de la v630 ne servait à rien :** chaque feuille de module « Registre » pose `#yada-XX .yy-tbl th{text-align:left}` — spécificité **(1,1,1)**, un ID — qui écrase la règle globale `td.r,th.r{text-align:right}` **(0,1,1)**. Les deux en-têtes « Dossier » et « Favori » nommés en v630 portaient donc bien `class="r"` **sans effet visible** : ils restaient à gauche au-dessus d'une colonne à droite. Le défaut n'était pas dans le markup mais dans la cascade.
+
+**Un 5ᵉ en-tête vide, que la v630 ne pouvait pas voir :** `<th class="sg-sens"></th>` dans la Consultation — la colonne qui affiche le **sens D ou C** d'un solde. Le balayage v630 tournait sur un dossier **vide** (l'application démarre sans aucun dossier depuis la v386) : sans écritures ni plan comptable, cette table ne rendait **aucune ligne**, donc la sonde la sautait. Le « 0 en-tête vide » de la v630 était mesuré sur une base trop mince. L'en-tête est nommé **`D/C`** — trois caractères, la notation comptable même que porte la colonne, qui tient dans ses 30 px.
+
+**Comment — nouvel addon `yada-addon-entetes-alignes` (100% ADDITIF, injecté en DERNIER) + 1 édition chirurgicale :** plutôt que de surenchérir sur la cascade module par module (il aurait fallu une règle par table, et une de plus à chaque table future), le filet est **générique** : après chaque rendu, pour chaque table, il lit l'alignement **réellement calculé** des cellules de chaque colonne et le **recopie sur son en-tête** (style en ligne `!important`). L'en-tête tombe ainsi toujours au-dessus de son contenu, **y compris pour toute table ajoutée plus tard**. **Points techniques :** (1) **idempotent** — une fois le style posé, le calculé correspond et plus rien n'est écrit ; (2) **alignement visuel, pas structurel** — si une cellule ne contient qu'un champ de saisie, c'est l'alignement du **champ** qui est lu, pas celui du `<td>` (sinon la grille de saisie aurait vu ses en-têtes Débit/Crédit tirés à gauche) ; (3) les lignes dont le nombre de cellules diffère de l'en-tête (totaux, sous-titres) et les en-têtes **groupés** (`colspan>1`) sont **ignorés** ; (4) les **éditions imprimables** (`.doc-page`, `.inv`, `#print-area`) sont **exclues** — elles gardent leur convention papier, comme en v627. Greffe sur `render` (patron maison `window.render=function(){…}`) + intervalle 1500 ms. `sw.js` yada-v226, badge v631, `version.json` 631.
+
+**Validé :** `node --check` (**302 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014) + balises `</head>`/`</body>`/`</html>` inchangées (3/5/3) + **filet d'équilibre** (`YADA_CHROME=… node tests/equilibre-ecritures.mjs` : vente 1200=1200, achat 600=600 ✅) + **balayage des 23 modules sur un dossier RÉELLEMENT PEUPLÉ** (plan comptable 981 comptes, 3 écritures, 4 tiers) :
+
+| Mesure | Avant | Après |
+| --- | --- | --- |
+| **En-tête non aligné sur sa colonne** | **30 / 70** | **0 / 70** |
+| **En-têtes de colonne vides** | **1** (`sg-sens`) | **0** |
+| Tables inspectées · colonnes comparées | 16 · 70 | 16 · 70 (identique) |
+| Grille de saisie : Débit / Crédit / Solde | à droite | **à droite** (non touchée) |
+
++ `pagesRoutedOk` **24/24** + **invariant v627 préservé** (**0 gras**, **0 italique**, soulignés = les seuls liens Qonto / impots.gouv.fr) + **invariant v626 préservé** (**24/24 avec exactement 1 sortie « Fermer »**) + **0 bouton vide**, **0 bouton sans action**, **0 montant mal aligné** + **aucun débordement** (`scrollWidth = clientWidth`) + **0 pageerror**, **0 console.error**. Badge → **v631**.
+
+**Leçon de méthode (à retenir) :** un balayage qui rend **0** n'a de valeur que si l'on **compte aussi ce qu'il a inspecté**. La première passe de cette version renvoyait « 0 écart » — en réalité elle n'avait vu **aucune table** (`tbl:0`) : l'application démarre vide et sur la page d'accueil, donc `current=…` ne routait rien. C'est le même piège qu'en v630 (`window.current` inexistant), sous une autre forme. Toute sonde doit désormais publier ses **compteurs de couverture** (tables vues · colonnes comparées) à côté de son résultat.
+
+---
+
+## 🟢 MAJ précédente — Balayage ALIGNEMENT & SYMÉTRIE des 23 modules : plus aucune formule vide (4 en-têtes de colonne nommés) — v630
+**Quoi :** application de la demande — *« Tout doit être aligné et symétrique, aucun boutons vide, aucune formule vide »* — **au-delà des menus de la Consultation (v629), à l'ensemble des 23 modules**. Balayage mesuré : **0 bouton vide**, **0 bouton sans action**, **0 libellé vide**, **0 montant mal aligné** (tous à droite), **0 écart irrégulier** dans les barres horizontales — mais **4 EN-TÊTES DE COLONNE VIDES** au-dessus de colonnes d'action. Ils sont **nommés** :
+
+| Module | Table | Contenu de la colonne | Avant | Après |
+| --- | --- | --- | --- | --- |
+| Sociétés | `so-tbl` | bouton « Ouvrir » | (vide) | **Dossier** |
+| Sociétés | `so-tbl` | pastille favori ● / ○ | (vide) | **Favori** |
+| Charges & Paie | `cp-saltbl` | bouton × (supprimer) | (vide) | **Actions** |
+| Salarié | `pil-t` | ✎ Fiche · 🗑 | (vide) | **Actions** |
+
+Chaque en-tête reçoit `class="r"` — **le même alignement à droite que sa colonne** (les cellules d'action sont en `td.r`) — donc l'en-tête tombe **exactement au-dessus** de son contenu. Un en-tête vide au-dessus d'une colonne qui agit est une **formule vide** : la colonne existe, elle ne se nomme pas.
+
+**Les 413 cellules vides restantes sont LÉGITIMES et ne sont PAS touchées** — qualifiées une par une (regroupement classe + table + en-tête de colonne, puis relecture du contenu de ligne) :
+- **Éditions (101)** — colonnes **Débit / Crédit / Solde débit / Solde crédit** d'une balance : une ligne porte un débit **ou** un crédit, **jamais les deux** ; la colonne « Compte » est vide sur les lignes de **sous-total** (« Total 28 »). C'est la **convention d'édition comptable** — remplir ces cases serait une faute de lecture.
+- **Pilotage (288)** — les **cases à cocher `.ea-c`** de la grille « État d'avancement » (v458 : 3 dossiers × 8 tâches × 12 mois = 288). Elles sont **vides tant que la tâche n'est pas cochée** — c'est leur état normal ; le clic passe par **délégation d'événements** sur `document`, d'où l'absence d'`onclick` sur la cellule (ce qui les faisait passer pour inertes au premier balayage).
+- **Journal (21)** — colonne **Pièce** quand l'écriture n'en porte pas, et colonne **Date** sur les **lignes de suite** d'une même écriture (la date n'est écrite qu'une fois par écriture, convention du journal).
+- **Fournisseurs (3)** — colonne de montant opposée au sens de la ligne.
+
+**Comment — 4 éditions chirurgicales (aucun nouvel addon) :** `<th></th><th></th>` → `<th class="r">Dossier</th><th class="r">Favori</th>` (`so-tbl`) ; `<th></th>` → `<th class="r">Actions</th>` dans `cp-saltbl` (**2 occurrences** — le markup d'origine **et** la refonte Registre v604, gardées identiques) et dans `pil-t` (module Salarié). `sw.js` yada-v225, badge v630, `version.json` 630.
+
+**Validé :** `node --check` (**301 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014) + balises `</head>`/`</body>`/`</html>` inchangées (3/5/3) + **filet d'équilibre** (`YADA_CHROME=… node tests/equilibre-ecritures.mjs` : vente 1200=1200, achat 600=600 ✅) + **balayage des 23 modules** :
+
+| Mesure | Avant | Après |
+| --- | --- | --- |
+| **En-têtes de colonne vides** | **4** | **0** |
+| Libellés / valeurs vides | 0 | 0 |
+| Boutons vides | 0 | 0 |
+| Boutons sans action | 0 | 0 |
+| Montants non alignés à droite | 0 | 0 |
+| Écarts irréguliers (barres horizontales) | 0 | 0 |
+| Cellules vides **légitimes** (montants · cases à cocher) | 417 | **413** |
+
++ `pagesRoutedOk` **23/23** + **invariant v627 préservé** (**0 gras**, **0 italique**, **4 soulignés** = les liens Qonto ×3 et impots.gouv.fr) + **invariant v626 préservé** (**23/23 modules avec exactement 1 sortie « Fermer »**, **0 intitulé « retour »/« revenir »**) + **aucun débordement** (`scrollWidth = clientWidth`) + **0 pageerror**, **0 console.error**. Badge → **v630**.
+
+---
+
+## 🟢 MAJ précédente — Consultation : « Aide » devient une COMMANDE + aucun bouton vide dans les menus (barre entièrement symétrique) — v629
+**Quoi :** deux demandes. (1) **« Aide » n'était pas une commande** — c'était le seul libellé inerte de la barre de menus de la Consultation (réaligné en v628, mais toujours sans action). Elle **ouvre désormais un menu déroulant** comme les neuf autres entrées, avec **trois commandes qui font réellement quelque chose** : **Raccourcis clavier…** (double-clic, clic droit, Entrée, flèches, Tab, sélection multiple, Échap), **Comment lire cette page…** (onglets, périodes, journaux, filet blanc épais = séparation d'écritures, pied de fenêtre, bouton ✕) et **À propos de YADA…** (version, dossier ouvert, exercice, nombre d'écritures, dossiers du portefeuille, rappel que les données ne quittent pas le poste). (2) **Aucun bouton vide, aucune formule vide** — balayage des menus : **15 entrées sur 93 ne faisaient rien** (elles affichaient seulement une notification annonçant une action qui n'existe pas) et sont **retirées**, avec les **séparateurs devenus orphelins**.
+
+**Les 15 entrées retirées, et pourquoi :** **Synchro compta**, **Connexion à Compta & Facturation**, **A.D.N. Compta**, **Exporter vers Sage Active…**, **Exporter Coala Acquisition**, **Ciel Up To Experts ▸** → des **produits externes Sage/Ciel** auxquels un logiciel interne hors-ligne ne peut pas se connecter ; **Archivage légal** → **doublon** de « Clôture définitive et archivage légal de l'exercice », juste au-dessus ; **Coller les lignes du presse-papier** → **redondant** (la saisie a déjà Ctrl+V depuis la v224) et sa notification disait littéralement « presse-papier vide » ; **Marque suivante**, **Mettre à jour le signalement des pièces associées**, **Renommage préfixes des auxiliaires**, **Paramétrage du curseur d'import d'écritures**, **Importer les crédits-bails / les locations / les emprunts** → fonctions **jamais implémentées**. Un bouton qui promet un traitement et ne le fait pas est un **faux bouton** : mieux vaut qu'il n'existe pas que de laisser croire au traitement.
+
+**Comment — 3 éditions chirurgicales + 1 addon (`yada-addon-consult-aide`, 100% ADDITIF) :** (1) le `<span>Aide</span>` inerte devient `<span class="mi" onclick="toggleMenu('sg-aide')">` + un `<div class="sg-dd" id="sg-aide">` à 3 boutons ; (2) `'sg-aide'` ajouté à **`SG_MENUS`** → il se **ferme** avec les autres (`closeMenus`, clic extérieur) ; (3) les 15 boutons + 5 séparateurs orphelins retirés du markup de `pageCompta`. L'addon définit `sgAideRaccourcis` / `sgAideGuide` / `sgAidePropos` (modale `#modal` + tableau libellé/explication, contenu **lu en direct** pour « À propos » : badge de version, `db.societe`, `db.ecritures`, `db.cabinet.dossiers`). **Point technique :** « Aide » portant désormais `.mi`, elle reçoit le `padding:5px 8px` de `consult-ui-mod` (v563) **par la règle normale** — la règle générique `span:not(.mi)` de la v628 est conservée comme filet pour une future entrée sans menu, mais **ne s'applique plus à rien** dans la Consultation. `sw.js` yada-v224, badge v629, `version.json` 629.
+
+**Validé :** `node --check` (**301 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014) + balises `</head>`/`</body>`/`</html>` inchangées (3/5/3) + **filet d'équilibre** (`YADA_CHROME=… node tests/equilibre-ecritures.mjs` : vente 1200=1200, achat 600=600 ✅) + **mesure Playwright** :
+
+| Mesure | Avant (v628) | Après (v629) |
+| --- | --- | --- |
+| Entrées de la barre portant `.mi` | 9 / 10 | **10 / 10** |
+| Pointeur sur « Aide » | `default` (inerte) | **`pointer`** (commande) |
+| Écarts texte-à-texte | 34 px (9/9) | 34 px (9/9) — **inchangés** |
+| Remplissage · hauteur des entrées | `5px 8px` · 25,2 px | `5px 8px` · 25,2 px — **identiques sur les 10** |
+| Boutons de menu | 93 | **81** |
+| Dont sans action réelle | **15** | **0** |
+| Séparateurs orphelins / doublés | 5 | **0** |
+| Commandes de « Aide » | 0 | **3** (7 · 6 · 6 lignes rendues, **0 cellule vide**) |
+
++ **balayage des 23 modules** : **0 bouton vide**, **0 bouton sans action**, `pagesRoutedOk` **23/23** + **invariant v627 préservé** (**0 gras**, **0 italique**, **4 soulignés** = les liens Qonto et impots.gouv.fr) + **invariant v626 préservé** (23/23 sortie « Fermer », **0 intitulé « retour »/« revenir »**) + **aucun débordement** de la barre à **1440 / 1280 / 1024 / 900 px** (`scrollWidth = clientWidth`, `document` sans défilement horizontal) + **0 pageerror**, **0 console.error**. Badge → **v629**.
+
+**Constaté et NON traité (à arbitrer) :** les barres de menus décoratives des modules **Rapprochement** (`.rb-menu`, entrées « Lignes » et « Aide » inertes) et **Immobilisations** (`.im-menu`, 7 libellés inertes) **ne sont plus rendues à l'écran** depuis les refontes Registre (v597 / v602) — vérifié par balayage : aucune n'est visible dans les 23 modules. Leur markup subsiste dans le fichier ; le retirer serait du nettoyage mort, sans effet visible, donc non engagé.
+
+---
+
+## 🟢 MAJ précédente — Consultation : entrée « Aide » de la barre de menus réalignée (rythme régulier en fin de barre) — v628
+**Quoi :** dans la **barre de menus de la Consultation** (Fichier · Exercice · Journal · Compte · Balances · Paramètres · Utilitaires · Navigation · Modules · **Aide**), l'entrée **« Aide » était décalée** : son texte tombait **8 px trop près** de son voisin, cassant le rythme de la barre au dernier élément. Mesuré avant correctif : **écart texte-à-texte de 26 px avant « Aide »** contre **34 px entre toutes les autres entrées**. Après : **34 px partout** (9 écarts sur 9 identiques).
+
+**Pourquoi :** les neuf entrées qui ouvrent un menu déroulant portent la classe `.mi` et reçoivent `padding:5px 8px` (`consult-ui-mod`, v563). **« Aide » n'ouvre aucun menu** : c'est un simple `<span>` **sans `.mi`**, donc **`padding:0`** — sa boîte collait au texte, d'où les 8 px manquants d'un seul côté. Le décalage n'était pas une erreur de marge mais une entrée **hors du sélecteur**.
+
+**Comment — 1 règle ajoutée à `<style id="consult-ui-mod">` (édition chirurgicale, aucun nouvel addon) :** `html body:not(#_yz) .sg-app .sg-menu>span:not(.mi){padding:5px 8px!important;font-size:12px!important}` — **même boîte** que les entrées à menu, **mais ni pointeur ni survol** : `cursor:default` et **aucun fond au survol** sont conservés, car « Aide » **est un libellé, pas une commande** — lui donner l'apparence d'un bouton promettrait une action qui n'existe pas. La règle est **générique** (`span:not(.mi)`) : toute future entrée sans menu déroulant sera alignée d'office. `sw.js` yada-v223, badge v628, `version.json` 628.
+
+**Validé :** `node --check` (**300 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014) + balises `</head>`/`</body>`/`</html>` inchangées (3/5/3) + **filet d'équilibre** (`YADA_CHROME=… node tests/equilibre-ecritures.mjs` : vente 1200=1200, achat 600=600 ✅) + **mesure Playwright avant / après** :
+
+| Mesure (barre de menus de la Consultation) | Avant | Après |
+| --- | --- | --- |
+| Écart texte-à-texte **avant « Aide »** | **26 px** | **34 px** |
+| Écart entre les autres entrées | 34 px | 34 px |
+| Écarts distincts sur la barre | **2** (26 · 34) | **1** (34) |
+| Remplissage de « Aide » | `0px` | `5px 8px` |
+| Hauteur des entrées | 25,2 px | 25,2 px (inchangée) |
+| Pointeur / survol sur « Aide » | `default` · aucun fond | `default` · aucun fond (conservés) |
+
++ **aucun débordement** de la barre à **1440 / 1280 / 1024 / 900 px** (`scrollWidth = clientWidth`, dernier élément à 861,9 px, `document` sans défilement horizontal) + **invariant v627 préservé** (23/23 modules : **0 gras**, **0 italique**, **4 soulignés** = les liens Qonto et impots.gouv.fr) + **invariant v626 préservé** (23/23 modules : sortie « Fermer », **0 intitulé « retour »/« revenir »**) + **navigation réellement exercée** (`pagesRoutedOk` 23/23) + **aucune couleur introduite** (la règle ne pose que `padding` et `font-size`) + **0 pageerror**, **0 console.error**. Badge → **v628**.
+
+**Constaté et NON traité (à arbitrer) :** « Aide » **n'ouvre rien** — c'est la seule entrée inerte de la barre. La **page de saisie** possède déjà, elle, une entrée « Aide » qui **liste les raccourcis clavier** (v623) ; brancher la même liste ici rendrait l'entrée utile et cohérente, mais c'est un **ajout de fonctionnalité** non demandé, donc non engagé. À noter aussi : la **seconde barre `.sg-menu`** du fichier (module « Saisie journal Banque », 7 libellés tous sans `.mi`) bénéficie de la même règle, mais **ce module n'est pas atteignable** depuis la table rase v535 (`saisiebq` absent de `window.YADA_OK`, 23 modules enregistrés) — l'effet n'a donc **pas pu être mesuré à l'écran** et n'est pas revendiqué.
+
+---
+
+## 🟢 MAJ précédente — AUCUN TEXTE EN GRAS NI EN ITALIQUE dans l'interface (balayage global des 23 modules) — v627
+**Quoi :** application de la **règle permanente** de l'utilisateur — *« ne jamais afficher de texte en gras, italique ou souligné »* — à **tout le logiciel**, et plus seulement aux deux modules traités en v619 (Consultation & Déclaration). Le balayage relevé en v619 (**« 480 éléments en gras, 2 en italique » — non engagé faute de demande explicite**) est désormais **exécuté** : mesuré à **583 éléments en gras** et **2 en italique** sur les 23 modules (Pilotage 140 · Infos société 48 · Fournisseurs 35 · Tiers 33 · Suivi des règlements 27 · Charges & Paie 26 · Analytique 23 · FEC 22 · Plan comptable 19 · Sociétés 19 · Tableau de bord 19 · Paramétrage 16 · Coffre-fort 16 · Journal 16 · Banque 16 · Rapprochement 16 · Immobilisations 16 · Salarié 16 · Éditions 13 · TVA 9 · Contrôles 9 · Import bancaire 9 · Écritures récurrentes 9) → **0 gras, 0 italique**. Couvre aussi les surfaces hors module (barre latérale, fenêtres, menus, modales, notifications).
+
+**Deux exceptions, toutes deux déjà posées :**
+1. **Les éditions imprimables gardent leur mise en forme papier** — `.doc-page`, `.inv` et `#print-area` sont **exclus** : le gras des en-têtes de colonnes et des totaux d'une balance ou d'un bilan est une **convention d'édition imprimée**, pas un gras d'interface (distinction énoncée en v619). Vérifié : l'édition de la Balance conserve ses **85 éléments en gras** sur feuille blanche.
+2. **Le SOULIGNÉ n'est pas touché** — les **4 seuls** éléments soulignés du logiciel sont des **LIENS** : « Qonto » (`.so-link`, module Sociétés, ×3) et « impots.gouv.fr · espace professionnel » (`.tvar-lk`, module Déclaration). C'est le souligné **qui les fait reconnaître comme des liens** — exception posée en v613, confirmée en v619 pour impots.gouv.fr, ici étendue par cohérence au lien Qonto.
+
+**Aucune hiérarchie n'est perdue :** chaque titre, en-tête ou total portait **déjà** un autre signal — **serif contre mono**, **taille**, **pastille inversée** (fond clair / texte noir), **filet blanc**. Contrôlé à l'écran sur Pilotage (140 gras → 0) et Suivi des règlements (27 → 0) : titre de module, en-têtes de colonnes, onglet actif, tiers sélectionné et montants restent parfaitement distincts.
+
+**Comment — nouvel addon `yada-addon-sans-gras` (100% ADDITIF & CSS-ONLY, injecté en DERNIER) :** `<style id="sans-gras-mod">` posant **une seule règle** — `html body:not(#_yz) *:not(.doc-page):not(.doc-page *):not(.inv):not(.inv *):not(#print-area):not(#print-area *){font-weight:400!important;font-style:normal!important}` — créé une fois puis **garanti après chaque rendu** (`ensure()` greffé sur `render` + intervalle 1500 ms, idempotent par l'id). **Points techniques :** (1) le préfixe `:not(#_yz)` apporte un **niveau d'ID** et chacun des six `:not(.x)` un niveau de classe → spécificité **(1,6,2)** + `!important`, ce qui bat la couche globale `yada-addon-registre-unify` (v609, (2,1,5)) sur `#main table thead th` **et** toutes les feuilles de module, sans surenchère ; (2) l'exclusion des éditions passe par un **sélecteur complexe dans `:not()`** (Selectors Level 4) — vérifié à l'exécution : un `<b>` posé dans `.doc-page` / `.inv` / `#print-area` reste à **700**, le même `<b>` dans l'interface passe à **400** ; (3) **aucun `style="font-weight:…!important"` en ligne** n'existe dans le fichier (relevé : 0), donc la règle n'est jamais écrasée. `sw.js` yada-v222, badge v627, `version.json` 627.
+
+**Validé :** `node --check` (**300 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (19674/19674) + balises `</head>`/`</body>`/`</html>` inchangées (3/5/3) + **filet d'équilibre** (`YADA_CHROME=… node tests/equilibre-ecritures.mjs` : vente 1200=1200, achat 600=600 ✅) + **mesure Playwright avant / après sur les 23 modules** :
+
+| Mesure | Avant | Après |
+| --- | --- | --- |
+| Texte en **gras** (interface) | **583** | **0** |
+| Texte en **italique** (interface) | **2** | **0** |
+| Texte **souligné** (liens Qonto + impots.gouv.fr) | 4 | **4** (conservés) |
+| Gras dans l'**édition Balance** (`.doc-page`) | 85 | **85** (conservé) |
+
++ **navigation réellement exercée** (`pagesRoutedOk` 23/23 : `body[data-page]` = module demandé à chaque étape — la sonde pilote le binding lexical `current`, car `window.current` **n'existe pas** dans le fichier et ne route rien) + **invariant v626 préservé** (23/23 modules : exactement **1 sortie « Fermer »**, **0 intitulé « retour »/« revenir »**, clic réel → page principale) + **chroma identique avant / après** (2346 = 2346, **aucune couleur introduite** — la règle ne touche que le poids et le style de la police) + **0 pageerror**, **0 console.error**. Badge → **v627**.
+
+---
+
+## 🟢 MAJ précédente — UN SEUL bouton : FERMER (plus aucun bouton « retour ») — v626
 **Quoi :** demande explicite — **« Je veux pas de boutons retour, je veux uniquement un bouton fermer »**. Les **23 modules** affichaient bien un **✕**, mais c'était un **bouton de RETOUR déguisé en croix** : son intitulé était **« Revenir à la Consultation »** (ou « Fermer et revenir… » / « Enregistrer et revenir… ») et son action ramenait sur la **Consultation** (`current='compta'`). Désormais le ✕ est un **vrai bouton de FERMETURE** : il **ferme la page** et rend la **PAGE PRINCIPALE** (l'accueil « Génération Experts », qui est aussi la page d'entrée du logiciel au démarrage — invariant v549), **exactement comme le ✕ de la Consultation** (v625). Les **intitulés** deviennent **« Fermer »** partout (« Enregistrer et fermer » pour Informations société, qui enregistre avant de fermer) — le mot « revenir » disparaît de l'interface.
 
 **Paramétrage — le dernier bouton « ← Retour » retiré :** le module Paramétrage (grille de tuiles → panneau de réglage) portait une **flèche « ← Retour aux réglages »** à côté de son ✕ — soit **deux boutons** dans le même bandeau. La flèche est **supprimée** et le ✕ devient **contextuel, en restant un unique bouton « Fermer »** : panneau ouvert → **ferme le panneau** (retour à la grille des réglages, on reste dans le module) ; depuis la grille → **ferme le module** (page principale). Les autres boutons de retour du code (`fermerCompteAux`, `admPaieSel('')`, `ds-back-chip`…) sont **inatteignables** depuis la table rase v535 — vérifié par balayage des 23 modules : **0 intitulé « retour » / « revenir » visible**.
