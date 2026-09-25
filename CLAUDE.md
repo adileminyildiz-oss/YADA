@@ -36,7 +36,45 @@
 
 ---
 
-## 🟢 Dernière mise à jour — LE JOURNAL DE CAISSE : la caisse n'est pas la banque — v655
+## 🟢 Dernière mise à jour — PLAN COMPTABLE GÉNÉRAL + LES QUATRE JOURNAUX DE BASE — v656
+**Quoi :** demande — *« Utilise le plan comptable générale ainsi que les journaux de base (HA, VT, BQ, OD) »*. Deux socles sont redressés.
+
+**1. Le plan du dossier est le PLAN COMPTABLE GÉNÉRAL.** Chaque dossier chargeait jusqu'ici une **surcouche BTP de 54 comptes** posée *au-dessus* du PCG (`PLAN_BTP` d'abord, PCG ensuite pour les manquants) — donc des libellés maison (« Prestation de service 20 % » `706002000`, « Travaux en cours » `713350000`, « Assurance obligatoire dommage construction ») **écrasaient** ceux du PCG. Désormais `chargerPlanComptable()` charge **le PCG seul — 970 comptes**, et c'est lui qui nomme. Les comptes **hors PCG restent LISIBLES** (leur libellé est conservé dans `COMPTES`) pour que l'historique déjà saisi ne devienne pas illisible, **mais ils n'entrent plus dans le plan** : le plan, c'est le PCG. La **TVA liée** est reclée sur des comptes du PCG (`TVA_LIEE` : 601/604/616/626/627 → `445667000` déductible 20 %, **706000000** → `445717000` collectée 20 %) et `appliquerTVAauto` (60/61/62 → déductible, 70x → collectée) est inchangée. `chargerPlanBTP()` **survit comme alias** — les neuf appels existants, dont un dans un `onclick`, continuent de fonctionner.
+
+**2. Quatre journaux, et quatre seulement : HA · VT · BQ · OD.** Le dossier en comptait **huit** (HA, VT, BQ, **CA**, **ODP**, **ODC**, **ODTVA**, OD). Les sous-journaux d'opérations diverses et le **journal CAISSE ajouté en v655 sont REGROUPÉS dans OD**.
+
+**Ce que ce regroupement ne touche pas.** Aucun montant, aucun compte, aucun équilibre : **seul le champ `journal` change**. Les **libellés** (`OD TVA CA3 03/2026`, `OD PAIE 03/2026`, `OD CHARGES 03/2026`, `DOTATION IMMO …`) continuent d'identifier chaque pièce — c'est précisément ce qui a permis de **rendre les sept gardes anti-doublon indépendantes du journal** : elles testaient `e.journal==='ODTVA' && libellé…`, elles ne testent plus que le **libellé**, qui est stable et unique. Sans cette reprise, regrouper les journaux aurait **rouvert la porte aux doublons** d'OD de TVA et d'OD de paie.
+
+**Ce qui aurait re-scindé les journaux, et qui ne le fait plus.** Deux automatismes travaillaient en sens inverse : (a) l'addon **v205**, qui **classait** chaque O.D. en ODP/ODC/ODTVA d'après son libellé — il les **regroupe désormais en OD** (la même machinerie, retournée) et ne crée plus les sous-journaux ; (b) l'addon **caisse de la v655**, qui routait les espèces en CA — **désactivé par un drapeau `JOURNAL_CA=false`**. Le **classement à l'import FEC** suit la même règle : `fecJournalMoteur` rend ACH / VTE / BQ, et **toute opération diverse entre en OD** (une caisse comptée à l'import va donc en **BQ**).
+
+**Ce qui SURVIT de la v655 : le contrôle comptable.** « **Une caisse ne peut pas être créditrice** » ne dépend pas du journal — c'est un fait de caisse, pas de classement. Le contrôle reste **CRITIQUE** dans le module Contrôles et au registre des contrôles en continu. Seul le **journal** CA est retiré.
+
+**Comment — nouvel addon `yada-addon-journaux-base` (100% ADDITIF) + 16 éditions chirurgicales :** l'addon ramène **toute écriture d'un journal hors des quatre à OD** et **élague `db.journaux`** aux quatre de base (rétablissant un journal de base manquant), sur le **dossier actif et tout le portefeuille**, au démarrage (+ second passage à 2,2 s pour les dossiers restaurés depuis IndexedDB), à chaque `chargerDossier` et à chaque `save`. Éditions : `chargerPlanComptable` (+ alias), `journauxDefaut`, les **cinq sites d'énumération** (Consultation, Éditions, centralisateur, saisie d'une opération, module Journal vivant `#yada-jr`), les **liens « journal lié »** des modules TVA et Charges & Paie, **sept postages** (`journal:'ODP'|'ODC'|'ODTVA'` → `'OD'`), **sept gardes anti-doublon** passées au libellé seul, `bpJrn`, `fecJournalMoteur`, l'**étape 14 du Parcours** (les OD de paie se comptent désormais **par leur libellé**, plus par leur journal — sinon l'étape serait retombée à zéro), et le `poster` de Règlements & échéances (retour à BQ).
+
+**Validé :** `node --check` (**325 scripts inline, 0 erreur**) + `node --check sw.js` OK + accolades CSS (2014/2014) + balises (3/5/3) + **filet d'équilibre** ✅ + deux sondes Playwright :
+
+| Mesure | Résultat |
+| --- | --- |
+| **Plan du dossier** | **970 comptes** — le PCG · `chargerPlanBTP` toujours appelable (alias) |
+| Libellés | `601000000` **ACHATS STOCKES MAT. PREM.** · `706000000` **PRESTATIONS DE SERVICES** · `530000000` **CAISSE** — ceux du PCG |
+| Compte **hors PCG** (`706002000`) | **absent du plan** · **libellé toujours lisible** |
+| **TVA liée** | `601` → `445667000` · `706` → `445717000` |
+| **Journaux** — défaut · dossier · Consultation · module Journal | **HA · VT · BQ · OD** dans les quatre surfaces |
+| Migration — 8 écritures (ODP, ODC, ODTVA, **CA**, ACH, VTE, BQ, OD) | **4 migrées** → `OD 5 · ACH 1 · VTE 1 · BQ 1` |
+| **Montants** après migration | **strictement intacts** · **0 écriture déséquilibrée** |
+| **Libellés** préservés | oui — `OD TVA CA3 …` et `OD PAIE …` retrouvés |
+| **Idempotence** — re-migration + `reclasserJournauxPaieCharges` | répartition **identique** — plus aucune re-scission |
+| **OD de TVA** postée | journal **OD** · garde anti-doublon **tenue** · second appel → **0 écriture de plus** |
+| **Import FEC** | achat **ACH** · vente **VTE** · banque **BQ** · **caisse → BQ** · TVA / paie / divers → **OD** |
+| Parcours · modules · pageerror · console.error | rendu ✓ · **34 / 34** · **0** · **0** |
+
+**Ce que cela retire de la v655 :** le **journal CA** et le routage des espèces. Les règlements en espèces repartent au journal **BQ**, la caisse se distinguant — comme avant — par son **compte `530`**. Le **contrôle de caisse créditrice**, lui, est conservé.
+
+**La suite du cahier des charges :** **CDC-3** — la **2065** (déclaration d'IS), dernier maillon d'une chaîne fiscale déjà construite (résultat fiscal v647 + calcul d'IS v654) ; puis **CDC-5** — la révision à deux étages **Révisé · Supervisé · Validé** ; puis les formats **QIF / MT940 / CFONB**, le **FEC provisoire**, la **gestion cabinet** et les **DES / DEB**.
+
+---
+
+## 🟢 MAJ précédente — LE JOURNAL DE CAISSE : la caisse n'est pas la banque — v655
 **Quoi :** **cahier des charges « Sage Expert IA » reçu** (chaîne Sage Génération Experts : production, révision, fiscalité, immobilisations, gestion cabinet, EDI, FEC). Il est **consigné et confronté à l'existant** dans `CAHIER-DES-CHARGES.md` : **l'essentiel est déjà construit** (l'ordre obligatoire des travaux = le Parcours v651, OCR, imputation apprenante, lettrage, rapprochement, TVA sur les encaissements, révision par cycles, clôture bloquante, liasse, comptes annuels, FEC) ; **huit chantiers manquent vraiment** (CDC-1 → CDC-8). Le premier est livré ici.
 
 **CDC-1 — les journaux.** Le cahier des charges autorise **CA — Caisse** ; YADA n'en avait pas. Le logiciel le **disait lui-même en v653** : « le dossier n'ayant qu'un journal de trésorerie, les règlements — **espèces comprises** — y sont portés (**BQ**), la caisse se distinguant par son **compte** (530) et non par son journal ». Ce compromis est levé.

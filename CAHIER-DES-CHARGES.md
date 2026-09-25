@@ -229,7 +229,14 @@
 
 ## Ce qui MANQUE réellement — les huit chantiers
 
-- ⏳ **[CDC-1 · Journaux] Journaux CAISSE (CA), SITUATION (SIT), CHEVAUCHEMENT (CHE)** absents.
+- ✅ **[CDC-1 · Journaux] — ARBITRÉ : quatre journaux de base (v656).** Demande de l'utilisateur :
+  *« Utilise le plan comptable générale ainsi que les journaux de base (HA, VT, BQ, OD) »*.
+  Le dossier ne connaît donc que **HA · VT · BQ · OD** ; les sous-journaux (OD PAIE, OD CHARGES,
+  OD TVA) et le journal **CAISSE** ajouté en v655 sont **regroupés dans OD**, et le plan du dossier
+  devient le **PCG (970 comptes)** à la place de la surcouche BTP. Les journaux **SIT** et **CHE**
+  du cahier des charges Sage ne sont donc **pas retenus**. *(Historique de la demande d'origine
+  ci-dessous.)*
+- ⏳ ~~**[CDC-1 · Journaux] Journaux CAISSE (CA), SITUATION (SIT), CHEVAUCHEMENT (CHE)** absents.~~
   YADA a HA · VT · BQ · ODP · ODC · ODTVA · OD. Conséquence **documentée et assumée en v653** :
   « le dossier n'ayant qu'un journal de trésorerie, les règlements — **espèces comprises** — y
   sont portés (BQ), la caisse se distinguant par son **compte** (530) et non par son journal ».
